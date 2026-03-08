@@ -1,12 +1,88 @@
 """Management command to create seed data for development."""
+import urllib.request
+import ssl
+from io import BytesIO
+
+from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
-from api.models import User, Property
+from api.models import User, Property, PropertyImage
+
+
+# Unsplash image URLs mapped to each property (2-3 images each)
+# Using Unsplash Source which is free to use
+PROPERTY_IMAGES = {
+    0: [  # Charming 3-Bed Semi
+        ('https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800&h=600&fit=crop', 'Front of house', True),
+        ('https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop', 'Living room', False),
+        ('https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&h=600&fit=crop', 'Kitchen', False),
+    ],
+    1: [  # Modern 2-Bed Flat
+        ('https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&h=600&fit=crop', 'Building exterior', True),
+        ('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop', 'Open plan living', False),
+        ('https://images.unsplash.com/photo-1560185893-a55cbc8c57e8?w=800&h=600&fit=crop', 'Bedroom', False),
+    ],
+    2: [  # Detached Family Home
+        ('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop', 'Front elevation', True),
+        ('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop', 'Garden view', False),
+        ('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&h=600&fit=crop', 'Side view', False),
+    ],
+    3: [  # Cosy Cotswold Cottage
+        ('https://images.unsplash.com/photo-1510627489930-0c1b0bfb6785?w=800&h=600&fit=crop', 'Cottage front', True),
+        ('https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&h=600&fit=crop', 'Interior', False),
+    ],
+    4: [  # Victorian Terraced
+        ('https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=800&h=600&fit=crop', 'Street view', True),
+        ('https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=800&h=600&fit=crop', 'Hallway', False),
+    ],
+    5: [  # Luxury Penthouse
+        ('https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&h=600&fit=crop', 'Living area', True),
+        ('https://images.unsplash.com/photo-1600607687644-aac4c3eac7f4?w=800&h=600&fit=crop', 'Master bedroom', False),
+        ('https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=800&h=600&fit=crop', 'Bathroom', False),
+    ],
+    6: [  # Building Plot
+        ('https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&h=600&fit=crop', 'Plot overview', True),
+        ('https://images.unsplash.com/photo-1628624747186-a941c476b7ef?w=800&h=600&fit=crop', 'Site entrance', False),
+    ],
+    7: [  # Spacious Bungalow
+        ('https://images.unsplash.com/photo-1598228723793-52759bba239c?w=800&h=600&fit=crop', 'Bungalow front', True),
+        ('https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=800&h=600&fit=crop', 'Kitchen diner', False),
+        ('https://images.unsplash.com/photo-1600573472592-401b489a3cdc?w=800&h=600&fit=crop', 'Garden', False),
+    ],
+    8: [  # 4-Bed Detached Sold STC
+        ('https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=800&h=600&fit=crop', 'Front of property', True),
+        ('https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800&h=600&fit=crop', 'Rear garden', False),
+    ],
+    9: [  # Studio Flat Draft
+        ('https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=800&h=600&fit=crop', 'Studio interior', True),
+    ],
+}
+
+
+def download_image(url):
+    """Download an image from a URL and return it as bytes."""
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    req = urllib.request.Request(url, headers={
+        'User-Agent': 'Mozilla/5.0 (compatible; FSBO-Seed/1.0)'
+    })
+    with urllib.request.urlopen(req, context=ctx, timeout=30) as response:
+        return response.read()
 
 
 class Command(BaseCommand):
     help = 'Create seed users and properties for development'
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--no-images',
+            action='store_true',
+            help='Skip downloading images (faster, useful offline)',
+        )
+
     def handle(self, *args, **options):
+        skip_images = options.get('no_images', False)
+
         # Create test users
         user1, created1 = User.objects.get_or_create(
             email='alice@example.com',
@@ -41,7 +117,7 @@ class Command(BaseCommand):
             self.stdout.write('Properties already exist, skipping seed data.')
             return
 
-        properties = [
+        properties_data = [
             {
                 'owner': user1,
                 'title': 'Charming 3-Bed Semi in Cheltenham',
@@ -205,7 +281,46 @@ class Command(BaseCommand):
             },
         ]
 
-        for prop_data in properties:
-            Property.objects.create(**prop_data)
+        created_properties = []
+        for prop_data in properties_data:
+            prop = Property.objects.create(**prop_data)
+            created_properties.append(prop)
 
-        self.stdout.write(self.style.SUCCESS(f'Created {len(properties)} seed properties.'))
+        self.stdout.write(self.style.SUCCESS(
+            f'Created {len(created_properties)} seed properties.'
+        ))
+
+        # Download and attach images
+        if skip_images:
+            self.stdout.write('Skipping image downloads (--no-images flag).')
+            return
+
+        self.stdout.write('Downloading property images from Unsplash...')
+        total_images = 0
+        failed_images = 0
+
+        for idx, prop in enumerate(created_properties):
+            images = PROPERTY_IMAGES.get(idx, [])
+            for order, (url, caption, is_primary) in enumerate(images):
+                try:
+                    self.stdout.write(f'  Downloading image {order + 1} for: {prop.title}...')
+                    image_data = download_image(url)
+                    image_file = ContentFile(image_data, name=f'seed_{idx}_{order}.jpg')
+
+                    PropertyImage.objects.create(
+                        property=prop,
+                        image=image_file,
+                        order=order,
+                        is_primary=is_primary,
+                        caption=caption,
+                    )
+                    total_images += 1
+                except Exception as e:
+                    failed_images += 1
+                    self.stdout.write(self.style.WARNING(
+                        f'  Failed to download image for {prop.title}: {e}'
+                    ))
+
+        self.stdout.write(self.style.SUCCESS(
+            f'Downloaded {total_images} images ({failed_images} failed).'
+        ))
