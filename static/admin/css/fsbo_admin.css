@@ -1,0 +1,231 @@
+/*
+ * For Sale By Owner — Django Admin Brand Override
+ * Remaps Django 5.x admin CSS custom properties to the FSBO brand palette.
+ */
+
+/* ========================================
+   LIGHT MODE
+   ======================================== */
+html[data-theme="light"], :root {
+    /* Primary palette */
+    --primary: #2D6A4F;          /* Forest Mid — links, module headers */
+    --secondary: #1A3C2E;        /* Forest Deep — header, buttons */
+    --accent: #C9872A;           /* Gold Ember — accent highlights */
+    --primary-fg: #fff;
+
+    /* Text */
+    --body-fg: #1C2B25;          /* Charcoal */
+    --body-bg: #F6F9F7;          /* Cream */
+    --body-quiet-color: #4A5E56; /* Slate */
+    --body-medium-color: #1C2B25;/* Charcoal */
+
+    /* Header */
+    --header-color: #D8F3DC;     /* Forest Mist */
+    --header-branding-color: #C9872A; /* Gold Ember */
+    --header-bg: #1A3C2E;        /* Forest Deep */
+    --header-link-color: #fff;
+
+    /* Breadcrumbs */
+    --breadcrumbs-fg: #D8F3DC;   /* Forest Mist */
+    --breadcrumbs-link-fg: #fff;
+    --breadcrumbs-bg: #2D6A4F;   /* Forest Mid */
+
+    /* Links */
+    --link-fg: #2D6A4F;          /* Forest Mid */
+    --link-hover-color: #1A3C2E; /* Forest Deep */
+    --link-selected-fg: #40916C; /* Forest Light */
+
+    /* Borders & hairlines */
+    --hairline-color: #D4DDD9;   /* Pebble */
+    --border-color: #D4DDD9;     /* Pebble */
+
+    /* Errors */
+    --error-fg: #B03A2E;
+
+    /* Messages */
+    --message-success-bg: #D8F3DC; /* Forest Mist */
+    --message-warning-bg: #FFF0D4; /* Gold Soft */
+    --message-error-bg: #f8d7d4;
+
+    /* Backgrounds */
+    --darkened-bg: #eef3f0;
+    --selected-bg: #D4DDD9;      /* Pebble */
+    --selected-row: #FFF0D4;     /* Gold Soft */
+
+    /* Buttons */
+    --button-fg: #fff;
+    --button-bg: #2D6A4F;        /* Forest Mid */
+    --button-hover-bg: #1A3C2E;  /* Forest Deep */
+    --default-button-bg: #1A3C2E;/* Forest Deep */
+    --default-button-hover-bg: #2D6A4F; /* Forest Mid */
+    --close-button-bg: #4A5E56;  /* Slate */
+    --close-button-hover-bg: #1C2B25; /* Charcoal */
+    --delete-button-bg: #B03A2E; /* Error */
+    --delete-button-hover-bg: #922f25;
+
+    /* Object tools */
+    --object-tools-fg: #D8F3DC;
+    --object-tools-bg: #4A5E56;
+    --object-tools-hover-bg: #1A3C2E;
+}
+
+
+/* ========================================
+   DARK MODE
+   ======================================== */
+@media (prefers-color-scheme: dark) {
+    html:not([data-theme="light"]) {
+        --primary: #40916C;          /* Forest Light */
+        --secondary: #2D6A4F;        /* Forest Mid */
+        --accent: #E5A04A;           /* Gold Warm */
+        --primary-fg: #fff;
+
+        --body-fg: #D4DDD9;          /* Pebble */
+        --body-bg: #0d1a14;          /* Dark forest-tinted black */
+        --body-quiet-color: #8FA89E; /* Stone */
+        --body-medium-color: #D4DDD9;
+
+        --header-color: #D8F3DC;
+        --header-branding-color: #E5A04A;
+        --header-bg: #0a1510;
+        --header-link-color: #D8F3DC;
+
+        --breadcrumbs-fg: #8FA89E;
+        --breadcrumbs-link-fg: #D8F3DC;
+        --breadcrumbs-bg: #132a1f;
+
+        --link-fg: #40916C;
+        --link-hover-color: #D8F3DC;
+        --link-selected-fg: #E5A04A;
+
+        --hairline-color: #1e3328;
+        --border-color: #1e3328;
+
+        --error-fg: #e87c70;
+
+        --message-success-bg: #132a1f;
+        --message-warning-bg: #2a2010;
+        --message-error-bg: #2a1210;
+
+        --darkened-bg: #111f18;
+        --selected-bg: #1e3328;
+        --selected-row: #2a2010;
+
+        --button-fg: #fff;
+        --button-bg: #2D6A4F;
+        --button-hover-bg: #40916C;
+        --default-button-bg: #2D6A4F;
+        --default-button-hover-bg: #40916C;
+        --close-button-bg: #4A5E56;
+        --close-button-hover-bg: #8FA89E;
+        --delete-button-bg: #B03A2E;
+        --delete-button-hover-bg: #d44a3c;
+
+        --object-tools-fg: #D8F3DC;
+        --object-tools-bg: #1e3328;
+        --object-tools-hover-bg: #2D6A4F;
+    }
+}
+
+html[data-theme="dark"] {
+    --primary: #40916C;
+    --secondary: #2D6A4F;
+    --accent: #E5A04A;
+    --primary-fg: #fff;
+
+    --body-fg: #D4DDD9;
+    --body-bg: #0d1a14;
+    --body-quiet-color: #8FA89E;
+    --body-medium-color: #D4DDD9;
+
+    --header-color: #D8F3DC;
+    --header-branding-color: #E5A04A;
+    --header-bg: #0a1510;
+    --header-link-color: #D8F3DC;
+
+    --breadcrumbs-fg: #8FA89E;
+    --breadcrumbs-link-fg: #D8F3DC;
+    --breadcrumbs-bg: #132a1f;
+
+    --link-fg: #40916C;
+    --link-hover-color: #D8F3DC;
+    --link-selected-fg: #E5A04A;
+
+    --hairline-color: #1e3328;
+    --border-color: #1e3328;
+
+    --error-fg: #e87c70;
+
+    --message-success-bg: #132a1f;
+    --message-warning-bg: #2a2010;
+    --message-error-bg: #2a1210;
+
+    --darkened-bg: #111f18;
+    --selected-bg: #1e3328;
+    --selected-row: #2a2010;
+
+    --button-fg: #fff;
+    --button-bg: #2D6A4F;
+    --button-hover-bg: #40916C;
+    --default-button-bg: #2D6A4F;
+    --default-button-hover-bg: #40916C;
+    --close-button-bg: #4A5E56;
+    --close-button-hover-bg: #8FA89E;
+    --delete-button-bg: #B03A2E;
+    --delete-button-hover-bg: #d44a3c;
+
+    --object-tools-fg: #D8F3DC;
+    --object-tools-bg: #1e3328;
+    --object-tools-hover-bg: #2D6A4F;
+}
+
+
+/* ========================================
+   TARGETED OVERRIDES
+   ======================================== */
+
+/* Header accent border */
+#header {
+    border-bottom: 3px solid rgba(201, 135, 42, 0.4);
+}
+
+/* Logo in header */
+#site-name a {
+    display: flex;
+    align-items: center;
+}
+
+#site-name img {
+    height: 40px;
+    width: auto;
+}
+
+/* Login page — constrain logo width */
+.login #site-name {
+    text-align: center;
+}
+
+.login #site-name a {
+    justify-content: center;
+}
+
+.login #site-name img {
+    max-width: 280px;
+    height: auto;
+}
+
+/* Module headers — gold accent left border */
+.module h2, .module caption, .inline-group h2 {
+    border-left: 4px solid var(--accent);
+}
+
+/* Admin title on dashboard */
+#content h1 {
+    color: var(--secondary);
+}
+
+/* Calendar and date shortcuts */
+.calendarbox .calendarnav-previous a,
+.calendarbox .calendarnav-next a {
+    color: var(--primary);
+}

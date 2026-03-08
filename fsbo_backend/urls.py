@@ -7,6 +7,10 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
 
+admin.site.site_header = "For Sale By Owner"
+admin.site.site_title = "FSBO Admin"
+admin.site.index_title = "Dashboard"
+
 
 def serve_media(request, path):
     """Serve media files in production."""
