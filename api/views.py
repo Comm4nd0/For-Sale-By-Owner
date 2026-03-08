@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework import viewsets, permissions
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -37,6 +38,28 @@ class PropertyViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(property_type=property_type)
         if city:
             queryset = queryset.filter(city__icontains=city)
+
+        # Search filters
+        location = self.request.query_params.get('location')
+        min_price = self.request.query_params.get('min_price')
+        max_price = self.request.query_params.get('max_price')
+        min_bedrooms = self.request.query_params.get('min_bedrooms')
+        min_bathrooms = self.request.query_params.get('min_bathrooms')
+
+        if location:
+            queryset = queryset.filter(
+                Q(city__icontains=location) |
+                Q(county__icontains=location) |
+                Q(postcode__icontains=location)
+            )
+        if min_price:
+            queryset = queryset.filter(price__gte=min_price)
+        if max_price:
+            queryset = queryset.filter(price__lte=max_price)
+        if min_bedrooms:
+            queryset = queryset.filter(bedrooms__gte=min_bedrooms)
+        if min_bathrooms:
+            queryset = queryset.filter(bathrooms__gte=min_bathrooms)
 
         return queryset
 

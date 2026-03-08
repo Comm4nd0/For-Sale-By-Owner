@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Search Results - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem; }
+    .results-header h2 { color: #1A3C2E; font-size: 1.5rem; }
+    .results-count { color: #4A5E56; font-size: 0.95rem; margin-bottom: 1rem; }
+
+    .active-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+    .filter-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: #D8F3DC;
+        color: #1A3C2E;
+        padding: 0.3rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+    }
+    .filter-tag .remove {
+        cursor: pointer;
+        font-weight: 700;
+        opacity: 0.6;
+        font-size: 1rem;
+        line-height: 1;
+    }
+    .filter-tag .remove:hover { opacity: 1; }
+
+    .property-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem; }
+    .property-card { border: 1px solid #D4DDD9; border-radius: 8px; overflow: hidden; transition: box-shadow 0.2s; cursor: pointer; text-decoration: none; color: inherit; display: block; background: #FFFFFF; }
+    .property-card:hover { box-shadow: 0 4px 12px rgba(26,60,46,0.12); }
+    .property-card img { width: 100%; height: 200px; object-fit: cover; display: block; }
+    .property-card .placeholder { width: 100%; height: 200px; background: #D8F3DC; display: flex; align-items: center; justify-content: center; color: #8FA89E; font-size: 2.5rem; }
+    .property-card-body { padding: 1.25rem; }
+    .property-card h3 { margin-bottom: 0.25rem; color: #1A3C2E; }
+    .property-price { font-size: 1.4rem; font-weight: 700; color: #C9872A; margin-bottom: 0.5rem; }
+    .property-details { color: #4A5E56; font-size: 0.9rem; }
+    .property-meta { display: flex; gap: 1rem; margin-top: 0.75rem; color: #4A5E56; font-size: 0.85rem; }
+
+    .empty-state { text-align: center; padding: 4rem 1rem; }
+    .empty-state h3 { color: #1A3C2E; margin-bottom: 0.75rem; }
+    .empty-state p { color: #4A5E56; margin-bottom: 1.5rem; }
+    .empty-state .btn { margin: 0 0.5rem; }
+
+    .pagination { display: flex; justify-content: center; gap: 1rem; margin-top: 2rem; padding: 1rem 0; }
+    .pagination a, .pagination span {
+        padding: 0.5rem 1.2rem;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.95rem;
+    }
+    .pagination a { background: #2D6A4F; color: white; }
+    .pagination a:hover { background: #40916C; }
+    .pagination .disabled { background: #D4DDD9; color: #8FA89E; cursor: default; }
+
+    @media (max-width: 768px) {
+        .results-header { flex-direction: column; align-items: flex-start; }
+        .property-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="results-header">
+    <h2>Search Results</h2>
+    <a href="/" class="btn btn-secondary">Modify Search</a>
+</div>
+<div id="active-filters" class="active-filters"></div>
+<div id="results-count" class="results-count"></div>
+<div id="results">
+    <p>Searching...</p>
+</div>
+<div id="pagination" class="pagination"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const FILTER_LABELS = {
+        location: 'Location',
+        property_type: 'Type',
+        min_price: 'Min Price',
+        max_price: 'Max Price',
+        min_bedrooms: 'Bedrooms',
+        min_bathrooms: 'Bathrooms',
+    };
+
+    const TYPE_NAMES = {
+        detached: 'Detached',
+        semi_detached: 'Semi-Detached',
+        terraced: 'Terraced',
+        flat: 'Flat / Apartment',
+        bungalow: 'Bungalow',
+        cottage: 'Cottage',
+        land: 'Land',
+        other: 'Other',
+    };
+
+    function formatPrice(val) {
+        return '\u00A3' + Number(val).toLocaleString();
+    }
+
+    function formatFilterValue(key, val) {
+        if (key === 'property_type') return TYPE_NAMES[val] || val;
+        if (key === 'min_price' || key === 'max_price') return formatPrice(val);
+        if (key === 'min_bedrooms') return val + '+';
+        if (key === 'min_bathrooms') return val + '+';
+        return val;
+    }
+
+    function renderActiveFilters(params) {
+        const container = document.getElementById('active-filters');
+        const tags = [];
+        for (const [key, val] of params.entries()) {
+            if (key === 'page') continue;
+            const label = FILTER_LABELS[key] || key;
+            const display = formatFilterValue(key, val);
+            tags.push(`<span class="filter-tag">
+                ${label}: ${display}
+                <span class="remove" data-key="${key}">&times;</span>
+            </span>`);
+        }
+        container.innerHTML = tags.join('');
+
+        container.querySelectorAll('.remove').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const newParams = new URLSearchParams(window.location.search);
+                newParams.delete(btn.dataset.key);
+                newParams.delete('page');
+                window.location.href = '/search/' + (newParams.toString() ? '?' + newParams.toString() : '');
+            });
+        });
+    }
+
+    function renderResults(data) {
+        const container = document.getElementById('results');
+        const results = data.results || data;
+        const count = data.count || results.length;
+
+        document.getElementById('results-count').textContent =
+            count === 0 ? '' : `Showing ${results.length} of ${count} propert${count === 1 ? 'y' : 'ies'}`;
+
+        if (!results || results.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <h3>No properties found</h3>
+                    <p>Try adjusting your search filters to find more results.</p>
+                    <a href="/search/" class="btn btn-secondary">Clear All Filters</a>
+                    <a href="/" class="btn btn-primary">Back to Search</a>
+                </div>`;
+            return;
+        }
+
+        container.className = 'property-grid';
+        container.innerHTML = results.map(p => {
+            const imgHtml = p.primary_image
+                ? `<img src="${p.primary_image}" alt="${p.title}">`
+                : `<div class="placeholder">&#8962;</div>`;
+            return `<a href="/properties/${p.id}/" class="property-card">
+                ${imgHtml}
+                <div class="property-card-body">
+                    <h3>${p.title}</h3>
+                    <div class="property-price">&pound;${Number(p.price).toLocaleString()}</div>
+                    <div class="property-details">${p.property_type_display}</div>
+                    <div class="property-details">${p.address_line_1}, ${p.city} ${p.postcode}</div>
+                    <div class="property-meta">
+                        <span>${p.bedrooms} bed</span>
+                        <span>${p.bathrooms} bath</span>
+                        <span>${p.reception_rooms} reception</span>
+                    </div>
+                </div>
+            </a>`;
+        }).join('');
+    }
+
+    function renderPagination(data) {
+        const container = document.getElementById('pagination');
+        const params = new URLSearchParams(window.location.search);
+        const currentPage = parseInt(params.get('page')) || 1;
+        let html = '';
+
+        if (data.previous) {
+            const prevParams = new URLSearchParams(window.location.search);
+            if (currentPage <= 2) prevParams.delete('page');
+            else prevParams.set('page', currentPage - 1);
+            html += `<a href="/search/?${prevParams.toString()}">&laquo; Previous</a>`;
+        }
+
+        if (data.count) {
+            const totalPages = Math.ceil(data.count / 20);
+            if (totalPages > 1) {
+                html += `<span style="color:#4A5E56; padding: 0.5rem 0;">Page ${currentPage} of ${totalPages}</span>`;
+            }
+        }
+
+        if (data.next) {
+            const nextParams = new URLSearchParams(window.location.search);
+            nextParams.set('page', currentPage + 1);
+            html += `<a href="/search/?${nextParams.toString()}">Next &raquo;</a>`;
+        }
+
+        container.innerHTML = html;
+    }
+
+    // Fetch and render
+    const params = new URLSearchParams(window.location.search);
+    renderActiveFilters(params);
+
+    fetch('/api/properties/?' + params.toString())
+        .then(r => r.json())
+        .then(data => {
+            renderResults(data);
+            renderPagination(data);
+        })
+        .catch(() => {
+            document.getElementById('results').innerHTML =
+                '<div class="empty-state"><p>Failed to load results. Please try again.</p></div>';
+        });
+</script>
+{% endblock %}

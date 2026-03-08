@@ -28,6 +28,7 @@ urlpatterns = [
 
     # Web pages
     path('', TemplateView.as_view(template_name='home.html'), name='home'),
+    path('search/', TemplateView.as_view(template_name='search_results.html'), name='search'),
     path('login/', TemplateView.as_view(template_name='login.html'), name='login'),
     path('register/', TemplateView.as_view(template_name='register.html'), name='register'),
     path('properties/new/', TemplateView.as_view(template_name='property_create.html'), name='property-create'),

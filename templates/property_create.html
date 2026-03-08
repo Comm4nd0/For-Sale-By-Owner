@@ -6,131 +6,384 @@
 <style>
     .page-title { color: #1A3C2E; margin-bottom: 1.5rem; }
     .property-form { max-width: 700px; }
+
+    /* Progress indicator */
+    .progress-bar {
+        display: flex;
+        margin-bottom: 2rem;
+        position: relative;
+    }
+    .progress-bar::before {
+        content: '';
+        position: absolute;
+        top: 18px;
+        left: 60px;
+        right: 60px;
+        height: 2px;
+        background: #D4DDD9;
+        z-index: 0;
+    }
+    .progress-step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+        cursor: default;
+    }
+    .progress-step.clickable { cursor: pointer; }
+    .step-number {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #D4DDD9;
+        color: #4A5E56;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-bottom: 0.4rem;
+        transition: all 0.2s;
+    }
+    .progress-step.active .step-number { background: #2D6A4F; color: white; }
+    .progress-step.completed .step-number { background: #1A3C2E; color: white; }
+    .step-label { font-size: 0.8rem; color: #8FA89E; display: block; }
+    .progress-step.active .step-label { color: #2D6A4F; font-weight: 500; }
+    .progress-step.completed .step-label { color: #1A3C2E; }
+
+    /* Form styles */
     .form-group { margin-bottom: 1.25rem; }
     .form-group label { display: block; margin-bottom: 0.3rem; font-weight: 500; color: #4A5E56; }
-    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.6rem; border: 1px solid #D4DDD9; border-radius: 6px; font-size: 1rem; font-family: inherit; }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #2D6A4F; box-shadow: 0 0 0 2px rgba(45,106,79,0.15); }
-    .form-group textarea { min-height: 120px; resize: vertical; }
+    .form-group input, .form-group select, .form-group textarea {
+        width: 100%;
+        padding: 0.6rem;
+        border: 1px solid #D4DDD9;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+        outline: none;
+        border-color: #2D6A4F;
+        box-shadow: 0 0 0 2px rgba(45,106,79,0.15);
+    }
+    .form-group textarea { min-height: 150px; resize: vertical; }
+    .form-group .hint { font-size: 0.8rem; color: #8FA89E; margin-top: 0.25rem; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
     .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
-    .section-title { font-size: 1.1rem; color: #1A3C2E; margin: 1.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #D4DDD9; }
-    .image-upload { border: 2px dashed #D4DDD9; border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: border-color 0.2s; }
-    .image-upload:hover { border-color: #2D6A4F; }
+    .form-row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; }
+    .section-title { font-size: 1.1rem; color: #1A3C2E; margin: 0.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #D4DDD9; }
+
+    /* Steps visibility */
+    .step { display: none; }
+    .step.active { display: block; }
+
+    /* Step intro text */
+    .step-intro { color: #4A5E56; margin-bottom: 1.5rem; font-size: 0.95rem; }
+
+    /* Image upload */
+    .image-upload {
+        border: 2px dashed #D4DDD9;
+        border-radius: 8px;
+        padding: 2.5rem;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color 0.2s, background 0.2s;
+    }
+    .image-upload:hover { border-color: #2D6A4F; background: #F6F9F7; }
     .image-upload input { display: none; }
-    .image-preview { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.75rem; margin-top: 1rem; }
+    .image-upload-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .image-upload p { color: #4A5E56; margin-bottom: 0.25rem; }
+    .image-upload .hint { font-size: 0.8rem; color: #8FA89E; }
+    .image-preview {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
     .image-preview-item { position: relative; border-radius: 6px; overflow: hidden; }
     .image-preview-item img { width: 100%; height: 100px; object-fit: cover; }
-    .image-preview-item .remove { position: absolute; top: 4px; right: 4px; background: rgba(26,60,46,0.7); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 14px; line-height: 22px; text-align: center; }
-    .form-actions { margin-top: 2rem; display: flex; gap: 0.75rem; }
+    .image-preview-item .remove {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: rgba(26,60,46,0.7);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 22px;
+        height: 22px;
+        cursor: pointer;
+        font-size: 14px;
+        line-height: 22px;
+        text-align: center;
+    }
+
+    /* Navigation buttons */
+    .step-actions {
+        margin-top: 2rem;
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #D4DDD9;
+    }
+    .step-actions .left { display: flex; gap: 0.75rem; }
+    .step-actions .right { display: flex; gap: 0.75rem; }
+    .btn-next {
+        background: #2D6A4F;
+        color: white;
+        padding: 0.7rem 2rem;
+        border: none;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        font-family: inherit;
+    }
+    .btn-next:hover { background: #40916C; }
+    .btn-back {
+        background: #D4DDD9;
+        color: #1A3C2E;
+        padding: 0.7rem 1.5rem;
+        border: none;
+        border-radius: 6px;
+        font-size: 1rem;
+        cursor: pointer;
+        font-family: inherit;
+    }
+    .btn-back:hover { background: #8FA89E; }
+
+    @media (max-width: 768px) {
+        .form-row, .form-row-3 { grid-template-columns: 1fr; }
+        .form-row-4 { grid-template-columns: 1fr 1fr; }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <h2 class="page-title">List Your Property</h2>
 <div id="error" class="alert alert-error" style="display:none;"></div>
-<form id="property-form" class="property-form">
-    <div class="form-group">
-        <label for="title">Property Title</label>
-        <input type="text" id="title" placeholder="e.g. Beautiful 3-bed semi in Cheltenham" required>
-    </div>
 
-    <div class="form-row">
-        <div class="form-group">
-            <label for="property_type">Property Type</label>
-            <select id="property_type" required>
-                <option value="detached">Detached</option>
-                <option value="semi_detached">Semi-Detached</option>
-                <option value="terraced">Terraced</option>
-                <option value="flat">Flat/Apartment</option>
-                <option value="bungalow">Bungalow</option>
-                <option value="cottage">Cottage</option>
-                <option value="land">Land</option>
-                <option value="other">Other</option>
-            </select>
+<div class="property-form">
+    <!-- Progress bar -->
+    <div class="progress-bar">
+        <div class="progress-step active" data-step="1">
+            <span class="step-number">1</span>
+            <span class="step-label">The Basics</span>
         </div>
-        <div class="form-group">
-            <label for="price">Price (&pound;)</label>
-            <input type="number" id="price" min="0" step="1" required>
+        <div class="progress-step" data-step="2">
+            <span class="step-number">2</span>
+            <span class="step-label">Details</span>
+        </div>
+        <div class="progress-step" data-step="3">
+            <span class="step-number">3</span>
+            <span class="step-label">Photos &amp; Publish</span>
         </div>
     </div>
 
-    <div class="form-group">
-        <label for="description">Description</label>
-        <textarea id="description" placeholder="Describe your property..."></textarea>
-    </div>
+    <form id="property-form">
+        <!-- STEP 1: The Basics -->
+        <div class="step active" data-step="1">
+            <p class="step-intro">Let's start with the key details about your property.</p>
 
-    <h3 class="section-title">Address</h3>
-    <div class="form-group">
-        <label for="address_line_1">Address Line 1</label>
-        <input type="text" id="address_line_1" required>
-    </div>
-    <div class="form-group">
-        <label for="address_line_2">Address Line 2</label>
-        <input type="text" id="address_line_2">
-    </div>
-    <div class="form-row">
-        <div class="form-group">
-            <label for="city">City / Town</label>
-            <input type="text" id="city" required>
-        </div>
-        <div class="form-group">
-            <label for="county">County</label>
-            <input type="text" id="county">
-        </div>
-    </div>
-    <div class="form-group" style="max-width: 200px;">
-        <label for="postcode">Postcode</label>
-        <input type="text" id="postcode" required>
-    </div>
+            <div class="form-group">
+                <label for="title">Property Title</label>
+                <input type="text" id="title" placeholder="e.g. Beautiful 3-bed semi in Cheltenham" required>
+                <p class="hint">Give your property an eye-catching headline</p>
+            </div>
 
-    <h3 class="section-title">Property Details</h3>
-    <div class="form-row-3">
-        <div class="form-group">
-            <label for="bedrooms">Bedrooms</label>
-            <input type="number" id="bedrooms" min="0" value="0">
-        </div>
-        <div class="form-group">
-            <label for="bathrooms">Bathrooms</label>
-            <input type="number" id="bathrooms" min="0" value="0">
-        </div>
-        <div class="form-group">
-            <label for="reception_rooms">Reception Rooms</label>
-            <input type="number" id="reception_rooms" min="0" value="0">
-        </div>
-    </div>
-    <div class="form-group" style="max-width: 200px;">
-        <label for="square_feet">Square Feet (optional)</label>
-        <input type="number" id="square_feet" min="0">
-    </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="property_type">Property Type</label>
+                    <select id="property_type" required>
+                        <option value="detached">Detached</option>
+                        <option value="semi_detached">Semi-Detached</option>
+                        <option value="terraced">Terraced</option>
+                        <option value="flat">Flat/Apartment</option>
+                        <option value="bungalow">Bungalow</option>
+                        <option value="cottage">Cottage</option>
+                        <option value="land">Land</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="price">Price (&pound;)</label>
+                    <input type="number" id="price" min="0" step="1" required>
+                </div>
+            </div>
 
-    <h3 class="section-title">Photos</h3>
-    <div class="image-upload" onclick="document.getElementById('image-input').click()">
-        <input type="file" id="image-input" accept="image/*" multiple>
-        <p>Click to select photos (up to 10)</p>
-    </div>
-    <div class="image-preview" id="image-preview"></div>
+            <h3 class="section-title">Address</h3>
+            <div class="form-group">
+                <label for="address_line_1">Address Line 1</label>
+                <input type="text" id="address_line_1" required>
+            </div>
+            <div class="form-group">
+                <label for="address_line_2">Address Line 2</label>
+                <input type="text" id="address_line_2">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="city">City / Town</label>
+                    <input type="text" id="city" required>
+                </div>
+                <div class="form-group">
+                    <label for="county">County</label>
+                    <input type="text" id="county">
+                </div>
+            </div>
+            <div class="form-group" style="max-width: 200px;">
+                <label for="postcode">Postcode</label>
+                <input type="text" id="postcode" required>
+            </div>
 
-    <div class="form-group" style="margin-top: 1.5rem;">
-        <label for="status">Listing Status</label>
-        <select id="status">
-            <option value="draft">Draft (not visible to public)</option>
-            <option value="active" selected>Active (visible to public)</option>
-        </select>
-    </div>
+            <div class="step-actions">
+                <div class="left">
+                    <a href="/" class="btn btn-secondary">Cancel</a>
+                </div>
+                <div class="right">
+                    <button type="button" class="btn-next" onclick="goToStep(2)">Next: Details &rarr;</button>
+                </div>
+            </div>
+        </div>
 
-    <div class="form-actions">
-        <button type="submit" class="btn btn-primary" id="submit-btn">Create Listing</button>
-        <a href="/" class="btn btn-secondary">Cancel</a>
-    </div>
-</form>
+        <!-- STEP 2: Details -->
+        <div class="step" data-step="2">
+            <p class="step-intro">Tell buyers more about your property.</p>
+
+            <h3 class="section-title">Rooms</h3>
+            <div class="form-row-4">
+                <div class="form-group">
+                    <label for="bedrooms">Bedrooms</label>
+                    <input type="number" id="bedrooms" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="bathrooms">Bathrooms</label>
+                    <input type="number" id="bathrooms" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="reception_rooms">Reception</label>
+                    <input type="number" id="reception_rooms" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="square_feet">Sq Ft</label>
+                    <input type="number" id="square_feet" min="0" placeholder="Optional">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" placeholder="Describe what makes your property special. Mention key features, recent improvements, nearby amenities..."></textarea>
+                <p class="hint">A good description helps your property stand out</p>
+            </div>
+
+            <div class="step-actions">
+                <div class="left">
+                    <button type="button" class="btn-back" onclick="goToStep(1)">&larr; Back</button>
+                </div>
+                <div class="right">
+                    <button type="button" class="btn-next" onclick="goToStep(3)">Next: Photos &rarr;</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 3: Photos & Publish -->
+        <div class="step" data-step="3">
+            <p class="step-intro">Add photos and publish your listing.</p>
+
+            <h3 class="section-title">Photos</h3>
+            <div class="image-upload" onclick="document.getElementById('image-input').click()">
+                <input type="file" id="image-input" accept="image/*" multiple>
+                <div class="image-upload-icon">&#128247;</div>
+                <p>Click to select photos</p>
+                <p class="hint">Upload up to 10 photos. The first photo will be your main image.</p>
+            </div>
+            <div class="image-preview" id="image-preview"></div>
+
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label for="status">Listing Status</label>
+                <select id="status">
+                    <option value="draft">Draft (not visible to public)</option>
+                    <option value="active" selected>Active (visible to public)</option>
+                </select>
+                <p class="hint">Save as draft if you're not ready to go live yet</p>
+            </div>
+
+            <div class="step-actions">
+                <div class="left">
+                    <button type="button" class="btn-back" onclick="goToStep(2)">&larr; Back</button>
+                </div>
+                <div class="right">
+                    <button type="submit" class="btn btn-primary" id="submit-btn" style="padding: 0.7rem 2rem; font-size: 1rem;">Create Listing</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     if (!Auth.requireAuth()) throw new Error('Not authenticated');
 
+    let currentStep = 1;
     let selectedFiles = [];
 
+    // Step navigation
+    function goToStep(step) {
+        // Validate current step before advancing
+        if (step > currentStep) {
+            const currentStepEl = document.querySelector(`.step[data-step="${currentStep}"]`);
+            const requiredFields = currentStepEl.querySelectorAll('[required]');
+            let valid = true;
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.style.borderColor = '#B03A2E';
+                    valid = false;
+                } else {
+                    field.style.borderColor = '#D4DDD9';
+                }
+            });
+            if (!valid) {
+                const errorEl = document.getElementById('error');
+                errorEl.textContent = 'Please fill in all required fields before continuing.';
+                errorEl.style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+            }
+        }
+
+        document.getElementById('error').style.display = 'none';
+
+        // Update step visibility
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.querySelector(`.step[data-step="${step}"]`).classList.add('active');
+
+        // Update progress bar
+        document.querySelectorAll('.progress-step').forEach(s => {
+            const sStep = parseInt(s.dataset.step);
+            s.classList.remove('active', 'completed', 'clickable');
+            if (sStep === step) {
+                s.classList.add('active');
+            } else if (sStep < step) {
+                s.classList.add('completed', 'clickable');
+            }
+        });
+
+        currentStep = step;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Make completed steps clickable
+    document.querySelectorAll('.progress-step').forEach(s => {
+        s.addEventListener('click', () => {
+            if (s.classList.contains('completed') || s.classList.contains('active')) {
+                goToStep(parseInt(s.dataset.step));
+            }
+        });
+    });
+
+    // Image handling
     document.getElementById('image-input').addEventListener('change', (e) => {
         const newFiles = Array.from(e.target.files);
         selectedFiles = [...selectedFiles, ...newFiles].slice(0, 10);
@@ -156,6 +409,7 @@
         renderPreviews();
     }
 
+    // Form submission
     document.getElementById('property-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('submit-btn');
@@ -198,7 +452,7 @@
 
             // Upload images
             if (selectedFiles.length > 0) {
-                btn.textContent = 'Uploading images...';
+                btn.textContent = 'Uploading photos...';
                 for (const file of selectedFiles) {
                     const formData = new FormData();
                     formData.append('image', file);
@@ -216,6 +470,7 @@
             errorEl.style.display = 'block';
             btn.disabled = false;
             btn.textContent = 'Create Listing';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     });
 </script>
