@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Property - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-title { color: #1a365d; margin-bottom: 1.5rem; }
+    .property-form { max-width: 700px; }
+    .form-group { margin-bottom: 1.25rem; }
+    .form-group label { display: block; margin-bottom: 0.3rem; font-weight: 500; color: #555; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.6rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-family: inherit; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #1a365d; box-shadow: 0 0 0 2px rgba(26,54,93,0.15); }
+    .form-group textarea { min-height: 120px; resize: vertical; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+    .section-title { font-size: 1.1rem; color: #1a365d; margin: 1.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e2e2e2; }
+    .image-upload { border: 2px dashed #d1d5db; border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+    .image-upload:hover { border-color: #1a365d; }
+    .image-upload input { display: none; }
+    .existing-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+    .existing-image { position: relative; border-radius: 6px; overflow: hidden; border: 2px solid transparent; }
+    .existing-image.primary { border-color: #38a169; }
+    .existing-image img { width: 100%; height: 110px; object-fit: cover; }
+    .existing-image .actions { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); display: flex; justify-content: center; gap: 0.25rem; padding: 4px; }
+    .existing-image .actions button { background: none; border: none; color: white; cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 3px; }
+    .existing-image .actions button:hover { background: rgba(255,255,255,0.2); }
+    .primary-badge { position: absolute; top: 4px; left: 4px; background: #38a169; color: white; font-size: 11px; padding: 2px 6px; border-radius: 3px; font-weight: 600; }
+    .new-preview { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
+    .new-preview-item { position: relative; border-radius: 6px; overflow: hidden; }
+    .new-preview-item img { width: 100%; height: 100px; object-fit: cover; }
+    .new-preview-item .remove { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 14px; line-height: 22px; text-align: center; }
+    .form-actions { margin-top: 2rem; display: flex; gap: 0.75rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 class="page-title">Edit Property</h2>
+<div id="error" class="alert alert-error" style="display:none;"></div>
+<div id="success" class="alert alert-success" style="display:none;"></div>
+<div id="form-container"><p>Loading...</p></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+
+    const propertyId = window.location.pathname.match(/\/properties\/(\d+)\/edit/)?.[1];
+    if (!propertyId) window.location.href = '/';
+
+    let existingImages = [];
+    let newFiles = [];
+
+    async function loadProperty() {
+        const res = await fetch(`/api/properties/${propertyId}/`, { headers: Auth.headers() });
+        if (!res.ok) { document.getElementById('form-container').innerHTML = '<div class="alert alert-error">Property not found.</div>'; return; }
+        const p = await res.json();
+        existingImages = p.images || [];
+
+        document.getElementById('form-container').innerHTML = `
+        <form id="property-form" class="property-form">
+            <div class="form-group">
+                <label for="title">Property Title</label>
+                <input type="text" id="title" value="${p.title}" required>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="property_type">Property Type</label>
+                    <select id="property_type" required>
+                        ${['detached','semi_detached','terraced','flat','bungalow','cottage','land','other'].map(t =>
+                            `<option value="${t}" ${p.property_type === t ? 'selected' : ''}>${t.replace('_',' ').replace(/\\b\\w/g, c => c.toUpperCase())}</option>`
+                        ).join('')}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="price">Price (&pound;)</label>
+                    <input type="number" id="price" value="${p.price}" min="0" step="1" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description">${p.description || ''}</textarea>
+            </div>
+            <h3 class="section-title">Address</h3>
+            <div class="form-group"><label for="address_line_1">Address Line 1</label><input type="text" id="address_line_1" value="${p.address_line_1}" required></div>
+            <div class="form-group"><label for="address_line_2">Address Line 2</label><input type="text" id="address_line_2" value="${p.address_line_2 || ''}"></div>
+            <div class="form-row">
+                <div class="form-group"><label for="city">City / Town</label><input type="text" id="city" value="${p.city}" required></div>
+                <div class="form-group"><label for="county">County</label><input type="text" id="county" value="${p.county || ''}"></div>
+            </div>
+            <div class="form-group" style="max-width:200px;"><label for="postcode">Postcode</label><input type="text" id="postcode" value="${p.postcode}" required></div>
+            <h3 class="section-title">Property Details</h3>
+            <div class="form-row-3">
+                <div class="form-group"><label for="bedrooms">Bedrooms</label><input type="number" id="bedrooms" value="${p.bedrooms}" min="0"></div>
+                <div class="form-group"><label for="bathrooms">Bathrooms</label><input type="number" id="bathrooms" value="${p.bathrooms}" min="0"></div>
+                <div class="form-group"><label for="reception_rooms">Reception Rooms</label><input type="number" id="reception_rooms" value="${p.reception_rooms}" min="0"></div>
+            </div>
+            <div class="form-group" style="max-width:200px;"><label for="square_feet">Square Feet</label><input type="number" id="square_feet" value="${p.square_feet || ''}" min="0"></div>
+            <h3 class="section-title">Photos</h3>
+            <div class="existing-images" id="existing-images"></div>
+            <div class="image-upload" onclick="document.getElementById('image-input').click()">
+                <input type="file" id="image-input" accept="image/*" multiple>
+                <p>Click to add more photos</p>
+            </div>
+            <div class="new-preview" id="new-preview"></div>
+            <div class="form-group" style="margin-top:1.5rem;">
+                <label for="status">Listing Status</label>
+                <select id="status">
+                    ${['draft','active','under_offer','sold_stc','sold','withdrawn'].map(s =>
+                        `<option value="${s}" ${p.status === s ? 'selected' : ''}>${s.replace('_',' ').replace(/\\b\\w/g, c => c.toUpperCase())}</option>`
+                    ).join('')}
+                </select>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="submit-btn">Save Changes</button>
+                <a href="/properties/${propertyId}/" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>`;
+
+        renderExistingImages();
+        document.getElementById('image-input').addEventListener('change', onNewFiles);
+        document.getElementById('property-form').addEventListener('submit', onSubmit);
+    }
+
+    function renderExistingImages() {
+        const container = document.getElementById('existing-images');
+        container.innerHTML = existingImages.map(img => `
+            <div class="existing-image ${img.is_primary ? 'primary' : ''}">
+                ${img.is_primary ? '<span class="primary-badge">Primary</span>' : ''}
+                <img src="${img.image}" alt="${img.caption || ''}">
+                <div class="actions">
+                    ${!img.is_primary ? `<button type="button" onclick="setPrimary(${img.id})" title="Set as primary">&#9733;</button>` : ''}
+                    <button type="button" onclick="deleteImage(${img.id})" title="Delete">&times;</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function onNewFiles(e) {
+        const files = Array.from(e.target.files);
+        const maxNew = 10 - existingImages.length - newFiles.length;
+        newFiles = [...newFiles, ...files].slice(0, Math.max(0, maxNew));
+        const container = document.getElementById('new-preview');
+        container.innerHTML = newFiles.map((f, i) => `
+            <div class="new-preview-item">
+                <img src="${URL.createObjectURL(f)}" alt="New">
+                <button type="button" class="remove" onclick="removeNew(${i})">&times;</button>
+            </div>
+        `).join('');
+    }
+
+    function removeNew(i) { newFiles.splice(i, 1); onNewFiles({ target: { files: [] } }); }
+
+    async function setPrimary(imageId) {
+        await fetch(`/api/properties/${propertyId}/images/${imageId}/`, {
+            method: 'PATCH', headers: Auth.headers(), body: JSON.stringify({ is_primary: true }),
+        });
+        const res = await fetch(`/api/properties/${propertyId}/`, { headers: Auth.headers() });
+        const p = await res.json();
+        existingImages = p.images || [];
+        renderExistingImages();
+    }
+
+    async function deleteImage(imageId) {
+        if (!confirm('Delete this image?')) return;
+        await fetch(`/api/properties/${propertyId}/images/${imageId}/`, {
+            method: 'DELETE', headers: Auth.headers(false),
+        });
+        existingImages = existingImages.filter(img => img.id !== imageId);
+        renderExistingImages();
+    }
+
+    async function onSubmit(e) {
+        e.preventDefault();
+        const btn = document.getElementById('submit-btn');
+        const errorEl = document.getElementById('error');
+        const successEl = document.getElementById('success');
+        errorEl.style.display = 'none';
+        successEl.style.display = 'none';
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+
+        const body = {
+            title: document.getElementById('title').value,
+            property_type: document.getElementById('property_type').value,
+            price: document.getElementById('price').value,
+            description: document.getElementById('description').value,
+            address_line_1: document.getElementById('address_line_1').value,
+            address_line_2: document.getElementById('address_line_2').value,
+            city: document.getElementById('city').value,
+            county: document.getElementById('county').value,
+            postcode: document.getElementById('postcode').value,
+            bedrooms: parseInt(document.getElementById('bedrooms').value) || 0,
+            bathrooms: parseInt(document.getElementById('bathrooms').value) || 0,
+            reception_rooms: parseInt(document.getElementById('reception_rooms').value) || 0,
+            status: document.getElementById('status').value,
+        };
+        const sqft = document.getElementById('square_feet').value;
+        if (sqft) body.square_feet = parseInt(sqft); else body.square_feet = null;
+
+        try {
+            const res = await fetch(`/api/properties/${propertyId}/`, {
+                method: 'PATCH', headers: Auth.headers(), body: JSON.stringify(body),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(Object.entries(data).map(([k,v]) => `${k}: ${v}`).join(' | '));
+            }
+
+            if (newFiles.length > 0) {
+                btn.textContent = 'Uploading images...';
+                for (const file of newFiles) {
+                    const fd = new FormData();
+                    fd.append('image', file);
+                    await fetch(`/api/properties/${propertyId}/images/`, {
+                        method: 'POST', headers: Auth.headers(false), body: fd,
+                    });
+                }
+                newFiles = [];
+                document.getElementById('new-preview').innerHTML = '';
+            }
+
+            successEl.textContent = 'Property updated successfully.';
+            successEl.style.display = 'block';
+            // Refresh images
+            const r2 = await fetch(`/api/properties/${propertyId}/`, { headers: Auth.headers() });
+            const p2 = await r2.json();
+            existingImages = p2.images || [];
+            renderExistingImages();
+        } catch (err) {
+            errorEl.textContent = err.message || 'Failed to update property.';
+            errorEl.style.display = 'block';
+        }
+
+        btn.disabled = false;
+        btn.textContent = 'Save Changes';
+    }
+
+    loadProperty();
+</script>
+{% endblock %}

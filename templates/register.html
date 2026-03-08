@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Register - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .auth-form { max-width: 400px; margin: 2rem auto; }
+    .auth-form h2 { margin-bottom: 1.5rem; color: #1a365d; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; margin-bottom: 0.3rem; font-weight: 500; color: #555; }
+    .form-group input { width: 100%; padding: 0.6rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-family: inherit; }
+    .form-group input:focus { outline: none; border-color: #1a365d; box-shadow: 0 0 0 2px rgba(26,54,93,0.15); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .auth-form .btn { width: 100%; padding: 0.75rem; font-size: 1rem; margin-top: 0.5rem; }
+    .auth-link { text-align: center; margin-top: 1rem; color: #666; }
+    .auth-link a { color: #1a365d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-form">
+    <h2>Create Account</h2>
+    <div id="error" class="alert alert-error" style="display:none;"></div>
+    <form id="register-form">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="first_name">First Name</label>
+                <input type="text" id="first_name" required>
+            </div>
+            <div class="form-group">
+                <label for="last_name">Last Name</label>
+                <input type="text" id="last_name" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" required minlength="8">
+        </div>
+        <div class="form-group">
+            <label for="re_password">Confirm Password</label>
+            <input type="password" id="re_password" required minlength="8">
+        </div>
+        <button type="submit" class="btn btn-primary" id="submit-btn">Register</button>
+    </form>
+    <p class="auth-link">Already have an account? <a href="/login/">Login</a></p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (Auth.isLoggedIn()) window.location.href = '/';
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submit-btn');
+        const errorEl = document.getElementById('error');
+        errorEl.style.display = 'none';
+
+        const password = document.getElementById('password').value;
+        const rePassword = document.getElementById('re_password').value;
+        if (password !== rePassword) {
+            errorEl.textContent = 'Passwords do not match.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Creating account...';
+
+        try {
+            const res = await fetch('/auth/users/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: document.getElementById('email').value,
+                    first_name: document.getElementById('first_name').value,
+                    last_name: document.getElementById('last_name').value,
+                    password: password,
+                    re_password: rePassword,
+                }),
+            });
+
+            if (res.ok || res.status === 201) {
+                window.location.href = '/login/?registered=1';
+            } else {
+                const data = await res.json();
+                const msgs = [];
+                for (const [key, val] of Object.entries(data)) {
+                    const errors = Array.isArray(val) ? val.join(', ') : val;
+                    msgs.push(`${key}: ${errors}`);
+                }
+                errorEl.textContent = msgs.join(' | ') || 'Registration failed.';
+                errorEl.style.display = 'block';
+            }
+        } catch (err) {
+            errorEl.textContent = 'Network error. Please try again.';
+            errorEl.style.display = 'block';
+        }
+
+        btn.disabled = false;
+        btn.textContent = 'Register';
+    });
+</script>
+{% endblock %}

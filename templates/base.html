@@ -16,6 +16,16 @@
         nav a:hover { color: white; }
         main { padding: 2rem 0; min-height: 60vh; }
         footer { background: #f5f5f5; padding: 1rem 0; text-align: center; color: #666; margin-top: 2rem; border-top: 1px solid #e2e2e2; }
+        .btn { display: inline-block; padding: 0.6rem 1.2rem; border-radius: 6px; text-decoration: none; font-size: 0.95rem; cursor: pointer; border: none; font-family: inherit; }
+        .btn-primary { background: #38a169; color: white; }
+        .btn-primary:hover { background: #2f855a; }
+        .btn-secondary { background: #e2e8f0; color: #1a365d; }
+        .btn-secondary:hover { background: #cbd5e0; }
+        .btn-danger { background: #e53e3e; color: white; }
+        .btn-danger:hover { background: #c53030; }
+        .alert { padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; }
+        .alert-error { background: #fed7d7; color: #9b2c2c; border: 1px solid #feb2b2; }
+        .alert-success { background: #c6f6d5; color: #22543d; border: 1px solid #9ae6b4; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -23,10 +33,9 @@
     <header>
         <div class="container">
             <h1><a href="/">For Sale By Owner</a></h1>
-            <nav>
+            <nav id="main-nav">
                 <a href="/">Home</a>
-                <a href="/admin/">Admin</a>
-                <a href="/api/">API</a>
+                <span id="nav-auth"></span>
             </nav>
         </div>
     </header>
@@ -40,6 +49,53 @@
             <p>&copy; 2026 For Sale By Owner &mdash; for-sale-by-owner.co.uk</p>
         </div>
     </footer>
+    <script>
+        // Auth helper used across all pages
+        const Auth = {
+            getToken() { return localStorage.getItem('auth_token'); },
+            setToken(token) { localStorage.setItem('auth_token', token); },
+            clear() { localStorage.removeItem('auth_token'); },
+            isLoggedIn() { return !!this.getToken(); },
+            headers(json = true) {
+                const h = {};
+                if (json) h['Content-Type'] = 'application/json';
+                const t = this.getToken();
+                if (t) h['Authorization'] = 'Token ' + t;
+                return h;
+            },
+            requireAuth() {
+                if (!this.isLoggedIn()) {
+                    window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
+                    return false;
+                }
+                return true;
+            },
+            async logout() {
+                try {
+                    await fetch('/auth/token/logout/', { method: 'POST', headers: this.headers() });
+                } catch(e) {}
+                this.clear();
+                window.location.href = '/';
+            }
+        };
+
+        // Render nav based on auth state
+        (function() {
+            const nav = document.getElementById('nav-auth');
+            if (Auth.isLoggedIn()) {
+                nav.innerHTML = `
+                    <a href="/my-listings/">My Listings</a>
+                    <a href="/properties/new/">List Property</a>
+                    <a href="#" onclick="Auth.logout(); return false;">Logout</a>
+                `;
+            } else {
+                nav.innerHTML = `
+                    <a href="/login/">Login</a>
+                    <a href="/register/">Register</a>
+                `;
+            }
+        })();
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

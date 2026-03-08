@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}List Your Property - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-title { color: #1a365d; margin-bottom: 1.5rem; }
+    .property-form { max-width: 700px; }
+    .form-group { margin-bottom: 1.25rem; }
+    .form-group label { display: block; margin-bottom: 0.3rem; font-weight: 500; color: #555; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.6rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-family: inherit; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #1a365d; box-shadow: 0 0 0 2px rgba(26,54,93,0.15); }
+    .form-group textarea { min-height: 120px; resize: vertical; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+    .section-title { font-size: 1.1rem; color: #1a365d; margin: 1.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e2e2e2; }
+    .image-upload { border: 2px dashed #d1d5db; border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+    .image-upload:hover { border-color: #1a365d; }
+    .image-upload input { display: none; }
+    .image-preview { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.75rem; margin-top: 1rem; }
+    .image-preview-item { position: relative; border-radius: 6px; overflow: hidden; }
+    .image-preview-item img { width: 100%; height: 100px; object-fit: cover; }
+    .image-preview-item .remove { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 14px; line-height: 22px; text-align: center; }
+    .form-actions { margin-top: 2rem; display: flex; gap: 0.75rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 class="page-title">List Your Property</h2>
+<div id="error" class="alert alert-error" style="display:none;"></div>
+<form id="property-form" class="property-form">
+    <div class="form-group">
+        <label for="title">Property Title</label>
+        <input type="text" id="title" placeholder="e.g. Beautiful 3-bed semi in Cheltenham" required>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label for="property_type">Property Type</label>
+            <select id="property_type" required>
+                <option value="detached">Detached</option>
+                <option value="semi_detached">Semi-Detached</option>
+                <option value="terraced">Terraced</option>
+                <option value="flat">Flat/Apartment</option>
+                <option value="bungalow">Bungalow</option>
+                <option value="cottage">Cottage</option>
+                <option value="land">Land</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="price">Price (&pound;)</label>
+            <input type="number" id="price" min="0" step="1" required>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="description">Description</label>
+        <textarea id="description" placeholder="Describe your property..."></textarea>
+    </div>
+
+    <h3 class="section-title">Address</h3>
+    <div class="form-group">
+        <label for="address_line_1">Address Line 1</label>
+        <input type="text" id="address_line_1" required>
+    </div>
+    <div class="form-group">
+        <label for="address_line_2">Address Line 2</label>
+        <input type="text" id="address_line_2">
+    </div>
+    <div class="form-row">
+        <div class="form-group">
+            <label for="city">City / Town</label>
+            <input type="text" id="city" required>
+        </div>
+        <div class="form-group">
+            <label for="county">County</label>
+            <input type="text" id="county">
+        </div>
+    </div>
+    <div class="form-group" style="max-width: 200px;">
+        <label for="postcode">Postcode</label>
+        <input type="text" id="postcode" required>
+    </div>
+
+    <h3 class="section-title">Property Details</h3>
+    <div class="form-row-3">
+        <div class="form-group">
+            <label for="bedrooms">Bedrooms</label>
+            <input type="number" id="bedrooms" min="0" value="0">
+        </div>
+        <div class="form-group">
+            <label for="bathrooms">Bathrooms</label>
+            <input type="number" id="bathrooms" min="0" value="0">
+        </div>
+        <div class="form-group">
+            <label for="reception_rooms">Reception Rooms</label>
+            <input type="number" id="reception_rooms" min="0" value="0">
+        </div>
+    </div>
+    <div class="form-group" style="max-width: 200px;">
+        <label for="square_feet">Square Feet (optional)</label>
+        <input type="number" id="square_feet" min="0">
+    </div>
+
+    <h3 class="section-title">Photos</h3>
+    <div class="image-upload" onclick="document.getElementById('image-input').click()">
+        <input type="file" id="image-input" accept="image/*" multiple>
+        <p>Click to select photos (up to 10)</p>
+    </div>
+    <div class="image-preview" id="image-preview"></div>
+
+    <div class="form-group" style="margin-top: 1.5rem;">
+        <label for="status">Listing Status</label>
+        <select id="status">
+            <option value="draft">Draft (not visible to public)</option>
+            <option value="active" selected>Active (visible to public)</option>
+        </select>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="submit-btn">Create Listing</button>
+        <a href="/" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+
+    let selectedFiles = [];
+
+    document.getElementById('image-input').addEventListener('change', (e) => {
+        const newFiles = Array.from(e.target.files);
+        selectedFiles = [...selectedFiles, ...newFiles].slice(0, 10);
+        renderPreviews();
+    });
+
+    function renderPreviews() {
+        const container = document.getElementById('image-preview');
+        container.innerHTML = '';
+        selectedFiles.forEach((file, i) => {
+            const url = URL.createObjectURL(file);
+            container.innerHTML += `
+                <div class="image-preview-item">
+                    <img src="${url}" alt="Preview">
+                    <button type="button" class="remove" onclick="removeFile(${i})">&times;</button>
+                </div>
+            `;
+        });
+    }
+
+    function removeFile(index) {
+        selectedFiles.splice(index, 1);
+        renderPreviews();
+    }
+
+    document.getElementById('property-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submit-btn');
+        const errorEl = document.getElementById('error');
+        errorEl.style.display = 'none';
+        btn.disabled = true;
+        btn.textContent = 'Creating...';
+
+        const body = {
+            title: document.getElementById('title').value,
+            property_type: document.getElementById('property_type').value,
+            price: document.getElementById('price').value,
+            description: document.getElementById('description').value,
+            address_line_1: document.getElementById('address_line_1').value,
+            address_line_2: document.getElementById('address_line_2').value,
+            city: document.getElementById('city').value,
+            county: document.getElementById('county').value,
+            postcode: document.getElementById('postcode').value,
+            bedrooms: parseInt(document.getElementById('bedrooms').value) || 0,
+            bathrooms: parseInt(document.getElementById('bathrooms').value) || 0,
+            reception_rooms: parseInt(document.getElementById('reception_rooms').value) || 0,
+            status: document.getElementById('status').value,
+        };
+        const sqft = document.getElementById('square_feet').value;
+        if (sqft) body.square_feet = parseInt(sqft);
+
+        try {
+            const res = await fetch('/api/properties/', {
+                method: 'POST',
+                headers: Auth.headers(),
+                body: JSON.stringify(body),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(Object.entries(data).map(([k,v]) => `${k}: ${v}`).join(' | '));
+            }
+
+            const property = await res.json();
+
+            // Upload images
+            if (selectedFiles.length > 0) {
+                btn.textContent = 'Uploading images...';
+                for (const file of selectedFiles) {
+                    const formData = new FormData();
+                    formData.append('image', file);
+                    await fetch(`/api/properties/${property.id}/images/`, {
+                        method: 'POST',
+                        headers: Auth.headers(false),
+                        body: formData,
+                    });
+                }
+            }
+
+            window.location.href = `/properties/${property.id}/`;
+        } catch (err) {
+            errorEl.textContent = err.message || 'Failed to create property.';
+            errorEl.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Create Listing';
+        }
+    });
+</script>
+{% endblock %}

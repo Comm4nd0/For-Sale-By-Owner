@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Property Details - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .property-header { margin-bottom: 1.5rem; }
+    .property-price { font-size: 2rem; font-weight: 700; color: #38a169; }
+    .property-title { font-size: 1.5rem; color: #1a365d; margin-top: 0.25rem; }
+    .property-type { color: #666; margin-top: 0.25rem; }
+    .carousel { position: relative; background: #f0f0f0; border-radius: 8px; overflow: hidden; margin-bottom: 1.5rem; }
+    .carousel img { width: 100%; height: 400px; object-fit: cover; display: none; }
+    .carousel img.active { display: block; }
+    .carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; padding: 0.75rem 1rem; cursor: pointer; font-size: 1.2rem; border-radius: 4px; }
+    .carousel-btn:hover { background: rgba(0,0,0,0.7); }
+    .carousel-prev { left: 10px; }
+    .carousel-next { right: 10px; }
+    .carousel-dots { text-align: center; padding: 0.75rem; }
+    .carousel-dots span { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ccc; margin: 0 4px; cursor: pointer; }
+    .carousel-dots span.active { background: #1a365d; }
+    .no-image { height: 300px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 1.2rem; }
+    .detail-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
+    .detail-section { margin-bottom: 1.5rem; }
+    .detail-section h3 { color: #1a365d; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e2e2e2; }
+    .detail-row { display: flex; justify-content: space-between; padding: 0.4rem 0; }
+    .detail-label { color: #666; }
+    .detail-value { font-weight: 500; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat-box { text-align: center; padding: 1rem; background: #f7fafc; border-radius: 8px; }
+    .stat-value { font-size: 1.5rem; font-weight: 700; color: #1a365d; }
+    .stat-label { font-size: 0.85rem; color: #666; }
+    .owner-actions { margin-top: 1rem; display: flex; gap: 0.75rem; }
+    @media (max-width: 768px) { .detail-grid { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="property-content">
+    <p>Loading property...</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const propertyId = window.location.pathname.match(/\/properties\/(\d+)/)?.[1];
+    if (!propertyId) window.location.href = '/';
+
+    let currentSlide = 0;
+    let images = [];
+
+    function showSlide(n) {
+        const imgs = document.querySelectorAll('.carousel img');
+        const dots = document.querySelectorAll('.carousel-dots span');
+        if (!imgs.length) return;
+        currentSlide = (n + imgs.length) % imgs.length;
+        imgs.forEach(img => img.classList.remove('active'));
+        dots.forEach(dot => dot.classList.remove('active'));
+        imgs[currentSlide].classList.add('active');
+        dots[currentSlide].classList.add('active');
+    }
+
+    fetch(`/api/properties/${propertyId}/`, { headers: Auth.headers() })
+        .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+        .then(p => {
+            images = p.images || [];
+            const carouselHtml = images.length > 0
+                ? `<div class="carousel">
+                    ${images.map((img, i) => `<img src="${img.image}" alt="${img.caption || p.title}" class="${i === 0 ? 'active' : ''}">`).join('')}
+                    ${images.length > 1 ? `
+                        <button class="carousel-btn carousel-prev" onclick="showSlide(currentSlide - 1)">&lsaquo;</button>
+                        <button class="carousel-btn carousel-next" onclick="showSlide(currentSlide + 1)">&rsaquo;</button>
+                        <div class="carousel-dots">${images.map((_, i) => `<span class="${i === 0 ? 'active' : ''}" onclick="showSlide(${i})"></span>`).join('')}</div>
+                    ` : ''}
+                   </div>`
+                : `<div class="carousel"><div class="no-image">No images available</div></div>`;
+
+            document.getElementById('property-content').innerHTML = `
+                ${carouselHtml}
+                <div class="property-header">
+                    <div class="property-price">&pound;${Number(p.price).toLocaleString()}</div>
+                    <div class="property-title">${p.title}</div>
+                    <div class="property-type">${p.property_type_display} &bull; ${p.status_display}</div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-box"><div class="stat-value">${p.bedrooms}</div><div class="stat-label">Bedrooms</div></div>
+                    <div class="stat-box"><div class="stat-value">${p.bathrooms}</div><div class="stat-label">Bathrooms</div></div>
+                    <div class="stat-box"><div class="stat-value">${p.reception_rooms}</div><div class="stat-label">Reception</div></div>
+                    ${p.square_feet ? `<div class="stat-box"><div class="stat-value">${p.square_feet.toLocaleString()}</div><div class="stat-label">Sq Ft</div></div>` : ''}
+                </div>
+                <div class="detail-grid">
+                    <div>
+                        ${p.description ? `<div class="detail-section"><h3>Description</h3><p>${p.description.replace(/\n/g, '<br>')}</p></div>` : ''}
+                        <div class="detail-section">
+                            <h3>Address</h3>
+                            <p>${p.address_line_1}${p.address_line_2 ? ', ' + p.address_line_2 : ''}<br>
+                            ${p.city}${p.county ? ', ' + p.county : ''}<br>${p.postcode}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="detail-section">
+                            <h3>Details</h3>
+                            <div class="detail-row"><span class="detail-label">Listed by</span><span class="detail-value">${p.owner_name}</span></div>
+                            <div class="detail-row"><span class="detail-label">Property type</span><span class="detail-value">${p.property_type_display}</span></div>
+                            <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value">${p.status_display}</span></div>
+                            <div class="detail-row"><span class="detail-label">Listed</span><span class="detail-value">${new Date(p.created_at).toLocaleDateString()}</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="owner-actions"></div>
+            `;
+
+            // Show edit button if owner
+            if (Auth.isLoggedIn()) {
+                fetch('/auth/users/me/', { headers: Auth.headers() })
+                    .then(r => r.json())
+                    .then(user => {
+                        if (user.id === p.owner) {
+                            document.getElementById('owner-actions').innerHTML = `
+                                <div class="owner-actions">
+                                    <a href="/properties/${p.id}/edit/" class="btn btn-secondary">Edit Property</a>
+                                </div>
+                            `;
+                        }
+                    }).catch(() => {});
+            }
+        })
+        .catch(() => {
+            document.getElementById('property-content').innerHTML = '<div class="alert alert-error">Property not found.</div>';
+        });
+</script>
+{% endblock %}

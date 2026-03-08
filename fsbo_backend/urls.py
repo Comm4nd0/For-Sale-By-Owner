@@ -21,7 +21,15 @@ urlpatterns = [
     path('api/', include('api.urls')),
     path('auth/', include('djoser.urls')),
     path('auth/', include('djoser.urls.authtoken')),
+
+    # Web pages
     path('', TemplateView.as_view(template_name='home.html'), name='home'),
+    path('login/', TemplateView.as_view(template_name='login.html'), name='login'),
+    path('register/', TemplateView.as_view(template_name='register.html'), name='register'),
+    path('properties/new/', TemplateView.as_view(template_name='property_create.html'), name='property-create'),
+    path('properties/<int:id>/', TemplateView.as_view(template_name='property_detail.html'), name='property-detail'),
+    path('properties/<int:id>/edit/', TemplateView.as_view(template_name='property_edit.html'), name='property-edit'),
+    path('my-listings/', TemplateView.as_view(template_name='my_listings.html'), name='my-listings'),
 ]
 
 if settings.DEBUG:

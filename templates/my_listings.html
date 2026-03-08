@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}My Listings - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .page-title { color: #1a365d; margin: 0; }
+    .listings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.25rem; }
+    .listing-card { border: 1px solid #e2e2e2; border-radius: 8px; overflow: hidden; transition: box-shadow 0.2s; }
+    .listing-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .listing-image { width: 100%; height: 180px; object-fit: cover; display: block; }
+    .listing-placeholder { width: 100%; height: 180px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 2rem; }
+    .listing-body { padding: 1rem 1.25rem; }
+    .listing-body h3 { margin-bottom: 0.25rem; color: #1a365d; font-size: 1.05rem; }
+    .listing-price { font-size: 1.2rem; font-weight: 700; color: #38a169; margin-bottom: 0.5rem; }
+    .listing-address { color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; }
+    .listing-meta { display: flex; gap: 1rem; color: #555; font-size: 0.85rem; margin-bottom: 0.75rem; }
+    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; }
+    .status-draft { background: #e2e8f0; color: #4a5568; }
+    .status-active { background: #c6f6d5; color: #22543d; }
+    .status-under_offer { background: #fefcbf; color: #975a16; }
+    .status-sold_stc { background: #fed7e2; color: #97266d; }
+    .status-sold { background: #bee3f8; color: #2a4365; }
+    .status-withdrawn { background: #fed7d7; color: #9b2c2c; }
+    .listing-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #f0f0f0; }
+    .listing-actions a { font-size: 0.85rem; }
+    .empty-state { text-align: center; padding: 4rem 2rem; color: #666; }
+    .empty-state p { margin-bottom: 1rem; font-size: 1.1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2 class="page-title">My Listings</h2>
+    <a href="/properties/new/" class="btn btn-primary">+ New Listing</a>
+</div>
+<div id="error" class="alert alert-error" style="display:none;"></div>
+<div id="listings"><p>Loading...</p></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+
+    async function loadListings() {
+        try {
+            // Get current user
+            const meRes = await fetch('/auth/users/me/', { headers: Auth.headers() });
+            if (!meRes.ok) { Auth.clear(); window.location.href = '/login/'; return; }
+            const me = await meRes.json();
+
+            // Get all properties and filter to user's own
+            const res = await fetch('/api/properties/', { headers: Auth.headers() });
+            const data = await res.json();
+            const results = data.results || data;
+            const myProperties = results.filter(p => p.owner === me.id);
+
+            const container = document.getElementById('listings');
+            if (myProperties.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>You haven't listed any properties yet.</p>
+                        <a href="/properties/new/" class="btn btn-primary">Create Your First Listing</a>
+                    </div>`;
+                return;
+            }
+
+            container.className = 'listings-grid';
+            container.innerHTML = myProperties.map(p => {
+                const imgHtml = p.primary_image
+                    ? `<img class="listing-image" src="${p.primary_image}" alt="${p.title}">`
+                    : `<div class="listing-placeholder">&#8962;</div>`;
+                return `
+                <div class="listing-card">
+                    ${imgHtml}
+                    <div class="listing-body">
+                        <h3>${p.title}</h3>
+                        <div class="listing-price">&pound;${Number(p.price).toLocaleString()}</div>
+                        <div class="listing-address">${p.address_line_1}, ${p.city} ${p.postcode}</div>
+                        <div class="listing-meta">
+                            <span>${p.bedrooms} bed</span>
+                            <span>${p.bathrooms} bath</span>
+                            <span>${p.reception_rooms} recep</span>
+                        </div>
+                        <span class="status-badge status-${p.status}">${(p.status_display || p.status).replace('_', ' ')}</span>
+                        <div class="listing-actions">
+                            <a href="/properties/${p.id}/" class="btn btn-secondary">View</a>
+                            <a href="/properties/${p.id}/edit/" class="btn btn-secondary">Edit</a>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        } catch (err) {
+            document.getElementById('error').textContent = 'Failed to load listings.';
+            document.getElementById('error').style.display = 'block';
+        }
+    }
+
+    loadListings();
+</script>
+{% endblock %}
