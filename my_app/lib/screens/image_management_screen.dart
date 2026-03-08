@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
+import '../constants/app_theme.dart';
 import '../models/property.dart';
 import '../models/property_image.dart';
 import '../services/api_service.dart';
@@ -197,7 +198,7 @@ class _ImageManagementScreenState extends State<ImageManagementScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF38A169),
+                  color: AppTheme.forestMid,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: const Text(

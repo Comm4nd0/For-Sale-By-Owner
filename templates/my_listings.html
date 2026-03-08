@@ -5,27 +5,27 @@
 {% block extra_css %}
 <style>
     .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-    .page-title { color: #1a365d; margin: 0; }
+    .page-title { color: #1A3C2E; margin: 0; }
     .listings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.25rem; }
-    .listing-card { border: 1px solid #e2e2e2; border-radius: 8px; overflow: hidden; transition: box-shadow 0.2s; }
-    .listing-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .listing-card { border: 1px solid #D4DDD9; border-radius: 8px; overflow: hidden; transition: box-shadow 0.2s; background: #FFFFFF; }
+    .listing-card:hover { box-shadow: 0 4px 12px rgba(26,60,46,0.12); }
     .listing-image { width: 100%; height: 180px; object-fit: cover; display: block; }
-    .listing-placeholder { width: 100%; height: 180px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 2rem; }
+    .listing-placeholder { width: 100%; height: 180px; background: #D8F3DC; display: flex; align-items: center; justify-content: center; color: #8FA89E; font-size: 2rem; }
     .listing-body { padding: 1rem 1.25rem; }
-    .listing-body h3 { margin-bottom: 0.25rem; color: #1a365d; font-size: 1.05rem; }
-    .listing-price { font-size: 1.2rem; font-weight: 700; color: #38a169; margin-bottom: 0.5rem; }
-    .listing-address { color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; }
-    .listing-meta { display: flex; gap: 1rem; color: #555; font-size: 0.85rem; margin-bottom: 0.75rem; }
+    .listing-body h3 { margin-bottom: 0.25rem; color: #1A3C2E; font-size: 1.05rem; }
+    .listing-price { font-size: 1.2rem; font-weight: 700; color: #C9872A; margin-bottom: 0.5rem; }
+    .listing-address { color: #4A5E56; font-size: 0.9rem; margin-bottom: 0.5rem; }
+    .listing-meta { display: flex; gap: 1rem; color: #4A5E56; font-size: 0.85rem; margin-bottom: 0.75rem; }
     .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; }
-    .status-draft { background: #e2e8f0; color: #4a5568; }
-    .status-active { background: #c6f6d5; color: #22543d; }
-    .status-under_offer { background: #fefcbf; color: #975a16; }
-    .status-sold_stc { background: #fed7e2; color: #97266d; }
-    .status-sold { background: #bee3f8; color: #2a4365; }
-    .status-withdrawn { background: #fed7d7; color: #9b2c2c; }
-    .listing-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #f0f0f0; }
+    .status-draft { background: #D4DDD9; color: #4A5E56; }
+    .status-active { background: #D8F3DC; color: #1A3C2E; }
+    .status-under_offer { background: #FFF0D4; color: #C9872A; }
+    .status-sold_stc { background: #FFF0D4; color: #C9872A; }
+    .status-sold { background: #D8F3DC; color: #2D6A4F; }
+    .status-withdrawn { background: #f8d7d4; color: #B03A2E; }
+    .listing-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #D4DDD9; }
     .listing-actions a { font-size: 0.85rem; }
-    .empty-state { text-align: center; padding: 4rem 2rem; color: #666; }
+    .empty-state { text-align: center; padding: 4rem 2rem; color: #4A5E56; }
     .empty-state p { margin-bottom: 1rem; font-size: 1.1rem; }
 </style>
 {% endblock %}
@@ -45,12 +45,10 @@
 
     async function loadListings() {
         try {
-            // Get current user
             const meRes = await fetch('/auth/users/me/', { headers: Auth.headers() });
             if (!meRes.ok) { Auth.clear(); window.location.href = '/login/'; return; }
             const me = await meRes.json();
 
-            // Get all properties and filter to user's own
             const res = await fetch('/api/properties/', { headers: Auth.headers() });
             const data = await res.json();
             const results = data.results || data;

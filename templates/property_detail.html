@@ -5,30 +5,30 @@
 {% block extra_css %}
 <style>
     .property-header { margin-bottom: 1.5rem; }
-    .property-price { font-size: 2rem; font-weight: 700; color: #38a169; }
-    .property-title { font-size: 1.5rem; color: #1a365d; margin-top: 0.25rem; }
-    .property-type { color: #666; margin-top: 0.25rem; }
-    .carousel { position: relative; background: #f0f0f0; border-radius: 8px; overflow: hidden; margin-bottom: 1.5rem; }
+    .property-price { font-size: 2rem; font-weight: 700; color: #C9872A; }
+    .property-title { font-size: 1.5rem; color: #1A3C2E; margin-top: 0.25rem; }
+    .property-type { color: #4A5E56; margin-top: 0.25rem; }
+    .carousel { position: relative; background: #D8F3DC; border-radius: 8px; overflow: hidden; margin-bottom: 1.5rem; }
     .carousel img { width: 100%; height: 400px; object-fit: cover; display: none; }
     .carousel img.active { display: block; }
-    .carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; padding: 0.75rem 1rem; cursor: pointer; font-size: 1.2rem; border-radius: 4px; }
-    .carousel-btn:hover { background: rgba(0,0,0,0.7); }
+    .carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(26,60,46,0.6); color: white; border: none; padding: 0.75rem 1rem; cursor: pointer; font-size: 1.2rem; border-radius: 4px; }
+    .carousel-btn:hover { background: rgba(26,60,46,0.85); }
     .carousel-prev { left: 10px; }
     .carousel-next { right: 10px; }
     .carousel-dots { text-align: center; padding: 0.75rem; }
-    .carousel-dots span { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ccc; margin: 0 4px; cursor: pointer; }
-    .carousel-dots span.active { background: #1a365d; }
-    .no-image { height: 300px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 1.2rem; }
+    .carousel-dots span { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #D4DDD9; margin: 0 4px; cursor: pointer; }
+    .carousel-dots span.active { background: #1A3C2E; }
+    .no-image { height: 300px; display: flex; align-items: center; justify-content: center; color: #8FA89E; font-size: 1.2rem; }
     .detail-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
     .detail-section { margin-bottom: 1.5rem; }
-    .detail-section h3 { color: #1a365d; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e2e2e2; }
+    .detail-section h3 { color: #1A3C2E; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid #D4DDD9; }
     .detail-row { display: flex; justify-content: space-between; padding: 0.4rem 0; }
-    .detail-label { color: #666; }
+    .detail-label { color: #4A5E56; }
     .detail-value { font-weight: 500; }
     .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
-    .stat-box { text-align: center; padding: 1rem; background: #f7fafc; border-radius: 8px; }
-    .stat-value { font-size: 1.5rem; font-weight: 700; color: #1a365d; }
-    .stat-label { font-size: 0.85rem; color: #666; }
+    .stat-box { text-align: center; padding: 1rem; background: #FFFFFF; border-radius: 8px; border: 1px solid #D4DDD9; }
+    .stat-value { font-size: 1.5rem; font-weight: 700; color: #1A3C2E; }
+    .stat-label { font-size: 0.85rem; color: #4A5E56; }
     .owner-actions { margin-top: 1rem; display: flex; gap: 0.75rem; }
     @media (max-width: 768px) { .detail-grid { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
 </style>

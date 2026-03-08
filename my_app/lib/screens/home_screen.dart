@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../constants/app_theme.dart';
 import '../models/property.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -169,7 +170,7 @@ class PropertyCard extends StatelessWidget {
                   Text(
                     property.formattedPrice,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: const Color(0xFF38A169),
+                          color: AppTheme.goldEmber,
                           fontWeight: FontWeight.bold,
                         ),
                   ),
