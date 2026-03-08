@@ -14,6 +14,10 @@
     .auth-form .btn { width: 100%; padding: 0.75rem; font-size: 1rem; margin-top: 0.5rem; }
     .auth-link { text-align: center; margin-top: 1rem; color: #4A5E56; }
     .auth-link a { color: #2D6A4F; }
+    .form-check { display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 1rem; }
+    .form-check input[type="checkbox"] { margin-top: 0.3rem; width: 16px; height: 16px; accent-color: #2D6A4F; flex-shrink: 0; }
+    .form-check label { font-size: 0.9rem; color: #4A5E56; line-height: 1.4; }
+    .form-check a { color: #2D6A4F; }
 </style>
 {% endblock %}
 
@@ -44,6 +48,10 @@
             <label for="re_password">Confirm Password</label>
             <input type="password" id="re_password" required minlength="8">
         </div>
+        <div class="form-check">
+            <input type="checkbox" id="agree_terms" required>
+            <label for="agree_terms">I agree to the <a href="/terms/" target="_blank">Terms &amp; Conditions</a> and <a href="/privacy/" target="_blank">Privacy Policy</a>.</label>
+        </div>
         <button type="submit" class="btn btn-primary" id="submit-btn">Register</button>
     </form>
     <p class="auth-link">Already have an account? <a href="/login/">Login</a></p>
@@ -59,6 +67,12 @@
         const btn = document.getElementById('submit-btn');
         const errorEl = document.getElementById('error');
         errorEl.style.display = 'none';
+
+        if (!document.getElementById('agree_terms').checked) {
+            errorEl.textContent = 'You must agree to the Terms & Conditions and Privacy Policy.';
+            errorEl.style.display = 'block';
+            return;
+        }
 
         const password = document.getElementById('password').value;
         const rePassword = document.getElementById('re_password').value;
