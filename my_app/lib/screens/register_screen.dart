@@ -18,6 +18,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _rePasswordController = TextEditingController();
   String? _error;
+  bool _agreedToTerms = false;
 
   @override
   void dispose() {
@@ -31,6 +32,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (!_agreedToTerms) {
+      setState(() => _error = 'You must agree to the Terms & Conditions and Privacy Policy.');
+      return;
+    }
 
     if (_passwordController.text != _rePasswordController.text) {
       setState(() => _error = 'Passwords do not match');
@@ -133,7 +139,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 obscureText: true,
                 validator: (v) => v == null || v.isEmpty ? 'Required' : null,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Checkbox(
+                    value: _agreedToTerms,
+                    onChanged: (value) {
+                      setState(() => _agreedToTerms = value ?? false);
+                    },
+                    activeColor: const Color(0xFF2D6A4F),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() => _agreedToTerms = !_agreedToTerms);
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.only(top: 12),
+                        child: Text(
+                          'I agree to the Terms & Conditions and Privacy Policy.',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: authService.isLoading ? null : _register,
                 child: authService.isLoading

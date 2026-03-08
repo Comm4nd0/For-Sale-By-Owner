@@ -34,6 +34,11 @@ urlpatterns = [
     path('properties/<int:id>/', TemplateView.as_view(template_name='property_detail.html'), name='property-detail'),
     path('properties/<int:id>/edit/', TemplateView.as_view(template_name='property_edit.html'), name='property-edit'),
     path('my-listings/', TemplateView.as_view(template_name='my_listings.html'), name='my-listings'),
+
+    # Legal pages
+    path('terms/', TemplateView.as_view(template_name='terms.html'), name='terms'),
+    path('privacy/', TemplateView.as_view(template_name='privacy.html'), name='privacy'),
+    path('cookies/', TemplateView.as_view(template_name='cookies.html'), name='cookies'),
 ]
 
 if settings.DEBUG:
