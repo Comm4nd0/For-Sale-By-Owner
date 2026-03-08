@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+eggs/
+*.egg
+.Python
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+/media/
+/staticfiles/
+
+# Environment
+.env
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Flutter
+my_app/.dart_tool/
+my_app/.packages
+my_app/.pub-cache/
+my_app/.pub/
+my_app/build/
+my_app/.flutter-plugins
+my_app/.flutter-plugins-dependencies
+my_app/android/.gradle/
+my_app/android/app/build/
+my_app/android/build/
+my_app/ios/Pods/
+my_app/ios/.symlinks/
+my_app/ios/Flutter/Flutter.framework
+my_app/ios/Flutter/Flutter.podspec
+my_app/.metadata

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Properties For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero { background: linear-gradient(135deg, #1a365d 0%, #2d4a7a 100%); color: white; padding: 3rem 0; margin: -2rem 0 2rem; }
+    .hero h2 { font-size: 2rem; margin-bottom: 0.5rem; }
+    .hero p { font-size: 1.1rem; opacity: 0.9; }
+    .property-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem; }
+    .property-card { border: 1px solid #e2e2e2; border-radius: 8px; padding: 1.5rem; transition: box-shadow 0.2s; }
+    .property-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .property-card h3 { margin-bottom: 0.5rem; color: #1a365d; }
+    .property-price { font-size: 1.4rem; font-weight: 700; color: #38a169; margin-bottom: 0.5rem; }
+    .property-details { color: #666; font-size: 0.9rem; }
+    .property-meta { display: flex; gap: 1rem; margin-top: 0.75rem; color: #555; font-size: 0.85rem; }
+    .empty-state { text-align: center; padding: 3rem; color: #666; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="container">
+        <h2>Sell Your Property Without an Agent</h2>
+        <p>Save thousands in estate agent fees. List your property directly.</p>
+    </div>
+</div>
+
+<h3 style="margin-bottom: 1.5rem;">Latest Properties</h3>
+<div id="properties">
+    <p>Loading properties...</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    fetch('/api/properties/')
+        .then(r => r.json())
+        .then(data => {
+            const container = document.getElementById('properties');
+            const results = data.results || data;
+            if (!results || results.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No properties listed yet. Check back soon!</p></div>';
+                return;
+            }
+            container.className = 'property-grid';
+            container.innerHTML = results.map(p =>
+                `<div class="property-card">
+                    <h3>${p.title}</h3>
+                    <div class="property-price">&pound;${Number(p.price).toLocaleString()}</div>
+                    <div class="property-details">${p.property_type_display}</div>
+                    <div class="property-details">${p.address_line_1}, ${p.city} ${p.postcode}</div>
+                    <div class="property-meta">
+                        <span>${p.bedrooms} bed</span>
+                        <span>${p.bathrooms} bath</span>
+                        <span>${p.reception_rooms} reception</span>
+                    </div>
+                </div>`
+            ).join('');
+        })
+        .catch(() => {
+            document.getElementById('properties').innerHTML = '<div class="empty-state"><p>Failed to load properties.</p></div>';
+        });
+</script>
+{% endblock %}
