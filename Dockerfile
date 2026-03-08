@@ -26,13 +26,14 @@ WORKDIR /app
 
 COPY --chown=appuser:appuser . .
 
-RUN mkdir -p /app/staticfiles /app/media && \
-    chown -R appuser:appuser /app/staticfiles /app/media
+RUN mkdir -p /app/staticfiles /app/media
 
 # Collect static files at build time
 RUN SECRET_KEY=temp-build-key \
     USE_SQLITE=True \
     python manage.py collectstatic --noinput 2>/dev/null || true
+
+RUN chown -R appuser:appuser /app/staticfiles /app/media
 
 USER appuser
 
