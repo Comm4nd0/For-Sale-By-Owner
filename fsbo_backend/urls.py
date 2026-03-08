@@ -6,6 +6,16 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
+from django.views.decorators.csrf import ensure_csrf_cookie
+
+
+class CSRFTemplateView(TemplateView):
+    """TemplateView that always sets the CSRF cookie."""
+
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = super().as_view(**initkwargs)
+        return ensure_csrf_cookie(view)
 
 admin.site.site_header = "For Sale By Owner"
 admin.site.site_title = "FSBO Admin"
@@ -27,19 +37,19 @@ urlpatterns = [
     path('auth/', include('djoser.urls.authtoken')),
 
     # Web pages
-    path('', TemplateView.as_view(template_name='home.html'), name='home'),
-    path('search/', TemplateView.as_view(template_name='search_results.html'), name='search'),
-    path('login/', TemplateView.as_view(template_name='login.html'), name='login'),
-    path('register/', TemplateView.as_view(template_name='register.html'), name='register'),
-    path('properties/new/', TemplateView.as_view(template_name='property_create.html'), name='property-create'),
-    path('properties/<int:id>/', TemplateView.as_view(template_name='property_detail.html'), name='property-detail'),
-    path('properties/<int:id>/edit/', TemplateView.as_view(template_name='property_edit.html'), name='property-edit'),
-    path('my-listings/', TemplateView.as_view(template_name='my_listings.html'), name='my-listings'),
+    path('', CSRFTemplateView.as_view(template_name='home.html'), name='home'),
+    path('search/', CSRFTemplateView.as_view(template_name='search_results.html'), name='search'),
+    path('login/', CSRFTemplateView.as_view(template_name='login.html'), name='login'),
+    path('register/', CSRFTemplateView.as_view(template_name='register.html'), name='register'),
+    path('properties/new/', CSRFTemplateView.as_view(template_name='property_create.html'), name='property-create'),
+    path('properties/<int:id>/', CSRFTemplateView.as_view(template_name='property_detail.html'), name='property-detail'),
+    path('properties/<int:id>/edit/', CSRFTemplateView.as_view(template_name='property_edit.html'), name='property-edit'),
+    path('my-listings/', CSRFTemplateView.as_view(template_name='my_listings.html'), name='my-listings'),
 
     # Legal pages
-    path('terms/', TemplateView.as_view(template_name='terms.html'), name='terms'),
-    path('privacy/', TemplateView.as_view(template_name='privacy.html'), name='privacy'),
-    path('cookies/', TemplateView.as_view(template_name='cookies.html'), name='cookies'),
+    path('terms/', CSRFTemplateView.as_view(template_name='terms.html'), name='terms'),
+    path('privacy/', CSRFTemplateView.as_view(template_name='privacy.html'), name='privacy'),
+    path('cookies/', CSRFTemplateView.as_view(template_name='cookies.html'), name='cookies'),
 ]
 
 if settings.DEBUG:

@@ -138,8 +138,12 @@
             setToken(token) { localStorage.setItem('auth_token', token); },
             clear() { localStorage.removeItem('auth_token'); },
             isLoggedIn() { return !!this.getToken(); },
+            getCSRFToken() {
+                const match = document.cookie.match(/csrftoken=([^;]+)/);
+                return match ? match[1] : '';
+            },
             headers(json = true) {
-                const h = {};
+                const h = { 'X-CSRFToken': this.getCSRFToken() };
                 if (json) h['Content-Type'] = 'application/json';
                 const t = this.getToken();
                 if (t) h['Authorization'] = 'Token ' + t;

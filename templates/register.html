@@ -88,7 +88,7 @@
         try {
             const res = await fetch('/auth/users/', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': Auth.getCSRFToken() },
                 body: JSON.stringify({
                     email: document.getElementById('email').value,
                     first_name: document.getElementById('first_name').value,
