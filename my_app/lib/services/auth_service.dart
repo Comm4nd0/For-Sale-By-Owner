@@ -7,15 +7,38 @@ import '../constants/api_constants.dart';
 class AuthService extends ChangeNotifier {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   String? _token;
+  int? _userId;
   bool _isLoading = false;
 
   String? get token => _token;
+  int? get userId => _userId;
   bool get isAuthenticated => _token != null;
   bool get isLoading => _isLoading;
 
   Future<void> init() async {
     _token = await _storage.read(key: 'auth_token');
+    if (_token != null) {
+      await _fetchCurrentUser();
+    }
     notifyListeners();
+  }
+
+  Future<void> _fetchCurrentUser() async {
+    try {
+      final response = await http.get(
+        Uri.parse(ApiConstants.userMe),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Token $_token',
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        _userId = data['id'];
+      }
+    } catch (e) {
+      debugPrint('Fetch user error: $e');
+    }
   }
 
   Future<bool> login(String email, String password) async {
@@ -33,6 +56,7 @@ class AuthService extends ChangeNotifier {
         final data = jsonDecode(response.body);
         _token = data['auth_token'];
         await _storage.write(key: 'auth_token', value: _token);
+        await _fetchCurrentUser();
         _isLoading = false;
         notifyListeners();
         return true;
@@ -92,6 +116,7 @@ class AuthService extends ChangeNotifier {
     }
 
     _token = null;
+    _userId = null;
     await _storage.delete(key: 'auth_token');
     notifyListeners();
   }

@@ -80,9 +80,6 @@ class Property(models.Model):
     reception_rooms = models.PositiveIntegerField(default=0)
     square_feet = models.PositiveIntegerField(null=True, blank=True)
 
-    # Media
-    image = models.ImageField(upload_to='properties/', blank=True, null=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -92,3 +89,30 @@ class Property(models.Model):
     class Meta:
         verbose_name_plural = 'Properties'
         ordering = ['-created_at']
+
+
+class PropertyImage(models.Model):
+    """An image belonging to a property listing."""
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='images'
+    )
+    image = models.ImageField(upload_to='properties/images/')
+    order = models.PositiveIntegerField(default=0)
+    is_primary = models.BooleanField(default=False)
+    caption = models.CharField(max_length=200, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', 'uploaded_at']
+
+    def __str__(self):
+        return f"Image {self.order} for {self.property.title}"
+
+    def save(self, *args, **kwargs):
+        if self.is_primary:
+            PropertyImage.objects.filter(
+                property=self.property, is_primary=True
+            ).exclude(pk=self.pk).update(is_primary=False)
+        if not self.pk and not PropertyImage.objects.filter(property=self.property).exists():
+            self.is_primary = True
+        super().save(*args, **kwargs)

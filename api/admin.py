@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import Property
+from .models import Property, PropertyImage
 
 User = get_user_model()
 
@@ -25,8 +25,15 @@ class UserAdmin(BaseUserAdmin):
     )
 
 
+class PropertyImageInline(admin.TabularInline):
+    model = PropertyImage
+    extra = 1
+    fields = ['image', 'order', 'is_primary', 'caption']
+
+
 @admin.register(Property)
 class PropertyAdmin(admin.ModelAdmin):
     list_display = ['title', 'property_type', 'status', 'price', 'city', 'postcode', 'owner', 'created_at']
     list_filter = ['property_type', 'status', 'city']
     search_fields = ['title', 'address_line_1', 'city', 'postcode', 'owner__email']
+    inlines = [PropertyImageInline]

@@ -1,5 +1,8 @@
+import 'property_image.dart';
+
 class Property {
   final int id;
+  final int ownerId;
   final String title;
   final String description;
   final String propertyType;
@@ -16,11 +19,13 @@ class Property {
   final int bathrooms;
   final int receptionRooms;
   final int? squareFeet;
-  final String? imageUrl;
+  final List<PropertyImage> images;
+  final String? primaryImageUrl;
   final String ownerName;
 
   Property({
     required this.id,
+    required this.ownerId,
     required this.title,
     required this.description,
     required this.propertyType,
@@ -37,13 +42,15 @@ class Property {
     required this.bathrooms,
     required this.receptionRooms,
     this.squareFeet,
-    this.imageUrl,
+    required this.images,
+    this.primaryImageUrl,
     required this.ownerName,
   });
 
   factory Property.fromJson(Map<String, dynamic> json) {
     return Property(
       id: json['id'],
+      ownerId: json['owner'] ?? 0,
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       propertyType: json['property_type'] ?? '',
@@ -60,7 +67,10 @@ class Property {
       bathrooms: json['bathrooms'] ?? 0,
       receptionRooms: json['reception_rooms'] ?? 0,
       squareFeet: json['square_feet'],
-      imageUrl: json['image'],
+      images: (json['images'] as List? ?? [])
+          .map((img) => PropertyImage.fromJson(img))
+          .toList(),
+      primaryImageUrl: json['primary_image'],
       ownerName: json['owner_name'] ?? '',
     );
   }

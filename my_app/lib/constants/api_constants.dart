@@ -10,6 +10,10 @@ class ApiConstants {
 
   // Properties
   static String get properties => '$apiUrl/properties/';
+  static String propertyImages(int propertyId) =>
+      '$apiUrl/properties/$propertyId/images/';
+  static String propertyImage(int propertyId, int imageId) =>
+      '$apiUrl/properties/$propertyId/images/$imageId/';
 
   // Auth
   static String get login => '$authUrl/token/login/';

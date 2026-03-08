@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/property.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
+import 'property_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -116,46 +118,84 @@ class PropertyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PropertyDetailScreen(propertyId: property.id),
+        ),
+      ),
+      child: Card(
+        clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              property.title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+            if (property.primaryImageUrl != null)
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: CachedNetworkImage(
+                  imageUrl: property.primaryImageUrl!,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: Colors.grey[200],
+                    child: const Center(child: CircularProgressIndicator()),
                   ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              property.formattedPrice,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: const Color(0xFF38A169),
-                    fontWeight: FontWeight.bold,
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.grey[200],
+                    child: const Icon(Icons.broken_image, size: 48, color: Colors.grey),
                   ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              property.propertyTypeDisplay,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
+                ),
+              )
+            else
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Container(
+                  color: Colors.grey[200],
+                  child: const Icon(Icons.home, size: 48, color: Colors.grey),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    property.title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
-            ),
-            Text(
-              '${property.addressLine1}, ${property.city} ${property.postcode}',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                _detail(Icons.bed, '${property.bedrooms} bed'),
-                const SizedBox(width: 16),
-                _detail(Icons.bathtub_outlined, '${property.bathrooms} bath'),
-                const SizedBox(width: 16),
-                _detail(Icons.weekend_outlined, '${property.receptionRooms} recep'),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    property.formattedPrice,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: const Color(0xFF38A169),
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    property.propertyTypeDisplay,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                  ),
+                  Text(
+                    '${property.addressLine1}, ${property.city} ${property.postcode}',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _detail(Icons.bed, '${property.bedrooms} bed'),
+                      const SizedBox(width: 16),
+                      _detail(Icons.bathtub_outlined, '${property.bathrooms} bath'),
+                      const SizedBox(width: 16),
+                      _detail(Icons.weekend_outlined, '${property.receptionRooms} recep'),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),

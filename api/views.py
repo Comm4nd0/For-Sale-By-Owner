@@ -1,6 +1,8 @@
 from rest_framework import viewsets, permissions
-from .models import Property
-from .serializers import PropertySerializer
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.parsers import MultiPartParser, FormParser
+from .models import Property, PropertyImage
+from .serializers import PropertySerializer, PropertyImageSerializer
 
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
@@ -21,7 +23,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated(), IsOwnerOrReadOnly()]
 
     def get_queryset(self):
-        queryset = Property.objects.all().select_related('owner')
+        queryset = Property.objects.all().select_related('owner').prefetch_related('images')
         status = self.request.query_params.get('status')
         property_type = self.request.query_params.get('property_type')
         city = self.request.query_params.get('city')
@@ -40,3 +42,47 @@ class PropertyViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+
+
+class PropertyImageViewSet(viewsets.ModelViewSet):
+    serializer_class = PropertyImageSerializer
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
+
+    def get_queryset(self):
+        return PropertyImage.objects.filter(
+            property_id=self.kwargs['property_pk']
+        )
+
+    def _get_property(self):
+        return Property.objects.get(pk=self.kwargs['property_pk'])
+
+    def perform_create(self, serializer):
+        property_obj = self._get_property()
+        if property_obj.owner != self.request.user:
+            raise PermissionDenied("You can only add images to your own properties.")
+        if property_obj.images.count() >= 10:
+            raise ValidationError("Maximum 10 images per property.")
+        serializer.save(property=property_obj)
+
+    def perform_update(self, serializer):
+        if serializer.instance.property.owner != self.request.user:
+            raise PermissionDenied()
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.property.owner != self.request.user:
+            raise PermissionDenied()
+        was_primary = instance.is_primary
+        prop = instance.property
+        instance.image.delete(save=False)
+        instance.delete()
+        if was_primary:
+            next_img = prop.images.first()
+            if next_img:
+                next_img.is_primary = True
+                next_img.save(update_fields=['is_primary'])
