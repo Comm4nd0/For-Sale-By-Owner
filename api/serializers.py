@@ -12,7 +12,18 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
+class RelativeImageField(serializers.ImageField):
+    """Returns relative URL path instead of absolute to avoid mixed-content issues behind proxies."""
+
+    def to_representation(self, value):
+        if not value:
+            return None
+        return value.url
+
+
 class PropertyImageSerializer(serializers.ModelSerializer):
+    image = RelativeImageField()
+
     class Meta:
         model = PropertyImage
         fields = ['id', 'image', 'order', 'is_primary', 'caption', 'uploaded_at']
@@ -48,8 +59,5 @@ class PropertySerializer(serializers.ModelSerializer):
     def get_primary_image(self, obj):
         primary = obj.images.filter(is_primary=True).first()
         if primary:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(primary.image.url)
             return primary.image.url
         return None

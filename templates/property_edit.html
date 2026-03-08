@@ -207,16 +207,25 @@
             }
 
             if (newFiles.length > 0) {
-                btn.textContent = 'Uploading images...';
-                for (const file of newFiles) {
+                let uploadErrors = [];
+                for (let i = 0; i < newFiles.length; i++) {
+                    btn.textContent = `Uploading photo ${i + 1} of ${newFiles.length}...`;
                     const fd = new FormData();
-                    fd.append('image', file);
-                    await fetch(`/api/properties/${propertyId}/images/`, {
+                    fd.append('image', newFiles[i]);
+                    const imgRes = await fetch(`/api/properties/${propertyId}/images/`, {
                         method: 'POST', headers: Auth.headers(false), body: fd,
                     });
+                    if (!imgRes.ok) {
+                        const errData = await imgRes.json().catch(() => ({}));
+                        uploadErrors.push(`Photo ${i + 1}: ${errData.detail || errData.image || 'upload failed'}`);
+                    }
                 }
                 newFiles = [];
                 document.getElementById('new-preview').innerHTML = '';
+                if (uploadErrors.length > 0) {
+                    errorEl.textContent = 'Some photos failed: ' + uploadErrors.join('; ');
+                    errorEl.style.display = 'block';
+                }
             }
 
             successEl.textContent = 'Property updated successfully.';

@@ -453,14 +453,23 @@
             // Upload images
             if (selectedFiles.length > 0) {
                 btn.textContent = 'Uploading photos...';
-                for (const file of selectedFiles) {
+                let uploadErrors = [];
+                for (let i = 0; i < selectedFiles.length; i++) {
+                    btn.textContent = `Uploading photo ${i + 1} of ${selectedFiles.length}...`;
                     const formData = new FormData();
-                    formData.append('image', file);
-                    await fetch(`/api/properties/${property.id}/images/`, {
+                    formData.append('image', selectedFiles[i]);
+                    const imgRes = await fetch(`/api/properties/${property.id}/images/`, {
                         method: 'POST',
                         headers: Auth.headers(false),
                         body: formData,
                     });
+                    if (!imgRes.ok) {
+                        const errData = await imgRes.json().catch(() => ({}));
+                        uploadErrors.push(`Photo ${i + 1}: ${errData.detail || errData.image || 'upload failed'}`);
+                    }
+                }
+                if (uploadErrors.length > 0) {
+                    alert('Some photos failed to upload:\\n' + uploadErrors.join('\\n') + '\\n\\nYou can add them later from the edit page.');
                 }
             }
 

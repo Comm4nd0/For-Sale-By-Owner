@@ -24,9 +24,13 @@ admin.site.index_title = "Dashboard"
 
 def serve_media(request, path):
     """Serve media files in production."""
+    import mimetypes
     file_path = os.path.join(settings.MEDIA_ROOT, path)
     if os.path.isfile(file_path):
-        return FileResponse(open(file_path, 'rb'))
+        content_type, _ = mimetypes.guess_type(file_path)
+        response = FileResponse(open(file_path, 'rb'), content_type=content_type or 'application/octet-stream')
+        response['Cache-Control'] = 'public, max-age=86400'
+        return response
     raise Http404
 
 
