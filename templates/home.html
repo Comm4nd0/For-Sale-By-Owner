@@ -12,14 +12,22 @@
         text-align: center;
         overflow: hidden;
     }
-    .hero::before {
-        content: '';
+    .hero-bg {
         position: absolute;
         inset: -10px;
-        background: url('https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1600&q=80') center/cover no-repeat;
-        filter: blur(3px);
         z-index: 0;
     }
+    .hero-bg img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        filter: blur(3px);
+        opacity: 0;
+        transition: opacity 1.5s ease-in-out;
+    }
+    .hero-bg img.active { opacity: 1; }
     .hero::after {
         content: '';
         position: absolute;
@@ -98,7 +106,7 @@
 
     @media (max-width: 768px) {
         .hero { padding: 2.5rem 0 2rem; }
-        .hero::before { filter: blur(2px); }
+        .hero-bg img { filter: blur(2px); }
         .hero h2 { font-size: 1.6rem; }
         .hero-logo svg { height: 56px; }
         .filter-row { grid-template-columns: 1fr; }
@@ -110,6 +118,13 @@
 
 {% block content %}
 <div class="hero">
+    <div class="hero-bg">
+        <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1600&q=80" alt="" class="active">
+        <img src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1600&q=80" alt="">
+        <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1600&q=80" alt="">
+        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1600&q=80" alt="">
+        <img src="https://images.unsplash.com/photo-1605146769289-440113cc3d00?w=1600&q=80" alt="">
+    </div>
     <div class="container">
         <div class="hero-logo">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 100" width="460" height="88">
@@ -283,5 +298,17 @@
         });
         window.location.href = '/search/' + (params.toString() ? '?' + params.toString() : '');
     });
+
+    // Cycle hero background images
+    (function() {
+        const images = document.querySelectorAll('.hero-bg img');
+        if (images.length < 2) return;
+        let current = 0;
+        setInterval(() => {
+            images[current].classList.remove('active');
+            current = (current + 1) % images.length;
+            images[current].classList.add('active');
+        }, 6000);
+    })();
 </script>
 {% endblock %}
