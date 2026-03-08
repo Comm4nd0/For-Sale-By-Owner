@@ -1,12 +1,10 @@
 """URL configuration for fsbo_backend project."""
-import os
 from django.contrib import admin
-from django.http import FileResponse, Http404
 from django.urls import path, include
 from django.conf import settings
-from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.static import serve as static_serve
 
 
 class CSRFTemplateView(TemplateView):
@@ -23,15 +21,8 @@ admin.site.index_title = "Dashboard"
 
 
 def serve_media(request, path):
-    """Serve media files in production."""
-    import mimetypes
-    file_path = os.path.join(settings.MEDIA_ROOT, path)
-    if os.path.isfile(file_path):
-        content_type, _ = mimetypes.guess_type(file_path)
-        response = FileResponse(open(file_path, 'rb'), content_type=content_type or 'application/octet-stream')
-        response['Cache-Control'] = 'public, max-age=86400'
-        return response
-    raise Http404
+    """Serve user-uploaded media files."""
+    return static_serve(request, path, document_root=settings.MEDIA_ROOT)
 
 
 urlpatterns = [
@@ -54,11 +45,7 @@ urlpatterns = [
     path('terms/', CSRFTemplateView.as_view(template_name='terms.html'), name='terms'),
     path('privacy/', CSRFTemplateView.as_view(template_name='privacy.html'), name='privacy'),
     path('cookies/', CSRFTemplateView.as_view(template_name='cookies.html'), name='cookies'),
-]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-else:
-    urlpatterns += [
-        path('media/<path:path>', serve_media, name='serve-media'),
-    ]
+    # Always serve media files (user-uploaded images) regardless of DEBUG setting
+    path('media/<path:path>', serve_media, name='serve-media'),
+]
