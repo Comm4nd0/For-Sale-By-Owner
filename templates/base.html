@@ -19,7 +19,7 @@
         header { background: #1A3C2E; color: white; padding: 1rem 0; }
         header .container { display: flex; justify-content: space-between; align-items: center; }
         header .logo a { display: flex; align-items: center; text-decoration: none; }
-        header .logo svg { height: 44px; width: auto; }
+        header .logo svg { height: 56px; width: auto; }
         nav { display: flex; align-items: center; }
         nav a { color: rgba(255,255,255,0.85); text-decoration: none; margin-left: 1.5rem; font-size: 0.95rem; }
         nav a:hover { color: white; }
@@ -33,7 +33,7 @@
         .nav-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 999; }
         .nav-overlay.open { display: block; }
         @media (max-width: 768px) {
-            header .logo svg { height: 34px; }
+            header .logo svg { height: 44px; }
             .hamburger { display: flex; }
             nav .nav-links {
                 position: fixed; top: 0; left: 0; bottom: 0; width: 270px;
@@ -50,7 +50,8 @@
                 background: none; border: none; color: rgba(255,255,255,0.7); font-size: 1.5rem; cursor: pointer; padding: 0.2rem 0.4rem; line-height: 1;
             }
             nav .nav-links .nav-drawer-header .nav-close:hover { color: white; }
-            nav .nav-links .nav-drawer-header .nav-brand { color: white; font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; font-weight: 700; text-decoration: none; }
+            nav .nav-links .nav-drawer-header .nav-brand { display: flex; align-items: center; text-decoration: none; }
+            nav .nav-links .nav-drawer-header .nav-brand svg { height: 36px; width: auto; }
             nav .nav-links a { margin: 0; padding: 0.85rem 1.25rem; font-size: 1rem; border-bottom: 1px solid rgba(255,255,255,0.06); display: block; }
             nav .nav-links a:hover { background: rgba(255,255,255,0.08); }
         }
@@ -127,7 +128,17 @@
             <nav id="main-nav" role="navigation" aria-label="Main navigation">
                 <div class="nav-links" id="nav-links">
                     <div class="nav-drawer-header">
-                        <a href="/" class="nav-brand">For Sale By Owner</a>
+                        <a href="/" class="nav-brand">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="5 10 80 85" width="40" height="40">
+                                <rect x="18" y="52" width="54" height="38" rx="3" fill="#FFFFFF" opacity="0.15"/>
+                                <polygon points="45,14 80,52 10,52" fill="url(#rg2)"/>
+                                <rect x="35" y="68" width="20" height="22" rx="2.5" fill="#D8F3DC" opacity="0.9"/>
+                                <circle cx="51" cy="80" r="2" fill="#C9872A"/>
+                                <rect x="22" y="58" width="10" height="9" rx="1.5" fill="#FFFFFF" opacity="0.4"/>
+                                <rect x="58" y="58" width="10" height="9" rx="1.5" fill="#FFFFFF" opacity="0.4"/>
+                                <rect x="62" y="24" width="8" height="18" rx="1.5" fill="#1A3C2E"/>
+                            </svg>
+                        </a>
                         <button class="nav-close" id="nav-close-btn" aria-label="Close menu">&times;</button>
                     </div>
                     <a href="/">Home</a>
