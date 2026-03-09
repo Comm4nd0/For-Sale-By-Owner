@@ -47,6 +47,7 @@ urlpatterns = [
         name='property-save-toggle',
     ),
     path('dashboard/stats/', views.dashboard_stats, name='dashboard-stats'),
+    path('notifications/counts/', views.notification_counts, name='notification-counts'),
     path('profile/', views.user_profile, name='user-profile'),
     path('push/register/', views.register_push_device, name='push-register'),
 ]

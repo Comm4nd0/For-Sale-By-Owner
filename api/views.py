@@ -426,15 +426,28 @@ def dashboard_stats(request):
     unread_enquiries = Enquiry.objects.filter(property__owner=user, is_read=False).count()
     total_saves = SavedProperty.objects.filter(property__owner=user).count()
 
+    pending_viewings = ViewingRequest.objects.filter(property__owner=user, status='pending').count()
+
     data = {
         'total_listings': properties.count(),
         'active_listings': properties.filter(status='active').count(),
         'total_views': total_views,
         'total_enquiries': total_enquiries,
         'unread_enquiries': unread_enquiries,
+        'pending_viewings': pending_viewings,
         'total_saves': total_saves,
     }
     return Response(data)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def notification_counts(request):
+    """Lightweight endpoint for nav bell badge — returns unread/pending counts."""
+    user = request.user
+    unread = Enquiry.objects.filter(property__owner=user, is_read=False).count()
+    pending = ViewingRequest.objects.filter(property__owner=user, status='pending').count()
+    return Response({'unread_enquiries': unread, 'pending_viewings': pending, 'total': unread + pending})
 
 
 @api_view(['GET', 'PATCH'])

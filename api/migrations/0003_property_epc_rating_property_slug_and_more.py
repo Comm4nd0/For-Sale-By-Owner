@@ -57,8 +57,8 @@ class Migration(migrations.Migration):
         migrations.SeparateDatabaseAndState(
             database_operations=[
                 migrations.RunSQL(
-                    sql='ALTER TABLE "api_property" ADD CONSTRAINT "api_property_slug_unique" UNIQUE ("slug");',
-                    reverse_sql='ALTER TABLE "api_property" DROP CONSTRAINT IF EXISTS "api_property_slug_unique";',
+                    sql='CREATE UNIQUE INDEX IF NOT EXISTS "api_property_slug_unique" ON "api_property" ("slug");',
+                    reverse_sql='DROP INDEX IF EXISTS "api_property_slug_unique";',
                 ),
             ],
             state_operations=[
