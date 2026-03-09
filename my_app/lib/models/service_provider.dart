@@ -14,6 +14,9 @@ class ServiceProvider {
   final String pricingInfo;
   final double? averageRating;
   final int reviewCount;
+  final String tierName;
+  final String tierSlug;
+  final bool isFeatured;
   final String createdAt;
 
   // Detail-only fields
@@ -25,6 +28,7 @@ class ServiceProvider {
   final int? yearsEstablished;
   final String? status;
   final List<ServiceProviderReview>? reviews;
+  final List<Map<String, dynamic>>? photos;
 
   ServiceProvider({
     required this.id,
@@ -39,6 +43,9 @@ class ServiceProvider {
     required this.pricingInfo,
     this.averageRating,
     required this.reviewCount,
+    this.tierName = 'Free',
+    this.tierSlug = 'free',
+    this.isFeatured = false,
     required this.createdAt,
     this.ownerId,
     this.ownerName,
@@ -48,6 +55,7 @@ class ServiceProvider {
     this.yearsEstablished,
     this.status,
     this.reviews,
+    this.photos,
   });
 
   factory ServiceProvider.fromJson(Map<String, dynamic> json) {
@@ -68,6 +76,9 @@ class ServiceProvider {
           ? double.tryParse(json['average_rating'].toString())
           : null,
       reviewCount: json['review_count'] ?? 0,
+      tierName: json['tier_name'] ?? 'Free',
+      tierSlug: json['tier_slug'] ?? 'free',
+      isFeatured: json['is_featured'] ?? false,
       createdAt: json['created_at'] ?? '',
       ownerId: json['owner'],
       ownerName: json['owner_name'],
@@ -81,6 +92,9 @@ class ServiceProvider {
               .map((r) => ServiceProviderReview.fromJson(r))
               .toList()
           : null,
+      photos: json['photos'] != null
+          ? List<Map<String, dynamic>>.from(json['photos'] as List)
+          : null,
     );
   }
 
@@ -90,4 +104,9 @@ class ServiceProvider {
     if (coveragePostcodes.isNotEmpty) parts.add(coveragePostcodes);
     return parts.join(' | ');
   }
+
+  bool get isProTier => tierSlug == 'pro';
+  bool get isGrowthTier => tierSlug == 'growth';
+  bool get isFreeTier => tierSlug == 'free';
+  bool get isPaidTier => !isFreeTier;
 }

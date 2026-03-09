@@ -10,6 +10,13 @@
     .provider-header-info { flex: 1; min-width: 0; }
     .provider-header-info h1 { font-size: 1.6rem; color: #1A3C2E; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
     .verified-badge { display: inline-flex; align-items: center; gap: 0.3rem; background: #D8F3DC; color: #1A3C2E; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+    .tier-badge-sm { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+    .tier-growth { background: #D8F3DC; color: #1A3C2E; }
+    .tier-pro { background: #C9872A; color: white; }
+    .photo-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
+    .photo-gallery img { width: 100%; height: 160px; object-fit: cover; border-radius: 8px; cursor: pointer; transition: transform 0.15s; }
+    .photo-gallery img:hover { transform: scale(1.02); }
+    .provider-featured { border: 2px solid #C9872A; border-radius: 12px; padding: 0.25rem; }
     .provider-cats-lg { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
     .provider-cat-tag-lg { background: #D8F3DC; color: #1A3C2E; padding: 0.25rem 0.65rem; border-radius: 14px; font-size: 0.85rem; }
     .provider-rating-lg { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.5rem; font-size: 1rem; color: #C9872A; }
@@ -242,7 +249,7 @@
                 <div class="provider-header">
                     ${logoHtml}
                     <div class="provider-header-info">
-                        <h1>${escHtml(p.business_name)} ${p.is_verified ? '<span class="verified-badge">&#10003; Verified</span>' : ''}</h1>
+                        <h1>${escHtml(p.business_name)} ${p.is_verified ? '<span class="verified-badge">&#10003; Verified</span>' : ''} ${p.tier_slug === 'pro' ? '<span class="tier-badge-sm tier-pro">Pro</span>' : p.tier_slug === 'growth' ? '<span class="tier-badge-sm tier-growth">Growth</span>' : ''}</h1>
                         <div class="provider-cats-lg">${catTags}</div>
                         ${ratingHtml}
                     </div>
@@ -250,6 +257,7 @@
                 <div class="detail-grid">
                     <div>
                         ${p.description ? `<div class="detail-section"><h3>About</h3><p style="line-height:1.6;color:#4A5E56;">${escHtml(p.description).replace(/\n/g, '<br>')}</p></div>` : ''}
+                        ${(p.photos && p.photos.length) ? `<div class="detail-section"><h3>Gallery</h3><div class="photo-gallery">${p.photos.map(ph => `<img src="${ph.image}" alt="${escHtml(ph.caption || p.business_name)}" title="${escHtml(ph.caption || '')}">`).join('')}</div></div>` : ''}
                         ${coverageHtml}
                         ${p.pricing_info ? `<div class="detail-section"><h3>Pricing</h3><p style="line-height:1.6;color:#4A5E56;">${escHtml(p.pricing_info).replace(/\n/g, '<br>')}</p></div>` : ''}
                         <div class="detail-section">

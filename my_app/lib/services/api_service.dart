@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -32,6 +33,8 @@ class ApiService {
     }
     return headers;
   }
+
+  static const _timeout = Duration(seconds: 15);
 
   Map<String, String> get _authHeaders {
     final headers = <String, String>{};
@@ -551,7 +554,7 @@ class ApiService {
     final response = await http.get(
       Uri.parse(ApiConstants.serviceCategories),
       headers: _headers,
-    );
+    ).timeout(_timeout);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as List;
       return data.map((json) => ServiceCategory.fromJson(json)).toList();
@@ -572,7 +575,7 @@ class ApiService {
 
     final uri = Uri.parse(ApiConstants.serviceProviders)
         .replace(queryParameters: params);
-    final response = await http.get(uri, headers: _headers);
+    final response = await http.get(uri, headers: _headers).timeout(_timeout);
 
     if (response.statusCode == 200) {
       return PaginatedResponse.fromJson(
@@ -668,5 +671,60 @@ class ApiService {
       return data.map((json) => ServiceProvider.fromJson(json)).toList();
     }
     throw Exception('Failed to load property services');
+  }
+
+  // ── Subscriptions / Pricing ─────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getPricing() async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.pricing),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to load pricing');
+  }
+
+  Future<Map<String, dynamic>> getMySubscription() async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.mySubscription),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to load subscription');
+  }
+
+  Future<String> createCheckout(String tierSlug, String billingCycle) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.createCheckout),
+      headers: _headers,
+      body: jsonEncode({
+        'tier_slug': tierSlug,
+        'billing_cycle': billingCycle,
+      }),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['checkout_url'] as String;
+    }
+    final data = jsonDecode(response.body);
+    throw Exception(data['detail'] ?? 'Failed to create checkout');
+  }
+
+  Future<String> createPortal() async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.createPortal),
+      headers: _headers,
+      body: jsonEncode({}),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['portal_url'] as String;
+    }
+    final data = jsonDecode(response.body);
+    throw Exception(data['detail'] ?? 'Failed to create billing portal');
   }
 }

@@ -8,6 +8,8 @@ import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import 'service_provider_detail_screen.dart';
 import 'service_provider_form_screen.dart';
+import 'pricing_screen.dart';
+import '../widgets/tier_badge.dart';
 
 class ServicesScreen extends StatefulWidget {
   const ServicesScreen({super.key});
@@ -27,6 +29,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
   bool _hasMore = true;
   int _page = 1;
   int _totalCount = 0;
+  String? _error;
 
   @override
   void initState() {
@@ -65,6 +68,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
       _page = 1;
       _providers = [];
       _hasMore = true;
+      _error = null;
     });
 
     try {
@@ -85,8 +89,14 @@ class _ServicesScreenState extends State<ServicesScreen> {
           _isLoading = false;
         });
       }
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _hasMore = false;
+          _error = 'Unable to load service providers. Pull down to retry.';
+        });
+      }
     }
   }
 
@@ -111,7 +121,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
           _isLoading = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -127,6 +137,14 @@ class _ServicesScreenState extends State<ServicesScreen> {
       appBar: AppBar(
         title: const Text('Local Services'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.monetization_on_outlined),
+            tooltip: 'Pricing',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PricingScreen()),
+            ),
+          ),
           if (context.read<AuthService>().isAuthenticated)
             TextButton(
               onPressed: () => Navigator.push(
@@ -209,39 +227,80 @@ class _ServicesScreenState extends State<ServicesScreen> {
             ),
           // Results
           Expanded(
-            child: _providers.isEmpty && !_isLoading
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+            child: RefreshIndicator(
+              onRefresh: _loadProviders,
+              child: _error != null && _providers.isEmpty
+                  ? ListView(
                       children: [
-                        Icon(Icons.search_off,
-                            size: 48, color: AppTheme.stone),
-                        const SizedBox(height: 12),
-                        const Text('No service providers found',
-                            style: TextStyle(
-                                fontSize: 16, color: AppTheme.slate)),
-                        const SizedBox(height: 4),
-                        const Text('Try a different location or category',
-                            style: TextStyle(
-                                fontSize: 14, color: AppTheme.stone)),
+                        const SizedBox(height: 100),
+                        Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.cloud_off,
+                                  size: 48, color: AppTheme.stone),
+                              const SizedBox(height: 12),
+                              Text(_error!,
+                                  style: const TextStyle(
+                                      fontSize: 14, color: AppTheme.slate),
+                                  textAlign: TextAlign.center),
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: _loadProviders,
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Retry'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.forestMid,
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
-                    ),
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _providers.length + (_hasMore ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == _providers.length) {
-                        return const Padding(
-                          padding: EdgeInsets.all(16),
-                          child:
-                              Center(child: CircularProgressIndicator()),
-                        );
-                      }
-                      return _ProviderCard(provider: _providers[index]);
-                    },
-                  ),
+                    )
+                  : _providers.isEmpty && !_isLoading
+                      ? ListView(
+                          children: [
+                            const SizedBox(height: 100),
+                            Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.search_off,
+                                      size: 48, color: AppTheme.stone),
+                                  const SizedBox(height: 12),
+                                  const Text('No service providers found',
+                                      style: TextStyle(
+                                          fontSize: 16, color: AppTheme.slate)),
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                      'Try a different location or category',
+                                      style: TextStyle(
+                                          fontSize: 14, color: AppTheme.stone)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      : ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.all(16),
+                          itemCount:
+                              _providers.length + (_hasMore ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index == _providers.length) {
+                              return const Padding(
+                                padding: EdgeInsets.all(16),
+                                child: Center(
+                                    child: CircularProgressIndicator()),
+                              );
+                            }
+                            return _ProviderCard(
+                                provider: _providers[index]);
+                          },
+                        ),
+            ),
           ),
         ],
       ),
@@ -302,6 +361,14 @@ class _ProviderCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                        if (provider.isPaidTier)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 4),
+                            child: TierBadge(
+                              tierSlug: provider.tierSlug,
+                              tierName: provider.tierName,
+                            ),
+                          ),
                         if (provider.isVerified)
                           const Icon(Icons.verified,
                               size: 16, color: AppTheme.forestMid),

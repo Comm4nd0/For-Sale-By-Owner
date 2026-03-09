@@ -41,6 +41,33 @@
     .empty-state h3 { color: #1A3C2E; margin-bottom: 0.75rem; }
     .empty-state p { color: #4A5E56; margin-bottom: 1.5rem; }
 
+    /* Subscription / Plan section */
+    .plan-card { background: linear-gradient(135deg, #1A3C2E 0%, #2D6A4F 100%); color: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .plan-card h3 { color: white; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 0.5rem; margin-bottom: 0.75rem; }
+    .plan-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+    .plan-name { font-size: 1.2rem; font-weight: 700; }
+    .plan-tier-badge { display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; border-radius: 14px; font-size: 0.8rem; font-weight: 600; }
+    .badge-free { background: rgba(255,255,255,0.2); color: white; }
+    .badge-growth { background: #D8F3DC; color: #1A3C2E; }
+    .badge-pro { background: #C9872A; color: white; }
+    .usage-meters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+    .usage-meter label { display: block; font-size: 0.8rem; opacity: 0.85; margin-bottom: 0.3rem; }
+    .usage-bar { height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden; }
+    .usage-bar-fill { height: 100%; background: #D8F3DC; border-radius: 3px; transition: width 0.3s; }
+    .usage-text { font-size: 0.8rem; opacity: 0.7; margin-top: 0.2rem; }
+    .plan-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .plan-actions .btn { font-size: 0.85rem; padding: 0.5rem 1rem; }
+    .btn-outline-light { background: transparent; color: white; border: 1px solid rgba(255,255,255,0.5); }
+    .btn-outline-light:hover { background: rgba(255,255,255,0.1); border-color: white; }
+
+    .upgrade-cta { background: #D8F3DC; border: 2px solid #2D6A4F; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; text-align: center; }
+    .upgrade-cta h3 { color: #1A3C2E; margin-bottom: 0.5rem; }
+    .upgrade-cta p { color: #4A5E56; margin-bottom: 1rem; font-size: 0.95rem; }
+    .upgrade-cta .benefits { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; margin-bottom: 1rem; }
+    .upgrade-cta .benefit { display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; color: #2D6A4F; font-weight: 500; }
+
+    .success-banner { background: #D8F3DC; border: 1px solid #a8d8b0; border-radius: 8px; padding: 1rem 1.5rem; text-align: center; margin-bottom: 1.5rem; color: #1A3C2E; font-weight: 500; }
+
     /* Edit form */
     .edit-form { display: none; }
     .edit-form.active { display: block; }
@@ -77,6 +104,7 @@
 
     let providerData = null;
     let allCategories = [];
+    let subscriptionData = null;
 
     function renderReview(r) {
         const date = new Date(r.created_at).toLocaleDateString();
@@ -105,6 +133,12 @@
                     <a href="/services/${p.slug}/" class="btn btn-secondary">View Public Page</a>
                 </div>
             </div>
+
+            <div id="success-msg" class="success-banner" style="display:none;">
+                Subscription activated! Your plan has been upgraded.
+            </div>
+
+            <div id="plan-section"></div>
 
             <div class="stat-cards">
                 <div class="stat-card"><div class="value">${p.average_rating ? p.average_rating.toFixed(1) : '—'}</div><div class="label">Rating</div></div>
@@ -262,11 +296,16 @@
             }
 
             providerData = results[0];
-            // Fetch full detail
-            const detailRes = await Auth.authFetch(`/api/service-providers/${providerData.id}/`, { headers: Auth.headers() });
+            // Fetch full detail + subscription in parallel
+            const [detailRes, subRes] = await Promise.all([
+                Auth.authFetch(`/api/service-providers/${providerData.id}/`, { headers: Auth.headers() }),
+                Auth.authFetch('/api/my-subscription/', { headers: Auth.headers() }),
+            ]);
             providerData = await detailRes.json();
+            subscriptionData = subRes.ok ? await subRes.json() : null;
 
             document.getElementById('my-service-content').innerHTML = renderViewMode(providerData);
+            renderPlanSection(subscriptionData);
 
             // Load reviews
             const revRes = await Auth.authFetch(`/api/service-providers/${providerData.id}/reviews/`, { headers: Auth.headers() });
@@ -281,6 +320,129 @@
             document.getElementById('my-service-content').innerHTML =
                 '<div class="alert alert-error">Failed to load your service. Please try again.</div>';
         }
+    }
+
+    function renderPlanSection(sub) {
+        const section = document.getElementById('plan-section');
+        if (!sub || !sub.tier) {
+            section.innerHTML = `
+                <div class="upgrade-cta">
+                    <h3>Upgrade Your Plan</h3>
+                    <p>Get more categories, locations, photos, and premium features to grow your business.</p>
+                    <div class="benefits">
+                        <span class="benefit">&#10003; More categories</span>
+                        <span class="benefit">&#10003; Logo upload</span>
+                        <span class="benefit">&#10003; Featured placement</span>
+                        <span class="benefit">&#10003; Analytics</span>
+                    </div>
+                    <a href="/pricing/" class="btn btn-primary">View Plans</a>
+                </div>`;
+            return;
+        }
+
+        const tier = sub.tier;
+        const usage = sub.usage || {};
+        const isFree = tier.slug === 'free';
+        const badgeClass = tier.slug === 'pro' ? 'badge-pro' : tier.slug === 'growth' ? 'badge-growth' : 'badge-free';
+
+        function usageBar(used, max) {
+            if (max === -1) return { pct: 0, text: `${used} used (unlimited)` };
+            if (max === 0) return { pct: 100, text: `Not available` };
+            const pct = Math.min((used / max) * 100, 100);
+            return { pct, text: `${used} / ${max}` };
+        }
+
+        const catUsage = usageBar(usage.categories_used || 0, usage.categories_max || 1);
+        const locUsage = usageBar(usage.locations_used || 0, usage.locations_max || 1);
+        const photoUsage = usageBar(usage.photos_used || 0, usage.photos_max || 0);
+
+        let billingInfo = '';
+        if (!isFree && sub.subscription) {
+            const s = sub.subscription;
+            const cycle = s.billing_cycle === 'annual' ? 'Annual' : 'Monthly';
+            billingInfo = `<div class="detail-row" style="color:rgba(255,255,255,0.8);"><span>${cycle} billing</span>`;
+            if (s.current_period_end) {
+                const endDate = new Date(s.current_period_end).toLocaleDateString();
+                billingInfo += `<span>Renews ${endDate}</span>`;
+            }
+            billingInfo += '</div>';
+            if (s.cancel_at_period_end) {
+                billingInfo += '<div style="color:#FFC107; font-size:0.85rem; margin-top:0.5rem;">Cancels at end of billing period</div>';
+            }
+        }
+
+        section.innerHTML = `
+            <div class="plan-card">
+                <h3>Your Plan</h3>
+                <div class="plan-header">
+                    <span class="plan-name">${escHtml(tier.name)}</span>
+                    <span class="plan-tier-badge ${badgeClass}">${escHtml(tier.name)} Plan</span>
+                </div>
+                ${billingInfo}
+                <div class="usage-meters">
+                    <div class="usage-meter">
+                        <label>Categories</label>
+                        <div class="usage-bar"><div class="usage-bar-fill" style="width:${catUsage.pct}%"></div></div>
+                        <div class="usage-text">${catUsage.text}</div>
+                    </div>
+                    <div class="usage-meter">
+                        <label>Locations</label>
+                        <div class="usage-bar"><div class="usage-bar-fill" style="width:${locUsage.pct}%"></div></div>
+                        <div class="usage-text">${locUsage.text}</div>
+                    </div>
+                    <div class="usage-meter">
+                        <label>Photos</label>
+                        <div class="usage-bar"><div class="usage-bar-fill" style="width:${photoUsage.pct}%"></div></div>
+                        <div class="usage-text">${photoUsage.text}</div>
+                    </div>
+                </div>
+                <div class="plan-actions">
+                    ${isFree ? `<a href="/pricing/" class="btn btn-primary">Upgrade Plan</a>` : `
+                        <a href="/pricing/" class="btn btn-outline-light">Change Plan</a>
+                        <button class="btn btn-outline-light" onclick="openBillingPortal()">Manage Billing</button>
+                    `}
+                </div>
+            </div>
+            ${isFree ? `
+                <div class="upgrade-cta">
+                    <h3>Unlock Premium Features</h3>
+                    <p>Upgrade to Growth or Pro to stand out and reach more customers.</p>
+                    <div class="benefits">
+                        <span class="benefit">&#10003; More categories</span>
+                        <span class="benefit">&#10003; Logo &amp; photos</span>
+                        <span class="benefit">&#10003; Featured placement</span>
+                        <span class="benefit">&#10003; Analytics &amp; reports</span>
+                    </div>
+                    <a href="/pricing/" class="btn btn-primary">View Plans &amp; Pricing</a>
+                </div>
+            ` : ''}
+        `;
+    }
+
+    async function openBillingPortal() {
+        try {
+            const res = await Auth.authFetch('/api/subscriptions/create-portal/', {
+                method: 'POST',
+                headers: Auth.headers(),
+            });
+            const data = await res.json();
+            if (res.ok && data.portal_url) {
+                window.location.href = data.portal_url;
+            } else {
+                alert(data.detail || 'Failed to open billing portal.');
+            }
+        } catch (err) {
+            alert('Network error. Please try again.');
+        }
+    }
+
+    // Show success message if redirected from Stripe checkout
+    if (new URLSearchParams(window.location.search).get('subscription') === 'success') {
+        // Show after DOM renders
+        setTimeout(() => {
+            const msg = document.getElementById('success-msg');
+            if (msg) msg.style.display = 'block';
+        }, 500);
     }
 
     loadMyService();

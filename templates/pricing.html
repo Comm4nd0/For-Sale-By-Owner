@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}Pricing - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pricing-hero { background: linear-gradient(135deg, #1A3C2E 0%, #2D6A4F 100%); color: white; padding: 3rem 0; margin: -2rem 0 2rem; }
+    .pricing-hero h1 { font-size: 2rem; margin-bottom: 0.5rem; text-align: center; }
+    .pricing-hero p { opacity: 0.85; font-size: 1.05rem; text-align: center; max-width: 500px; margin: 0 auto; }
+
+    .billing-toggle { display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin: 1.5rem 0 0; }
+    .billing-toggle span { font-size: 0.95rem; }
+    .billing-toggle .active-label { font-weight: 600; opacity: 1; }
+    .billing-toggle .inactive-label { opacity: 0.6; }
+    .toggle-switch { position: relative; width: 52px; height: 28px; cursor: pointer; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; inset: 0; background: rgba(255,255,255,0.3); border-radius: 28px; transition: 0.3s; }
+    .toggle-slider::before { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; background: white; border-radius: 50%; transition: 0.3s; }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(24px); }
+    .save-badge { background: #C9872A; color: white; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-left: 0.35rem; }
+
+    .tiers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2.5rem; }
+    .tier-card { background: #FFFFFF; border: 2px solid #D4DDD9; border-radius: 12px; padding: 2rem 1.5rem; position: relative; display: flex; flex-direction: column; }
+    .tier-card.highlighted { border-color: #C9872A; box-shadow: 0 4px 20px rgba(201,135,42,0.15); }
+    .tier-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #C9872A; color: white; padding: 0.25rem 1rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+    .tier-name { font-size: 1.4rem; font-weight: 700; color: #1A3C2E; margin-bottom: 0.25rem; }
+    .tier-tagline { color: #4A5E56; font-size: 0.9rem; margin-bottom: 1rem; min-height: 2.5rem; }
+    .tier-price { margin-bottom: 1.25rem; }
+    .tier-price .amount { font-size: 2.2rem; font-weight: 700; color: #1A3C2E; }
+    .tier-price .period { color: #8FA89E; font-size: 0.9rem; }
+    .tier-price .annual-note { color: #4A5E56; font-size: 0.8rem; margin-top: 0.2rem; }
+
+    .tier-limits { margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid #D4DDD9; }
+    .tier-limits .limit-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: #1C2B25; padding: 0.3rem 0; }
+    .limit-value { font-weight: 600; color: #2D6A4F; }
+
+    .tier-features { flex: 1; margin-bottom: 1.5rem; }
+    .feature-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; padding: 0.25rem 0; }
+    .feature-check { color: #2D6A4F; font-weight: 700; font-size: 1rem; }
+    .feature-cross { color: #D4DDD9; font-size: 1rem; }
+    .feature-item.disabled { color: #8FA89E; }
+
+    .tier-cta { margin-top: auto; }
+    .tier-cta .btn { display: block; text-align: center; padding: 0.75rem; font-size: 1rem; font-weight: 600; }
+    .btn-gold { background: #C9872A; color: white; }
+    .btn-gold:hover { background: #B07624; }
+
+    .addons-section { background: #FFFFFF; border-radius: 12px; padding: 2rem; margin-bottom: 2rem; }
+    .addons-section h2 { color: #1A3C2E; font-size: 1.3rem; margin-bottom: 0.5rem; }
+    .addons-section .subtitle { color: #4A5E56; margin-bottom: 1.5rem; font-size: 0.95rem; }
+    .addons-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+    .addon-card { border: 1px solid #D4DDD9; border-radius: 8px; padding: 1.25rem; }
+    .addon-name { font-weight: 600; color: #1A3C2E; font-size: 1rem; margin-bottom: 0.25rem; }
+    .addon-desc { color: #4A5E56; font-size: 0.85rem; margin-bottom: 0.5rem; }
+    .addon-price { font-weight: 600; color: #2D6A4F; font-size: 0.95rem; }
+    .addon-tiers { font-size: 0.8rem; color: #8FA89E; margin-top: 0.35rem; }
+
+    .free-banner { background: #D8F3DC; border-radius: 12px; padding: 2rem; text-align: center; margin-bottom: 2rem; }
+    .free-banner h3 { color: #1A3C2E; margin-bottom: 0.5rem; }
+    .free-banner p { color: #4A5E56; }
+
+    .cancelled-banner { background: #f8d7d4; border: 1px solid #e8a9a4; border-radius: 8px; padding: 1rem 1.5rem; text-align: center; margin-bottom: 1.5rem; color: #B03A2E; }
+
+    @media (max-width: 900px) {
+        .tiers-grid { grid-template-columns: 1fr; max-width: 400px; margin-left: auto; margin-right: auto; }
+        .tier-card.highlighted { order: -1; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pricing-hero" style="margin-left:-20px; margin-right:-20px; padding-left:20px; padding-right:20px;">
+    <div style="max-width:800px; margin:0 auto;">
+        <h1>Simple, Transparent Pricing</h1>
+        <p>Grow your business with premium features. Start free, upgrade when you're ready.</p>
+        <div class="billing-toggle">
+            <span id="monthly-label" class="active-label">Monthly</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="billing-toggle" onchange="toggleBilling()">
+                <span class="toggle-slider"></span>
+            </label>
+            <span id="annual-label" class="inactive-label">Annual <span class="save-badge">Save 20%</span></span>
+        </div>
+    </div>
+</div>
+
+<div id="cancelled-msg" class="cancelled-banner" style="display:none;">
+    Your checkout was cancelled. You can try again whenever you're ready.
+</div>
+
+<div id="tiers-container" class="tiers-grid">
+    <p>Loading pricing...</p>
+</div>
+
+<div id="addons-container" class="addons-section" style="display:none;">
+    <h2>Add-Ons</h2>
+    <p class="subtitle">Boost your listing with optional extras</p>
+    <div id="addons-grid" class="addons-grid"></div>
+</div>
+
+<div class="free-banner">
+    <h3>Buying or selling a property?</h3>
+    <p>For Sale By Owner is <strong>100% free</strong> for property buyers and sellers. No fees. No commission. Ever.</p>
+    <a href="/" class="btn btn-primary" style="margin-top:1rem;">Explore Properties</a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let pricingData = null;
+    let isAnnual = false;
+
+    const featureLabels = {
+        basic_listing: 'Basic listing',
+        local_area_visibility: 'Local area visibility',
+        contact_details: 'Contact details shown',
+        featured_placement: 'Featured placement',
+        click_through_analytics: 'Click-through analytics',
+        category_exclusivity: 'Category exclusivity',
+        priority_search: 'Priority in search results',
+        lead_notifications: 'Lead notifications',
+        performance_reports: 'Performance reports',
+        account_manager: 'Dedicated account manager',
+        photo_gallery: 'Photo gallery',
+        early_access: 'Early access to new features',
+    };
+
+    function toggleBilling() {
+        isAnnual = document.getElementById('billing-toggle').checked;
+        document.getElementById('monthly-label').className = isAnnual ? 'inactive-label' : 'active-label';
+        document.getElementById('annual-label').className = isAnnual ? 'active-label' : 'inactive-label';
+        renderTiers();
+    }
+
+    function formatLimit(val, singular, plural) {
+        if (val === -1) return 'Unlimited ' + plural;
+        return val + ' ' + (val === 1 ? singular : plural);
+    }
+
+    function renderTiers() {
+        if (!pricingData) return;
+        const container = document.getElementById('tiers-container');
+        const tiers = pricingData.tiers;
+
+        container.innerHTML = tiers.map(tier => {
+            const price = isAnnual ? tier.annual_price : tier.monthly_price;
+            const isFree = parseFloat(price) === 0;
+            const isHighlighted = tier.slug === 'pro';
+            const features = tier.features || {};
+            const limits = tier.limits || {};
+
+            let priceHtml;
+            if (isFree) {
+                priceHtml = `<span class="amount">&pound;0</span> <span class="period">forever</span>`;
+            } else if (isAnnual) {
+                const monthlyEquiv = (parseFloat(tier.annual_price) / 12).toFixed(2);
+                priceHtml = `<span class="amount">&pound;${monthlyEquiv}</span> <span class="period">/month</span>
+                    <div class="annual-note">Billed &pound;${parseFloat(tier.annual_price).toFixed(0)}/year</div>`;
+            } else {
+                priceHtml = `<span class="amount">&pound;${parseFloat(tier.monthly_price).toFixed(0)}</span> <span class="period">/month</span>`;
+            }
+
+            const limitsHtml = `
+                <div class="limit-item"><span class="limit-value">${formatLimit(limits.max_service_categories, 'category', 'categories')}</span></div>
+                <div class="limit-item"><span class="limit-value">${formatLimit(limits.max_locations, 'location', 'locations')}</span></div>
+                <div class="limit-item"><span class="limit-value">${limits.max_photos === 0 ? 'No photos' : formatLimit(limits.max_photos, 'photo', 'photos')}</span></div>
+                <div class="limit-item"><span class="limit-value">${limits.allow_logo ? 'Logo upload' : 'No logo'}</span></div>
+            `;
+
+            const featuresHtml = Object.entries(featureLabels).map(([key, label]) => {
+                const has = features[key];
+                return `<div class="feature-item ${has ? '' : 'disabled'}">
+                    <span class="${has ? 'feature-check' : 'feature-cross'}">${has ? '&#10003;' : '&mdash;'}</span>
+                    ${escHtml(label)}
+                </div>`;
+            }).join('');
+
+            let ctaHtml;
+            if (isFree) {
+                ctaHtml = `<a href="/services/register/" class="btn btn-secondary">Get Started Free</a>`;
+            } else if (isHighlighted) {
+                ctaHtml = `<button class="btn btn-gold" onclick="subscribe('${tier.slug}')">${escHtml(tier.cta_text || 'Upgrade to ' + tier.name)}</button>`;
+            } else {
+                ctaHtml = `<button class="btn btn-primary" onclick="subscribe('${tier.slug}')">${escHtml(tier.cta_text || 'Choose ' + tier.name)}</button>`;
+            }
+
+            return `<div class="tier-card ${isHighlighted ? 'highlighted' : ''}">
+                ${tier.badge_text ? `<div class="tier-badge">${escHtml(tier.badge_text)}</div>` : ''}
+                <div class="tier-name">${escHtml(tier.name)}</div>
+                <div class="tier-tagline">${escHtml(tier.tagline)}</div>
+                <div class="tier-price">${priceHtml}</div>
+                <div class="tier-limits">${limitsHtml}</div>
+                <div class="tier-features">${featuresHtml}</div>
+                <div class="tier-cta">${ctaHtml}</div>
+            </div>`;
+        }).join('');
+    }
+
+    function renderAddons() {
+        if (!pricingData || !pricingData.addons.length) return;
+        const container = document.getElementById('addons-container');
+        const grid = document.getElementById('addons-grid');
+        container.style.display = 'block';
+
+        grid.innerHTML = pricingData.addons.map(addon => `
+            <div class="addon-card">
+                <div class="addon-name">${escHtml(addon.name)}</div>
+                <div class="addon-desc">${escHtml(addon.description)}</div>
+                <div class="addon-price">&pound;${parseFloat(addon.monthly_price).toFixed(0)}/month</div>
+                <div class="addon-tiers">Available on: ${addon.compatible_tier_slugs.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')}</div>
+            </div>
+        `).join('');
+    }
+
+    async function subscribe(tierSlug) {
+        if (!Auth.isLoggedIn()) {
+            window.location.href = '/login/?next=/pricing/';
+            return;
+        }
+
+        const btn = event.target;
+        btn.disabled = true;
+        btn.textContent = 'Redirecting...';
+
+        try {
+            const res = await Auth.authFetch('/api/subscriptions/create-checkout/', {
+                method: 'POST',
+                headers: Auth.headers(),
+                body: JSON.stringify({
+                    tier_slug: tierSlug,
+                    billing_cycle: isAnnual ? 'annual' : 'monthly',
+                }),
+            });
+            const data = await res.json();
+            if (res.ok && data.checkout_url) {
+                window.location.href = data.checkout_url;
+            } else {
+                alert(data.detail || 'Failed to start checkout. Please try again.');
+                btn.disabled = false;
+                btn.textContent = 'Try Again';
+            }
+        } catch (err) {
+            alert('Network error. Please try again.');
+            btn.disabled = false;
+            btn.textContent = 'Try Again';
+        }
+    }
+
+    // Load pricing data
+    fetch('/api/pricing/')
+        .then(r => r.json())
+        .then(data => {
+            pricingData = data;
+            renderTiers();
+            renderAddons();
+        })
+        .catch(() => {
+            document.getElementById('tiers-container').innerHTML =
+                '<p style="text-align:center; color:#4A5E56;">Failed to load pricing. Please refresh the page.</p>';
+        });
+
+    // Show cancelled message if redirected from Stripe
+    if (new URLSearchParams(window.location.search).get('cancelled') === 'true') {
+        document.getElementById('cancelled-msg').style.display = 'block';
+    }
+</script>
+{% endblock %}

@@ -69,4 +69,23 @@ urlpatterns = [
         views.property_services,
         name='property-services',
     ),
+    # Subscription / Stripe
+    path('pricing/', views.pricing_page, name='pricing-api'),
+    path('my-subscription/', views.my_subscription, name='my-subscription'),
+    path('subscriptions/create-checkout/', views.create_checkout, name='create-checkout'),
+    path('subscriptions/create-portal/', views.create_portal, name='create-portal'),
+    path('stripe/webhook/', views.stripe_webhook, name='stripe-webhook'),
+    # Service provider photos (nested)
+    path(
+        'service-providers/<int:provider_pk>/photos/',
+        views.ServiceProviderPhotoViewSet.as_view({'get': 'list', 'post': 'create'}),
+        name='service-provider-photos-list',
+    ),
+    path(
+        'service-providers/<int:provider_pk>/photos/<int:pk>/',
+        views.ServiceProviderPhotoViewSet.as_view({
+            'get': 'retrieve', 'patch': 'partial_update', 'delete': 'destroy'
+        }),
+        name='service-provider-photos-detail',
+    ),
 ]

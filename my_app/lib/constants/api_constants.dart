@@ -86,6 +86,20 @@ class ApiConstants {
   static String propertyServices(int propertyId) =>
       '$apiUrl/properties/$propertyId/services/';
 
+  // Service provider photos
+  static String serviceProviderPhotos(int providerId) =>
+      '$apiUrl/service-providers/$providerId/photos/';
+  static String serviceProviderPhoto(int providerId, int photoId) =>
+      '$apiUrl/service-providers/$providerId/photos/$photoId/';
+
+  // Subscriptions / Pricing
+  static String get pricing => '$apiUrl/pricing/';
+  static String get mySubscription => '$apiUrl/my-subscription/';
+  static String get createCheckout =>
+      '$apiUrl/subscriptions/create-checkout/';
+  static String get createPortal =>
+      '$apiUrl/subscriptions/create-portal/';
+
   // Auth
   static String get login => '$authUrl/token/login/';
   static String get logout => '$authUrl/token/logout/';

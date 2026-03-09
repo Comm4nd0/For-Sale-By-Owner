@@ -8,10 +8,16 @@ class AuthService extends ChangeNotifier {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   String? _token;
   int? _userId;
+  String? _email;
+  String? _firstName;
+  String? _lastName;
   bool _isLoading = false;
 
   String? get token => _token;
   int? get userId => _userId;
+  String? get email => _email;
+  String? get firstName => _firstName;
+  String? get lastName => _lastName;
   bool get isAuthenticated => _token != null;
   bool get isLoading => _isLoading;
 
@@ -35,6 +41,9 @@ class AuthService extends ChangeNotifier {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         _userId = data['id'];
+        _email = data['email'];
+        _firstName = data['first_name'];
+        _lastName = data['last_name'];
       }
     } catch (e) {
       debugPrint('Fetch user error: $e');
@@ -117,6 +126,9 @@ class AuthService extends ChangeNotifier {
 
     _token = null;
     _userId = null;
+    _email = null;
+    _firstName = null;
+    _lastName = null;
     await _storage.delete(key: 'auth_token');
     notifyListeners();
   }

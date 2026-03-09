@@ -445,6 +445,12 @@ class ServiceProvider(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     is_verified = models.BooleanField(default=False, help_text='Admin-verified business')
 
+    # Stripe
+    stripe_customer_id = models.CharField(
+        max_length=100, blank=True, default='',
+        help_text='Stripe Customer ID for billing'
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -482,6 +488,25 @@ class ServiceProvider(models.Model):
     def review_count(self):
         return self.reviews.count()
 
+    @property
+    def active_subscription(self):
+        """Return the current active subscription, or None."""
+        from django.utils import timezone
+        return self.subscriptions.filter(
+            status='active'
+        ).filter(
+            models.Q(current_period_end__isnull=True) |
+            models.Q(current_period_end__gt=timezone.now())
+        ).select_related('tier').first()
+
+    @property
+    def current_tier(self):
+        """Return the current SubscriptionTier, defaulting to free."""
+        sub = self.active_subscription
+        if sub:
+            return sub.tier
+        return SubscriptionTier.objects.filter(slug='free', is_active=True).first()
+
 
 class ServiceProviderReview(models.Model):
     """A rating and review left by a user for a service provider."""
@@ -503,3 +528,173 @@ class ServiceProviderReview(models.Model):
 
     def __str__(self):
         return f"{self.reviewer.email} rated {self.provider.business_name} {self.rating}/5"
+
+
+# ── Subscription / Pricing Models ────────────────────────────────
+
+
+class SubscriptionTier(models.Model):
+    """Admin-configurable subscription tier for service providers."""
+    name = models.CharField(max_length=50)
+    slug = models.SlugField(max_length=50, unique=True)
+    tagline = models.CharField(max_length=200, blank=True)
+    cta_text = models.CharField(max_length=100, blank=True, help_text='Call-to-action button text')
+    badge_text = models.CharField(max_length=50, blank=True, help_text='e.g. "Most Popular"')
+
+    # Pricing
+    monthly_price = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    annual_price = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    currency = models.CharField(max_length=3, default='GBP')
+
+    # Stripe Price IDs (set via admin after creating products in Stripe Dashboard)
+    stripe_monthly_price_id = models.CharField(
+        max_length=100, blank=True, default='',
+        help_text='Stripe Price ID for monthly billing'
+    )
+    stripe_annual_price_id = models.CharField(
+        max_length=100, blank=True, default='',
+        help_text='Stripe Price ID for annual billing'
+    )
+
+    # Limits (-1 means unlimited)
+    max_service_categories = models.IntegerField(default=1, help_text='-1 = unlimited')
+    max_locations = models.IntegerField(default=1, help_text='-1 = unlimited')
+    max_photos = models.IntegerField(default=0, help_text='-1 = unlimited')
+    allow_logo = models.BooleanField(default=False)
+
+    # Feature flags
+    feature_basic_listing = models.BooleanField(default=True)
+    feature_local_area_visibility = models.BooleanField(default=True)
+    feature_contact_details = models.BooleanField(default=True)
+    feature_featured_placement = models.BooleanField(default=False)
+    feature_click_through_analytics = models.BooleanField(default=False)
+    feature_category_exclusivity = models.BooleanField(default=False)
+    feature_priority_search = models.BooleanField(default=False)
+    feature_lead_notifications = models.BooleanField(default=False)
+    feature_performance_reports = models.BooleanField(default=False)
+    feature_account_manager = models.BooleanField(default=False)
+    feature_photo_gallery = models.BooleanField(default=False)
+    feature_early_access = models.BooleanField(default=False)
+
+    # Display
+    display_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['display_order', 'monthly_price']
+
+    def __str__(self):
+        return self.name
+
+
+class SubscriptionAddOn(models.Model):
+    """Purchasable extras for service provider subscriptions."""
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    monthly_price = models.DecimalField(max_digits=8, decimal_places=2)
+    stripe_price_id = models.CharField(
+        max_length=100, blank=True, default='',
+        help_text='Stripe Price ID for this add-on'
+    )
+    compatible_tiers = models.ManyToManyField(
+        SubscriptionTier, related_name='available_addons', blank=True
+    )
+    is_active = models.BooleanField(default=True)
+    display_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['display_order']
+
+    def __str__(self):
+        return self.name
+
+
+class ServiceProviderSubscription(models.Model):
+    """Links a service provider to their active subscription tier."""
+    BILLING_CHOICES = [
+        ('monthly', 'Monthly'),
+        ('annual', 'Annual'),
+    ]
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('cancelled', 'Cancelled'),
+        ('past_due', 'Past Due'),
+        ('pending', 'Pending'),
+    ]
+
+    provider = models.ForeignKey(
+        ServiceProvider, on_delete=models.CASCADE, related_name='subscriptions'
+    )
+    tier = models.ForeignKey(
+        SubscriptionTier, on_delete=models.PROTECT, related_name='subscriptions'
+    )
+    billing_cycle = models.CharField(max_length=10, choices=BILLING_CHOICES, default='monthly')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+
+    # Stripe
+    stripe_subscription_id = models.CharField(
+        max_length=100, blank=True, default='', unique=True, null=True,
+        help_text='Stripe Subscription ID'
+    )
+    stripe_customer_id = models.CharField(max_length=100, blank=True, default='')
+
+    # Period
+    current_period_start = models.DateTimeField(null=True, blank=True)
+    current_period_end = models.DateTimeField(null=True, blank=True)
+    cancel_at_period_end = models.BooleanField(default=False)
+
+    started_at = models.DateTimeField(auto_now_add=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    admin_notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-started_at']
+
+    def __str__(self):
+        return f"{self.provider.business_name} - {self.tier.name} ({self.status})"
+
+    @property
+    def is_current(self):
+        if self.status != 'active':
+            return False
+        if self.current_period_end is None:
+            return True  # Free tier never expires
+        from django.utils import timezone
+        return self.current_period_end > timezone.now()
+
+
+class ServiceProviderAddOn(models.Model):
+    """Active add-on on a service provider's subscription."""
+    subscription = models.ForeignKey(
+        ServiceProviderSubscription, on_delete=models.CASCADE, related_name='active_addons'
+    )
+    addon = models.ForeignKey(
+        SubscriptionAddOn, on_delete=models.PROTECT, related_name='provider_addons'
+    )
+    quantity = models.PositiveIntegerField(default=1)
+    stripe_subscription_item_id = models.CharField(max_length=100, blank=True, default='')
+    activated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['subscription', 'addon']
+
+    def __str__(self):
+        return f"{self.subscription.provider.business_name} - {self.addon.name} x{self.quantity}"
+
+
+class ServiceProviderPhoto(models.Model):
+    """Gallery photo for a service provider (paid tiers only)."""
+    provider = models.ForeignKey(
+        ServiceProvider, on_delete=models.CASCADE, related_name='photos'
+    )
+    image = models.ImageField(upload_to='services/photos/')
+    caption = models.CharField(max_length=200, blank=True)
+    order = models.PositiveIntegerField(default=0)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', 'uploaded_at']
+
+    def __str__(self):
+        return f"Photo {self.order} for {self.provider.business_name}"

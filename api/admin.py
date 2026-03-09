@@ -7,6 +7,8 @@ from .models import (
     PriceHistory, SavedProperty, Enquiry, PropertyView,
     ViewingRequest, SavedSearch, PushNotificationDevice, Reply,
     ServiceCategory, ServiceProvider, ServiceProviderReview,
+    SubscriptionTier, SubscriptionAddOn, ServiceProviderSubscription,
+    ServiceProviderAddOn, ServiceProviderPhoto,
 )
 from .notifications import notify_listing_approved, notify_listing_rejected
 
@@ -250,16 +252,41 @@ class ServiceProviderReviewInline(admin.TabularInline):
     readonly_fields = ['reviewer', 'rating', 'comment', 'created_at']
 
 
+class ServiceProviderSubscriptionInline(admin.TabularInline):
+    model = ServiceProviderSubscription
+    extra = 0
+    fields = ['tier', 'billing_cycle', 'status', 'current_period_end', 'cancel_at_period_end']
+    readonly_fields = ['current_period_end']
+
+
+class ServiceProviderPhotoInline(admin.TabularInline):
+    model = ServiceProviderPhoto
+    extra = 0
+    fields = ['image', 'caption', 'order']
+
+
 @admin.register(ServiceProvider)
 class ServiceProviderAdmin(admin.ModelAdmin):
-    list_display = ['business_name', 'owner', 'status', 'is_verified', 'review_count_display', 'created_at']
+    list_display = ['business_name', 'owner', 'status', 'current_tier_display', 'is_verified', 'review_count_display', 'created_at']
     list_filter = ['status', 'is_verified', 'categories', 'created_at']
     list_editable = ['status', 'is_verified']
     search_fields = ['business_name', 'owner__email', 'coverage_counties', 'coverage_postcodes']
     readonly_fields = ['slug', 'created_at', 'updated_at']
     filter_horizontal = ['categories']
-    inlines = [ServiceProviderReviewInline]
+    inlines = [ServiceProviderSubscriptionInline, ServiceProviderPhotoInline, ServiceProviderReviewInline]
     actions = ['approve_providers', 'verify_providers']
+
+    def current_tier_display(self, obj):
+        tier = obj.current_tier
+        if not tier:
+            return '-'
+        colours = {'free': '#999', 'growth': '#27AE60', 'pro': '#C9872A'}
+        colour = colours.get(tier.slug, '#999')
+        return format_html(
+            '<span style="background:{}; color:white; padding:3px 8px; border-radius:3px; font-size:11px;">{}</span>',
+            colour, tier.name
+        )
+    current_tier_display.short_description = 'Tier'
 
     def review_count_display(self, obj):
         return obj.reviews.count()
@@ -280,3 +307,107 @@ class ServiceProviderReviewAdmin(admin.ModelAdmin):
     list_filter = ['rating', 'created_at']
     search_fields = ['provider__business_name', 'reviewer__email', 'comment']
     readonly_fields = ['created_at']
+
+
+# ── Subscription / Billing models ────────────────────────────────
+
+@admin.register(SubscriptionTier)
+class SubscriptionTierAdmin(admin.ModelAdmin):
+    list_display = ['name', 'price_display', 'annual_price_display', 'display_order', 'is_active']
+    list_editable = ['display_order', 'is_active']
+    prepopulated_fields = {'slug': ('name',)}
+    fieldsets = (
+        ('General', {'fields': ('name', 'slug', 'tagline', 'cta_text', 'badge_text')}),
+        ('Pricing', {'fields': ('monthly_price', 'annual_price', 'currency')}),
+        ('Stripe', {
+            'fields': ('stripe_monthly_price_id', 'stripe_annual_price_id'),
+            'description': 'Set these after creating products/prices in the Stripe Dashboard.',
+        }),
+        ('Limits', {'fields': ('max_service_categories', 'max_locations', 'max_photos', 'allow_logo')}),
+        ('Features', {
+            'fields': (
+                'feature_basic_listing', 'feature_local_area_visibility',
+                'feature_contact_details', 'feature_featured_placement',
+                'feature_click_through_analytics', 'feature_category_exclusivity',
+                'feature_priority_search', 'feature_lead_notifications',
+                'feature_performance_reports', 'feature_account_manager',
+                'feature_photo_gallery', 'feature_early_access',
+            ),
+        }),
+        ('Display', {'fields': ('display_order', 'is_active')}),
+    )
+
+    def price_display(self, obj):
+        return f"\u00A3{obj.monthly_price:.2f}/mo"
+    price_display.short_description = 'Monthly'
+
+    def annual_price_display(self, obj):
+        return f"\u00A3{obj.annual_price:.2f}/yr"
+    annual_price_display.short_description = 'Annual'
+
+
+@admin.register(SubscriptionAddOn)
+class SubscriptionAddOnAdmin(admin.ModelAdmin):
+    list_display = ['name', 'monthly_price', 'is_active', 'display_order']
+    list_editable = ['is_active', 'display_order']
+    prepopulated_fields = {'slug': ('name',)}
+    filter_horizontal = ['compatible_tiers']
+    fieldsets = (
+        (None, {'fields': ('name', 'slug', 'description', 'monthly_price')}),
+        ('Stripe', {'fields': ('stripe_price_id',)}),
+        ('Availability', {'fields': ('compatible_tiers', 'is_active', 'display_order')}),
+    )
+
+
+class ServiceProviderAddOnInline(admin.TabularInline):
+    model = ServiceProviderAddOn
+    extra = 0
+    readonly_fields = ['activated_at']
+
+
+@admin.register(ServiceProviderSubscription)
+class ServiceProviderSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ['provider', 'tier', 'billing_cycle', 'status_badge', 'current_period_end', 'cancel_at_period_end']
+    list_filter = ['status', 'tier', 'billing_cycle']
+    search_fields = ['provider__business_name', 'stripe_subscription_id']
+    readonly_fields = ['started_at', 'stripe_subscription_id', 'stripe_customer_id']
+    inlines = [ServiceProviderAddOnInline]
+    fieldsets = (
+        (None, {'fields': ('provider', 'tier', 'billing_cycle', 'status')}),
+        ('Stripe', {'fields': ('stripe_subscription_id', 'stripe_customer_id')}),
+        ('Period', {'fields': ('current_period_start', 'current_period_end', 'cancel_at_period_end')}),
+        ('Dates', {'fields': ('started_at', 'cancelled_at')}),
+        ('Notes', {'fields': ('admin_notes',)}),
+    )
+    actions = ['activate_subscriptions', 'cancel_subscriptions']
+
+    def status_badge(self, obj):
+        colours = {
+            'active': '#27AE60',
+            'cancelled': '#E74C3C',
+            'past_due': '#E67E22',
+            'pending': '#999',
+        }
+        colour = colours.get(obj.status, '#999')
+        return format_html(
+            '<span style="background:{}; color:white; padding:3px 8px; border-radius:3px; font-size:11px;">{}</span>',
+            colour, obj.get_status_display()
+        )
+    status_badge.short_description = 'Status'
+
+    @admin.action(description='Activate selected subscriptions')
+    def activate_subscriptions(self, request, queryset):
+        queryset.update(status='active')
+
+    @admin.action(description='Cancel selected subscriptions')
+    def cancel_subscriptions(self, request, queryset):
+        from django.utils import timezone
+        queryset.update(status='cancelled', cancelled_at=timezone.now())
+
+
+@admin.register(ServiceProviderPhoto)
+class ServiceProviderPhotoAdmin(admin.ModelAdmin):
+    list_display = ['provider', 'caption', 'order', 'uploaded_at']
+    list_filter = ['uploaded_at']
+    search_fields = ['provider__business_name', 'caption']
+    readonly_fields = ['uploaded_at']

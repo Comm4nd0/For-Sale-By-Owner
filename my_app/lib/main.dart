@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'constants/app_theme.dart';
 import 'services/auth_service.dart';
 import 'services/api_service.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,7 +28,7 @@ class FSBOApp extends StatelessWidget {
         title: 'For Sale By Owner',
         theme: AppTheme.lightTheme,
         debugShowCheckedModeBanner: false,
-        home: const HomeScreen(),
+        home: const MainShell(),
       ),
     );
   }

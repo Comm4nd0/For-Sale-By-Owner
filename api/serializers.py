@@ -5,6 +5,8 @@ from .models import (
     PriceHistory, SavedProperty, Enquiry, PropertyView,
     ViewingRequest, SavedSearch, Reply,
     ServiceCategory, ServiceProvider, ServiceProviderReview,
+    SubscriptionTier, SubscriptionAddOn, ServiceProviderSubscription,
+    ServiceProviderPhoto,
 )
 
 User = get_user_model()
@@ -267,6 +269,9 @@ class ServiceProviderListSerializer(serializers.ModelSerializer):
     categories = ServiceCategorySerializer(many=True, read_only=True)
     average_rating = serializers.SerializerMethodField()
     review_count = serializers.SerializerMethodField()
+    tier_name = serializers.SerializerMethodField()
+    tier_slug = serializers.SerializerMethodField()
+    is_featured = serializers.SerializerMethodField()
 
     class Meta:
         model = ServiceProvider
@@ -275,6 +280,7 @@ class ServiceProviderListSerializer(serializers.ModelSerializer):
             'categories', 'coverage_counties', 'coverage_postcodes',
             'logo', 'is_verified', 'pricing_info',
             'average_rating', 'review_count',
+            'tier_name', 'tier_slug', 'is_featured',
             'created_at',
         ]
 
@@ -284,23 +290,49 @@ class ServiceProviderListSerializer(serializers.ModelSerializer):
     def get_review_count(self, obj):
         return obj.review_count
 
+    def get_tier_name(self, obj):
+        tier = obj.current_tier
+        return tier.name if tier else 'Free'
+
+    def get_tier_slug(self, obj):
+        tier = obj.current_tier
+        return tier.slug if tier else 'free'
+
+    def get_is_featured(self, obj):
+        tier = obj.current_tier
+        return tier.feature_featured_placement if tier else False
+
+
+class ServiceProviderPhotoSerializer(serializers.ModelSerializer):
+    image = RelativeImageField()
+
+    class Meta:
+        model = ServiceProviderPhoto
+        fields = ['id', 'image', 'caption', 'order', 'uploaded_at']
+        read_only_fields = ['id', 'uploaded_at']
+
 
 class ServiceProviderDetailSerializer(ServiceProviderListSerializer):
     """Full serializer for detail/create/update views."""
     reviews = ServiceProviderReviewSerializer(many=True, read_only=True)
+    photos = ServiceProviderPhotoSerializer(many=True, read_only=True)
     owner_name = serializers.SerializerMethodField()
     category_ids = serializers.PrimaryKeyRelatedField(
         queryset=ServiceCategory.objects.all(),
         many=True, write_only=True, required=False,
         source='categories',
     )
+    subscription = serializers.SerializerMethodField()
+    tier_limits = serializers.SerializerMethodField()
+    tier_features = serializers.SerializerMethodField()
 
     class Meta(ServiceProviderListSerializer.Meta):
         fields = ServiceProviderListSerializer.Meta.fields + [
             'owner', 'owner_name',
             'contact_email', 'contact_phone', 'website',
             'years_established',
-            'status', 'reviews',
+            'status', 'reviews', 'photos',
+            'subscription', 'tier_limits', 'tier_features',
             'updated_at',
             'category_ids',
         ]
@@ -308,6 +340,46 @@ class ServiceProviderDetailSerializer(ServiceProviderListSerializer):
 
     def get_owner_name(self, obj):
         return obj.owner.get_full_name() or obj.owner.email
+
+    def get_subscription(self, obj):
+        """Return subscription details only to the owner."""
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated or request.user != obj.owner:
+            return None
+        sub = obj.active_subscription
+        if not sub:
+            return None
+        return ServiceProviderSubscriptionSerializer(sub).data
+
+    def get_tier_limits(self, obj):
+        tier = obj.current_tier
+        if not tier:
+            return {}
+        return {
+            'max_service_categories': tier.max_service_categories,
+            'max_locations': tier.max_locations,
+            'max_photos': tier.max_photos,
+            'allow_logo': tier.allow_logo,
+        }
+
+    def get_tier_features(self, obj):
+        tier = obj.current_tier
+        if not tier:
+            return {}
+        return {
+            'basic_listing': tier.feature_basic_listing,
+            'local_area_visibility': tier.feature_local_area_visibility,
+            'contact_details': tier.feature_contact_details,
+            'featured_placement': tier.feature_featured_placement,
+            'click_through_analytics': tier.feature_click_through_analytics,
+            'category_exclusivity': tier.feature_category_exclusivity,
+            'priority_search': tier.feature_priority_search,
+            'lead_notifications': tier.feature_lead_notifications,
+            'performance_reports': tier.feature_performance_reports,
+            'account_manager': tier.feature_account_manager,
+            'photo_gallery': tier.feature_photo_gallery,
+            'early_access': tier.feature_early_access,
+        }
 
     def create(self, validated_data):
         categories = validated_data.pop('categories', [])
@@ -322,3 +394,68 @@ class ServiceProviderDetailSerializer(ServiceProviderListSerializer):
         if categories is not None:
             instance.categories.set(categories)
         return instance
+
+
+# ── Subscription serializers ─────────────────────────────────────
+
+class SubscriptionTierSerializer(serializers.ModelSerializer):
+    limits = serializers.SerializerMethodField()
+    features = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SubscriptionTier
+        fields = [
+            'id', 'name', 'slug', 'tagline', 'cta_text', 'badge_text',
+            'monthly_price', 'annual_price', 'currency',
+            'limits', 'features', 'display_order',
+        ]
+
+    def get_limits(self, obj):
+        return {
+            'max_service_categories': obj.max_service_categories,
+            'max_locations': obj.max_locations,
+            'max_photos': obj.max_photos,
+            'allow_logo': obj.allow_logo,
+        }
+
+    def get_features(self, obj):
+        return {
+            'basic_listing': obj.feature_basic_listing,
+            'local_area_visibility': obj.feature_local_area_visibility,
+            'contact_details': obj.feature_contact_details,
+            'featured_placement': obj.feature_featured_placement,
+            'click_through_analytics': obj.feature_click_through_analytics,
+            'category_exclusivity': obj.feature_category_exclusivity,
+            'priority_search': obj.feature_priority_search,
+            'lead_notifications': obj.feature_lead_notifications,
+            'performance_reports': obj.feature_performance_reports,
+            'account_manager': obj.feature_account_manager,
+            'photo_gallery': obj.feature_photo_gallery,
+            'early_access': obj.feature_early_access,
+        }
+
+
+class SubscriptionAddOnSerializer(serializers.ModelSerializer):
+    compatible_tier_slugs = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SubscriptionAddOn
+        fields = [
+            'id', 'name', 'slug', 'description', 'monthly_price',
+            'compatible_tier_slugs',
+        ]
+
+    def get_compatible_tier_slugs(self, obj):
+        return list(obj.compatible_tiers.values_list('slug', flat=True))
+
+
+class ServiceProviderSubscriptionSerializer(serializers.ModelSerializer):
+    tier = SubscriptionTierSerializer(read_only=True)
+
+    class Meta:
+        model = ServiceProviderSubscription
+        fields = [
+            'id', 'tier', 'billing_cycle', 'status',
+            'current_period_start', 'current_period_end',
+            'cancel_at_period_end', 'started_at',
+        ]
