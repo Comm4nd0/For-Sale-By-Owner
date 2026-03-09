@@ -91,15 +91,16 @@
         <form id="property-form" class="property-form">
             <div class="form-group">
                 <label for="title">Property Title</label>
-                <input type="text" id="title" value="${p.title}" required>
+                <input type="text" id="title" value="${escHtml(p.title)}" required>
             </div>
             <div class="form-row">
                 <div class="form-group">
                     <label for="property_type">Property Type</label>
                     <select id="property_type" required>
-                        ${['detached','semi_detached','terraced','flat','bungalow','cottage','land','other'].map(t =>
-                            `<option value="${t}" ${p.property_type === t ? 'selected' : ''}>${t.replace('_',' ').replace(/\\b\\w/g, c => c.toUpperCase())}</option>`
-                        ).join('')}
+                        ${['detached','semi_detached','terraced','flat','bungalow','cottage','land','other'].map(t => {
+                            const label = {detached:'Detached',semi_detached:'Semi-Detached',terraced:'Terraced',flat:'Flat/Apartment',bungalow:'Bungalow',cottage:'Cottage',land:'Land',other:'Other'}[t] || t;
+                            return `<option value="${t}" ${p.property_type === t ? 'selected' : ''}>${label}</option>`;
+                        }).join('')}
                     </select>
                 </div>
                 <div class="form-group">
@@ -109,16 +110,16 @@
             </div>
             <div class="form-group">
                 <label for="description">Description</label>
-                <textarea id="description">${p.description || ''}</textarea>
+                <textarea id="description">${escHtml(p.description || '')}</textarea>
             </div>
             <h3 class="section-title">Address</h3>
-            <div class="form-group"><label for="address_line_1">Address Line 1</label><input type="text" id="address_line_1" value="${p.address_line_1}" required></div>
-            <div class="form-group"><label for="address_line_2">Address Line 2</label><input type="text" id="address_line_2" value="${p.address_line_2 || ''}"></div>
+            <div class="form-group"><label for="address_line_1">Address Line 1</label><input type="text" id="address_line_1" value="${escHtml(p.address_line_1)}" required></div>
+            <div class="form-group"><label for="address_line_2">Address Line 2</label><input type="text" id="address_line_2" value="${escHtml(p.address_line_2 || '')}"></div>
             <div class="form-row">
-                <div class="form-group"><label for="city">City / Town</label><input type="text" id="city" value="${p.city}" required></div>
-                <div class="form-group"><label for="county">County</label><input type="text" id="county" value="${p.county || ''}"></div>
+                <div class="form-group"><label for="city">City / Town</label><input type="text" id="city" value="${escHtml(p.city)}" required></div>
+                <div class="form-group"><label for="county">County</label><input type="text" id="county" value="${escHtml(p.county || '')}"></div>
             </div>
-            <div class="form-group" style="max-width:200px;"><label for="postcode">Postcode</label><input type="text" id="postcode" value="${p.postcode}" required></div>
+            <div class="form-group" style="max-width:200px;"><label for="postcode">Postcode</label><input type="text" id="postcode" value="${escHtml(p.postcode)}" required></div>
             <h3 class="section-title">Property Details</h3>
             <div class="form-row-3">
                 <div class="form-group"><label for="bedrooms">Bedrooms</label><input type="number" id="bedrooms" value="${p.bedrooms}" min="0"></div>
@@ -155,9 +156,10 @@
             <div class="form-group" style="margin-top:1.5rem;">
                 <label for="status">Listing Status</label>
                 <select id="status">
-                    ${['draft','active','under_offer','sold_stc','sold','withdrawn'].map(s =>
-                        `<option value="${s}" ${p.status === s ? 'selected' : ''}>${s.replace('_',' ').replace(/\\b\\w/g, c => c.toUpperCase())}</option>`
-                    ).join('')}
+                    ${['draft','active','under_offer','sold_stc','sold','withdrawn'].map(s => {
+                        const label = {draft:'Draft',active:'Active',under_offer:'Under Offer',sold_stc:'Sold STC',sold:'Sold',withdrawn:'Withdrawn'}[s] || s;
+                        return `<option value="${s}" ${p.status === s ? 'selected' : ''}>${label}</option>`;
+                    }).join('')}
                 </select>
             </div>
             <div class="form-actions">
@@ -223,15 +225,16 @@
     function renderExistingImages() {
         const container = document.getElementById('existing-images');
         container.innerHTML = existingImages.map(img => `
-            <div class="existing-image ${img.is_primary ? 'primary' : ''}">
+            <div class="existing-image ${img.is_primary ? 'primary' : ''}" data-id="${img.id}">
                 ${img.is_primary ? '<span class="primary-badge">Primary</span>' : ''}
-                <img src="${img.image}" alt="${img.caption || ''}">
+                <img src="${img.image}" alt="${escHtml(img.caption || '')}">
                 <div class="actions">
                     ${!img.is_primary ? `<button type="button" onclick="setPrimary(${img.id})" title="Set as primary">&#9733;</button>` : ''}
                     <button type="button" onclick="deleteImage(${img.id})" title="Delete">&times;</button>
                 </div>
             </div>
         `).join('');
+        setupDragDrop();
     }
 
     async function onNewFiles(e) {
@@ -399,22 +402,6 @@
             });
         });
     }
-
-    const origRender = renderExistingImages;
-    renderExistingImages = function() {
-        const container = document.getElementById('existing-images');
-        container.innerHTML = existingImages.map(img => `
-            <div class="existing-image ${img.is_primary ? 'primary' : ''}" data-id="${img.id}">
-                ${img.is_primary ? '<span class="primary-badge">Primary</span>' : ''}
-                <img src="${img.image}" alt="${img.caption || ''}">
-                <div class="actions">
-                    ${!img.is_primary ? `<button type="button" onclick="setPrimary(${img.id})" title="Set as primary">&#9733;</button>` : ''}
-                    <button type="button" onclick="deleteImage(${img.id})" title="Delete">&times;</button>
-                </div>
-            </div>
-        `).join('');
-        setupDragDrop();
-    };
 
     loadProperty();
 </script>

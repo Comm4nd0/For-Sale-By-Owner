@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.core.mail import send_mail
-from django.template.loader import render_to_string
 import logging
 
 logger = logging.getLogger(__name__)
@@ -77,7 +76,8 @@ def notify_viewing_request(viewing):
         f'Preferred date: {viewing.preferred_date.strftime("%A %d %B %Y")} at {viewing.preferred_time.strftime("%H:%M")}\n'
     )
     if viewing.alternative_date:
-        message += f'Alternative date: {viewing.alternative_date.strftime("%A %d %B %Y")} at {viewing.alternative_time.strftime("%H:%M")}\n'
+        alt_time = viewing.alternative_time.strftime("%H:%M") if viewing.alternative_time else 'TBC'
+        message += f'Alternative date: {viewing.alternative_date.strftime("%A %d %B %Y")} at {alt_time}\n'
     if viewing.message:
         message += f'\nMessage:\n{viewing.message}\n'
     message += (

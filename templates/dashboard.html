@@ -126,12 +126,12 @@
         listEl.innerHTML = enquiries.map(e => `
             <div class="enquiry-item ${e.is_read ? '' : 'unread'}">
                 <div class="enquiry-header">
-                    <span class="enquiry-from">${e.name}</span>
+                    <span class="enquiry-from">${escHtml(e.name)}</span>
                     <span class="enquiry-date">${new Date(e.created_at).toLocaleString()}</span>
                 </div>
-                <div class="enquiry-property">Re: ${e.property_title}</div>
-                <div class="enquiry-message">${e.message}</div>
-                <div class="enquiry-contact">${e.email} ${e.phone ? ' &bull; ' + e.phone : ''}</div>
+                <div class="enquiry-property">Re: ${escHtml(e.property_title)}</div>
+                <div class="enquiry-message">${escHtml(e.message)}</div>
+                <div class="enquiry-contact">${escHtml(e.email)} ${e.phone ? ' &bull; ' + escHtml(e.phone) : ''}</div>
                 <div class="enquiry-actions">
                     ${!e.is_read ? `<button class="btn btn-secondary" style="font-size:0.8rem; padding:0.3rem 0.8rem;" onclick="markRead(${e.id}, this)">Mark Read</button>` : '<span style="font-size:0.8rem; color:#8FA89E;">Read</span>'}
                     <a href="mailto:${e.email}?subject=Re: ${encodeURIComponent(e.property_title)}" class="btn btn-primary" style="font-size:0.8rem; padding:0.3rem 0.8rem;">Reply</a>
@@ -163,16 +163,16 @@
         listEl.innerHTML = viewings.map(v => `
             <div class="viewing-item">
                 <div class="viewing-header">
-                    <span class="enquiry-from">${v.name}</span>
-                    <span class="viewing-status status-${v.status}">${v.status_display}</span>
+                    <span class="enquiry-from">${escHtml(v.name)}</span>
+                    <span class="viewing-status status-${escHtml(v.status)}">${escHtml(v.status_display)}</span>
                 </div>
-                <div class="enquiry-property">Re: ${v.property_title}</div>
+                <div class="enquiry-property">Re: ${escHtml(v.property_title)}</div>
                 <div class="viewing-details">
-                    <strong>Date:</strong> ${new Date(v.preferred_date + 'T00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} at ${v.preferred_time}
-                    ${v.alternative_date ? `<br><strong>Alt:</strong> ${new Date(v.alternative_date + 'T00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} at ${v.alternative_time}` : ''}
-                    ${v.message ? `<br><strong>Message:</strong> ${v.message}` : ''}
+                    <strong>Date:</strong> ${new Date(v.preferred_date + 'T00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} at ${escHtml(v.preferred_time)}
+                    ${v.alternative_date ? `<br><strong>Alt:</strong> ${new Date(v.alternative_date + 'T00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} at ${escHtml(v.alternative_time)}` : ''}
+                    ${v.message ? `<br><strong>Message:</strong> ${escHtml(v.message)}` : ''}
                 </div>
-                <div class="enquiry-contact">${v.email} ${v.phone ? ' &bull; ' + v.phone : ''}</div>
+                <div class="enquiry-contact">${escHtml(v.email)} ${v.phone ? ' &bull; ' + escHtml(v.phone) : ''}</div>
                 ${v.status === 'pending' ? `
                 <div class="viewing-actions">
                     <button class="btn btn-primary" style="font-size:0.8rem; padding:0.3rem 0.8rem;" onclick="updateViewing(${v.id}, 'confirmed')">Confirm</button>

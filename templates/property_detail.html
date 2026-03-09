@@ -417,7 +417,7 @@
                 <div class="property-header">
                     <div class="property-header-left">
                         <div class="property-price">&pound;${Number(p.price).toLocaleString()}</div>
-                        <div class="property-title">${p.title}</div>
+                        <div class="property-title">${escHtml(p.title)}</div>
                         <div class="property-type">
                             ${p.property_type_display} &bull; ${p.status_display}
                             ${p.owner_is_verified ? '<span class="verified-badge">&#10003; Verified Seller</span>' : ''}
@@ -437,18 +437,18 @@
                 </div>
                 <div class="detail-grid">
                     <div>
-                        ${p.description ? `<div class="detail-section"><h3>Description</h3><p>${p.description.replace(/\n/g, '<br>')}</p></div>` : ''}
+                        ${p.description ? `<div class="detail-section"><h3>Description</h3><p>${escHtml(p.description).replace(/\n/g, '<br>')}</p></div>` : ''}
                         ${p.feature_list && p.feature_list.length ? `
                         <div class="detail-section">
                             <h3>Features</h3>
                             <div class="features-list">
-                                ${p.feature_list.map(f => `<span class="feature-tag">${f.icon ? f.icon + ' ' : ''}${f.name}</span>`).join('')}
+                                ${p.feature_list.map(f => `<span class="feature-tag">${f.icon ? escHtml(f.icon) + ' ' : ''}${escHtml(f.name)}</span>`).join('')}
                             </div>
                         </div>` : ''}
                         <div class="detail-section">
                             <h3>Address</h3>
-                            <p>${p.address_line_1}${p.address_line_2 ? ', ' + p.address_line_2 : ''}<br>
-                            ${p.city}${p.county ? ', ' + p.county : ''}<br>${p.postcode}</p>
+                            <p>${escHtml(p.address_line_1)}${p.address_line_2 ? ', ' + escHtml(p.address_line_2) : ''}<br>
+                            ${escHtml(p.city)}${p.county ? ', ' + escHtml(p.county) : ''}<br>${escHtml(p.postcode)}</p>
                         </div>
                         ${epcHtml}
                         ${p.floorplans && p.floorplans.length ? `
@@ -484,7 +484,7 @@
                     <div>
                         <div class="detail-section">
                             <h3>Details</h3>
-                            <div class="detail-row"><span class="detail-label">Listed by</span><span class="detail-value">${p.owner_name} ${p.owner_is_verified ? '&#10003;' : ''}</span></div>
+                            <div class="detail-row"><span class="detail-label">Listed by</span><span class="detail-value">${escHtml(p.owner_name)} ${p.owner_is_verified ? '&#10003;' : ''}</span></div>
                             <div class="detail-row"><span class="detail-label">Property type</span><span class="detail-value">${p.property_type_display}</span></div>
                             <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value">${p.status_display}</span></div>
                             ${p.epc_rating ? `<div class="detail-row"><span class="detail-label">EPC Rating</span><span class="detail-value">${p.epc_rating}</span></div>` : ''}
@@ -516,8 +516,9 @@
                         <div class="stamp-duty-section">
                             <h3>Stamp Duty Calculator</h3>
                             <div class="stamp-options">
-                                <label><input type="checkbox" id="stamp-first-time" onchange="calculateStampDuty()"> First-time buyer</label>
-                                <label><input type="checkbox" id="stamp-additional" onchange="calculateStampDuty()"> Additional property</label>
+                                <label><input type="radio" name="stamp-buyer-type" id="stamp-standard" onchange="calculateStampDuty()" checked> Standard</label>
+                                <label><input type="radio" name="stamp-buyer-type" id="stamp-first-time" onchange="calculateStampDuty()"> First-time buyer</label>
+                                <label><input type="radio" name="stamp-buyer-type" id="stamp-additional" onchange="calculateStampDuty()"> Additional property</label>
                             </div>
                             <div class="stamp-result" id="stamp-result"></div>
                         </div>

@@ -287,6 +287,9 @@ class PropertyView(models.Model):
     class Meta:
         ordering = ['-viewed_at']
 
+    def __str__(self):
+        return f"View of {self.property.title} at {self.viewed_at}"
+
 
 class SavedSearch(models.Model):
     """A saved search with alert preferences."""

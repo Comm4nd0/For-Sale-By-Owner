@@ -413,7 +413,17 @@
     });
     function removeFloorplan(i) {
         selectedFloorplans.splice(i, 1);
-        document.getElementById('floorplan-input').dispatchEvent(new Event('change'));
+        renderFloorplanPreviews();
+    }
+
+    function renderFloorplanPreviews() {
+        const container = document.getElementById('floorplan-preview');
+        container.innerHTML = selectedFloorplans.map((f, i) => `
+            <div class="image-preview-item">
+                ${f.type.startsWith('image/') ? `<img src="${URL.createObjectURL(f)}" alt="Floorplan">` : `<div style="width:100%;height:100px;background:#D8F3DC;display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:#4A5E56;">${escHtml(f.name)}</div>`}
+                <button type="button" class="remove" onclick="removeFloorplan(${i})">&times;</button>
+            </div>
+        `).join('');
     }
 
     // Step navigation

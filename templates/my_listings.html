@@ -47,14 +47,9 @@
 
     async function loadListings() {
         try {
-            const meRes = await fetch('/auth/users/me/', { headers: Auth.headers() });
-            if (!meRes.ok) { Auth.clear(); window.location.href = '/login/'; return; }
-            const me = await meRes.json();
-
-            const res = await fetch('/api/properties/', { headers: Auth.headers() });
+            const res = await fetch('/api/properties/?mine=true', { headers: Auth.headers() });
             const data = await res.json();
-            const results = data.results || data;
-            const myProperties = results.filter(p => p.owner === me.id);
+            const myProperties = data.results || data;
 
             const container = document.getElementById('listings');
             if (myProperties.length === 0) {
@@ -69,15 +64,15 @@
             container.className = 'listings-grid';
             container.innerHTML = myProperties.map(p => {
                 const imgHtml = p.primary_image
-                    ? `<img class="listing-image" src="${p.primary_image}" alt="${p.title}">`
+                    ? `<img class="listing-image" src="${p.primary_image}" alt="${escHtml(p.title)}">`
                     : `<div class="listing-placeholder">&#8962;</div>`;
                 return `
                 <div class="listing-card">
                     ${imgHtml}
                     <div class="listing-body">
-                        <h3>${p.title}</h3>
+                        <h3>${escHtml(p.title)}</h3>
                         <div class="listing-price">&pound;${Number(p.price).toLocaleString()}</div>
-                        <div class="listing-address">${p.address_line_1}, ${p.city} ${p.postcode}</div>
+                        <div class="listing-address">${escHtml(p.address_line_1)}, ${escHtml(p.city)} ${escHtml(p.postcode)}</div>
                         <div class="listing-meta">
                             <span>${p.bedrooms} bed</span>
                             <span>${p.bathrooms} bath</span>

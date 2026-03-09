@@ -209,6 +209,15 @@ class PropertyAPITest(TestCase):
         titles = [p['title'] for p in res.data['results']]
         self.assertNotIn('Draft', titles)
 
+    def test_mine_filter_only_shows_own_properties(self):
+        """mine=true should only show the current user's properties, not all."""
+        make_property(self.buyer, title='Buyer Property')
+        res = self.buyer_client.get('/api/properties/?mine=true')
+        self.assertEqual(res.status_code, 200)
+        titles = [p['title'] for p in res.data['results']]
+        self.assertIn('Buyer Property', titles)
+        self.assertNotIn('Test House', titles)  # owner's property
+
     def test_create_property_requires_auth(self):
         res = self.anon_client.post('/api/properties/', {})
         self.assertEqual(res.status_code, 401)

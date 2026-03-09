@@ -184,9 +184,9 @@ async function loadSavedSearches() {
         container.innerHTML = items.map(s => `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #D4DDD9;">
                 <div>
-                    <strong>${s.name || 'Saved Search'}</strong>
+                    <strong>${escHtml(s.name || 'Saved Search')}</strong>
                     <span style="color:#4A5E56; font-size:0.85rem; margin-left:0.5rem;">
-                        ${[s.location, s.property_type, s.min_bedrooms ? s.min_bedrooms + '+ bed' : ''].filter(Boolean).join(', ')}
+                        ${[s.location, s.property_type, s.min_bedrooms ? s.min_bedrooms + '+ bed' : ''].filter(Boolean).map(escHtml).join(', ')}
                     </span>
                     ${s.email_alerts ? '<span style="background:#D8F3DC; color:#1A3C2E; font-size:0.75rem; padding:2px 6px; border-radius:3px; margin-left:0.5rem;">Alerts On</span>' : ''}
                 </div>

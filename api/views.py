@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.db.models import Q, Count
 from rest_framework import viewsets, permissions, status, generics
 from rest_framework.decorators import api_view, permission_classes, action
+from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
@@ -55,7 +56,10 @@ class PropertyViewSet(viewsets.ModelViewSet):
 
         if not self.request.user.is_authenticated:
             queryset = queryset.filter(status='active')
-        elif self.request.query_params.get('mine') != 'true':
+        elif self.request.query_params.get('mine') == 'true':
+            # Only show the current user's own properties
+            queryset = queryset.filter(owner=self.request.user)
+        else:
             # Authenticated users see active + their own
             queryset = queryset.filter(
                 Q(status='active') | Q(owner=self.request.user)
@@ -110,12 +114,16 @@ class PropertyViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        # Track view
-        PropertyView.objects.create(
-            property=instance,
-            viewer_ip=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip(),
-            user=request.user if request.user.is_authenticated else None,
-        )
+        # Track view (non-critical, should not block response)
+        try:
+            ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+            PropertyView.objects.create(
+                property=instance,
+                viewer_ip=ip or None,
+                user=request.user if request.user.is_authenticated else None,
+            )
+        except Exception:
+            pass
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
@@ -150,7 +158,7 @@ class PropertyImageViewSet(viewsets.ModelViewSet):
         )
 
     def _get_property(self):
-        return Property.objects.get(pk=self.kwargs['property_pk'])
+        return get_object_or_404(Property, pk=self.kwargs['property_pk'])
 
     def perform_create(self, serializer):
         property_obj = self._get_property()
@@ -194,7 +202,7 @@ class PropertyFloorplanViewSet(viewsets.ModelViewSet):
         )
 
     def _get_property(self):
-        return Property.objects.get(pk=self.kwargs['property_pk'])
+        return get_object_or_404(Property, pk=self.kwargs['property_pk'])
 
     def perform_create(self, serializer):
         property_obj = self._get_property()
@@ -220,7 +228,7 @@ class PropertyFloorplanViewSet(viewsets.ModelViewSet):
 @permission_classes([permissions.IsAuthenticated])
 def reorder_images(request, property_pk):
     """Bulk-update image ordering. Expects {"order": [id1, id2, ...]}."""
-    prop = Property.objects.get(pk=property_pk)
+    prop = get_object_or_404(Property, pk=property_pk)
     if prop.owner != request.user:
         raise PermissionDenied()
     order = request.data.get('order', [])
@@ -284,7 +292,8 @@ class EnquiryViewSet(viewsets.ModelViewSet):
         prop = serializer.validated_data['property']
         if prop.owner == self.request.user:
             raise ValidationError("You cannot enquire about your own property.")
-        enquiry = serializer.save(sender=self.request.user)
+        # Force is_read=False on create so sender can't mark their own enquiry as read
+        enquiry = serializer.save(sender=self.request.user, is_read=False)
         notify_new_enquiry(enquiry)
 
     def perform_update(self, serializer):
