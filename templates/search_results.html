@@ -44,16 +44,11 @@
     .empty-state p { color: #4A5E56; margin-bottom: 1.5rem; }
     .empty-state .btn { margin: 0 0.5rem; }
 
-    .pagination { display: flex; justify-content: center; gap: 1rem; margin-top: 2rem; padding: 1rem 0; }
-    .pagination a, .pagination span {
-        padding: 0.5rem 1.2rem;
-        border-radius: 6px;
-        text-decoration: none;
-        font-size: 0.95rem;
-    }
-    .pagination a { background: #2D6A4F; color: white; }
-    .pagination a:hover { background: #40916C; }
-    .pagination .disabled { background: #D4DDD9; color: #8FA89E; cursor: default; }
+    /* Lazy load spinner & end-of-results */
+    .load-more-sentinel { display: flex; justify-content: center; padding: 2rem 0; }
+    .spinner { width: 32px; height: 32px; border: 3px solid #D4DDD9; border-top-color: #2D6A4F; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .end-of-results { text-align: center; padding: 1.5rem 0; color: #8FA89E; font-size: 0.9rem; }
 
     @media (max-width: 768px) {
         .results-header { flex-direction: column; align-items: flex-start; }
@@ -75,7 +70,10 @@
 <div id="results">
     <p>Searching...</p>
 </div>
-<div id="pagination" class="pagination"></div>
+<div id="load-more" class="load-more-sentinel" style="display:none;">
+    <div class="spinner"></div>
+</div>
+<div id="end-of-results" class="end-of-results" style="display:none;"></div>
 {% endblock %}
 
 {% block extra_js %}
@@ -136,15 +134,41 @@
         });
     }
 
-    function renderResults(data) {
+    // --- Infinite scroll state ---
+    let nextPage = 1;
+    let totalCount = 0;
+    let loadedCount = 0;
+    let isLoading = false;
+    let hasMore = true;
+
+    function renderCard(p) {
+        const url = p.slug ? `/properties/${p.slug}/` : `/properties/${p.id}/`;
+        const imgHtml = p.primary_image
+            ? `<img src="${p.primary_image}" alt="${escHtml(p.title)}" loading="lazy">`
+            : `<div class="placeholder">&#8962;</div>`;
+        return `<a href="${url}" class="property-card">
+            ${imgHtml}
+            <div class="property-card-body">
+                <h3>${escHtml(p.title)} ${p.owner_is_verified ? '<span style="color:#2D6A4F; font-size:0.75rem;">&#10003; Verified</span>' : ''}</h3>
+                <div class="property-price">&pound;${Number(p.price).toLocaleString()}</div>
+                <div class="property-details">${p.property_type_display}</div>
+                <div class="property-details">${p.address_line_1}, ${p.city} ${p.postcode}</div>
+                <div class="property-meta">
+                    <span>${p.bedrooms} bed</span>
+                    <span>${p.bathrooms} bath</span>
+                    <span>${p.reception_rooms} reception</span>
+                    ${p.epc_rating ? `<span>EPC: ${p.epc_rating}</span>` : ''}
+                </div>
+            </div>
+        </a>`;
+    }
+
+    function appendResults(data) {
         const container = document.getElementById('results');
         const results = data.results || data;
-        const count = data.count || results.length;
+        totalCount = data.count || results.length;
 
-        document.getElementById('results-count').textContent =
-            count === 0 ? '' : `Showing ${results.length} of ${count} propert${count === 1 ? 'y' : 'ies'}`;
-
-        if (!results || results.length === 0) {
+        if (loadedCount === 0 && results.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
                     <h3>No properties found</h3>
@@ -152,60 +176,63 @@
                     <a href="/search/" class="btn btn-secondary">Clear All Filters</a>
                     <a href="/" class="btn btn-primary">Back to Search</a>
                 </div>`;
+            hasMore = false;
             return;
         }
 
-        container.className = 'property-grid';
-        container.innerHTML = results.map(p => {
-            const url = p.slug ? `/properties/${p.slug}/` : `/properties/${p.id}/`;
-            const imgHtml = p.primary_image
-                ? `<img src="${p.primary_image}" alt="${escHtml(p.title)}">`
-                : `<div class="placeholder">&#8962;</div>`;
-            return `<a href="${url}" class="property-card">
-                ${imgHtml}
-                <div class="property-card-body">
-                    <h3>${escHtml(p.title)} ${p.owner_is_verified ? '<span style="color:#2D6A4F; font-size:0.75rem;">&#10003; Verified</span>' : ''}</h3>
-                    <div class="property-price">&pound;${Number(p.price).toLocaleString()}</div>
-                    <div class="property-details">${p.property_type_display}</div>
-                    <div class="property-details">${p.address_line_1}, ${p.city} ${p.postcode}</div>
-                    <div class="property-meta">
-                        <span>${p.bedrooms} bed</span>
-                        <span>${p.bathrooms} bath</span>
-                        <span>${p.reception_rooms} reception</span>
-                        ${p.epc_rating ? `<span>EPC: ${p.epc_rating}</span>` : ''}
-                    </div>
-                </div>
-            </a>`;
-        }).join('');
-    }
-
-    function renderPagination(data) {
-        const container = document.getElementById('pagination');
-        const params = new URLSearchParams(window.location.search);
-        const currentPage = parseInt(params.get('page')) || 1;
-        let html = '';
-
-        if (data.previous) {
-            const prevParams = new URLSearchParams(window.location.search);
-            if (currentPage <= 2) prevParams.delete('page');
-            else prevParams.set('page', currentPage - 1);
-            html += `<a href="/search/?${prevParams.toString()}">&laquo; Previous</a>`;
+        // First batch: set up the grid
+        if (loadedCount === 0) {
+            container.className = 'property-grid';
+            container.innerHTML = '';
         }
 
-        if (data.count) {
-            const totalPages = Math.ceil(data.count / 20);
-            if (totalPages > 1) {
-                html += `<span style="color:#4A5E56; padding: 0.5rem 0;">Page ${currentPage} of ${totalPages}</span>`;
+        // Append new cards
+        container.insertAdjacentHTML('beforeend', results.map(renderCard).join(''));
+        loadedCount += results.length;
+
+        // Update count text
+        document.getElementById('results-count').textContent =
+            `Showing ${loadedCount} of ${totalCount} propert${totalCount === 1 ? 'y' : 'ies'}`;
+
+        // Check if there's more to load
+        hasMore = !!data.next;
+        if (!hasMore && loadedCount > 0) {
+            document.getElementById('load-more').style.display = 'none';
+            if (totalCount > 20) {
+                const endEl = document.getElementById('end-of-results');
+                endEl.textContent = `All ${totalCount} properties loaded`;
+                endEl.style.display = 'block';
             }
         }
+    }
 
-        if (data.next) {
-            const nextParams = new URLSearchParams(window.location.search);
-            nextParams.set('page', currentPage + 1);
-            html += `<a href="/search/?${nextParams.toString()}">Next &raquo;</a>`;
+    async function loadNextPage() {
+        if (isLoading || !hasMore) return;
+        isLoading = true;
+        document.getElementById('load-more').style.display = 'flex';
+
+        try {
+            const fetchParams = new URLSearchParams(window.location.search);
+            fetchParams.set('page', nextPage);
+
+            const res = await Auth.authFetch('/api/properties/?' + fetchParams.toString(), { headers: Auth.headers() });
+            if (!res.ok) {
+                const body = await res.text();
+                throw new Error(`HTTP ${res.status}: ${body}`);
+            }
+            const data = await res.json();
+            appendResults(data);
+            nextPage++;
+        } catch (err) {
+            console.error('Search fetch error:', err);
+            hasMore = false;
+            document.getElementById('load-more').style.display = 'none';
+            if (loadedCount === 0) {
+                document.getElementById('results').innerHTML =
+                    `<div class="empty-state"><p>Failed to load results: ${escHtml(err.message)}. Please try again.</p></div>`;
+            }
         }
-
-        container.innerHTML = html;
+        isLoading = false;
     }
 
     // Save search feature
@@ -252,27 +279,25 @@
         }
     }
 
-    // Fetch and render
+    // --- Init: render filters and start loading ---
     const params = new URLSearchParams(window.location.search);
+    // Remove any leftover page param from URL (infinite scroll handles paging)
+    if (params.has('page')) {
+        params.delete('page');
+        history.replaceState(null, '', '/search/' + (params.toString() ? '?' + params.toString() : ''));
+    }
     renderActiveFilters(params);
 
-    Auth.authFetch('/api/properties/?' + params.toString(), { headers: Auth.headers() })
-        .then(r => {
-            if (!r.ok) {
-                return r.text().then(body => {
-                    throw new Error(`HTTP ${r.status}: ${body}`);
-                });
-            }
-            return r.json();
-        })
-        .then(data => {
-            renderResults(data);
-            renderPagination(data);
-        })
-        .catch(err => {
-            console.error('Search fetch error:', err);
-            document.getElementById('results').innerHTML =
-                `<div class="empty-state"><p>Failed to load results: ${escHtml(err.message)}. Please try again.</p></div>`;
-        });
+    // IntersectionObserver to trigger loading when sentinel is near viewport
+    const sentinel = document.getElementById('load-more');
+    const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoading) {
+            loadNextPage();
+        }
+    }, { rootMargin: '400px' });  // Start loading 400px before it's visible
+    observer.observe(sentinel);
+
+    // Kick off the first load
+    loadNextPage();
 </script>
 {% endblock %}
