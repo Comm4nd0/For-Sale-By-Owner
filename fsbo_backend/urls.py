@@ -1,12 +1,10 @@
 """URL configuration for fsbo_backend project."""
-import os
 from django.contrib import admin
-from django.http import FileResponse, Http404
 from django.urls import path, include
 from django.conf import settings
-from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.static import serve as static_serve
 
 
 class CSRFTemplateView(TemplateView):
@@ -23,15 +21,8 @@ admin.site.index_title = "Dashboard"
 
 
 def serve_media(request, path):
-    """Serve media files in production."""
-    import mimetypes
-    file_path = os.path.join(settings.MEDIA_ROOT, path)
-    if os.path.isfile(file_path):
-        content_type, _ = mimetypes.guess_type(file_path)
-        response = FileResponse(open(file_path, 'rb'), content_type=content_type or 'application/octet-stream')
-        response['Cache-Control'] = 'public, max-age=86400'
-        return response
-    raise Http404
+    """Serve user-uploaded media files."""
+    return static_serve(request, path, document_root=settings.MEDIA_ROOT)
 
 
 urlpatterns = [
@@ -45,20 +36,27 @@ urlpatterns = [
     path('search/', CSRFTemplateView.as_view(template_name='search_results.html'), name='search'),
     path('login/', CSRFTemplateView.as_view(template_name='login.html'), name='login'),
     path('register/', CSRFTemplateView.as_view(template_name='register.html'), name='register'),
+    path('profile/', CSRFTemplateView.as_view(template_name='profile.html'), name='profile'),
+    path('forgot-password/', CSRFTemplateView.as_view(template_name='forgot_password.html'), name='forgot-password'),
+    path('password-reset/<str:uid>/<str:token>/', CSRFTemplateView.as_view(template_name='password_reset_confirm.html'), name='password-reset-confirm'),
     path('properties/new/', CSRFTemplateView.as_view(template_name='property_create.html'), name='property-create'),
     path('properties/<int:id>/', CSRFTemplateView.as_view(template_name='property_detail.html'), name='property-detail'),
     path('properties/<int:id>/edit/', CSRFTemplateView.as_view(template_name='property_edit.html'), name='property-edit'),
     path('my-listings/', CSRFTemplateView.as_view(template_name='my_listings.html'), name='my-listings'),
+    path('dashboard/', CSRFTemplateView.as_view(template_name='dashboard.html'), name='dashboard'),
+    path('saved/', CSRFTemplateView.as_view(template_name='saved_properties.html'), name='saved-properties'),
+
+    # Slug-based property URL (must come after /properties/new/ and /properties/<int:id>/)
+    path('properties/<slug:slug>/', CSRFTemplateView.as_view(template_name='property_detail.html'), name='property-detail-slug'),
 
     # Legal pages
     path('terms/', CSRFTemplateView.as_view(template_name='terms.html'), name='terms'),
     path('privacy/', CSRFTemplateView.as_view(template_name='privacy.html'), name='privacy'),
     path('cookies/', CSRFTemplateView.as_view(template_name='cookies.html'), name='cookies'),
+
+    # Always serve media files (user-uploaded images) regardless of DEBUG setting
+    path('media/<path:path>', serve_media, name='serve-media'),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-else:
-    urlpatterns += [
-        path('media/<path:path>', serve_media, name='serve-media'),
-    ]
+handler404 = 'fsbo_backend.views.custom_404'
+handler500 = 'fsbo_backend.views.custom_500'

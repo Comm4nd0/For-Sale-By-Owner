@@ -1,10 +1,14 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}For Sale By Owner{% endblock %}</title>
+    {% block meta_tags %}
+    <meta property="og:site_name" content="For Sale By Owner">
+    <meta property="og:type" content="website">
+    {% endblock %}
     <link rel="icon" type="image/svg+xml" href="{% static 'img/favicon.svg' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon-32.png' %}">
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/apple-touch-icon.png' %}">
@@ -45,11 +49,20 @@
         .cookie-btn-accept:hover { background: #40916C; }
         .cookie-btn-reject { background: transparent; color: white; border: 1px solid rgba(255,255,255,0.4) !important; }
         .cookie-btn-reject:hover { border-color: white !important; }
+        .skip-link { position: absolute; top: -40px; left: 0; background: #2D6A4F; color: white; padding: 8px 16px; z-index: 10000; font-size: 0.9rem; text-decoration: none; border-radius: 0 0 4px 0; }
+        .skip-link:focus { top: 0; }
+        @media print {
+            header, footer, .cookie-banner, nav, .btn, .owner-actions, .enquiry-form-section, .mortgage-section { display: none !important; }
+            main { padding: 0; }
+            .container { max-width: 100%; }
+            .carousel-btn, .carousel-dots { display: none !important; }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <header>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <header role="banner">
         <div class="container">
             <div class="logo">
                 <a href="/">
@@ -74,18 +87,18 @@
                     </svg>
                 </a>
             </div>
-            <nav id="main-nav">
+            <nav id="main-nav" role="navigation" aria-label="Main navigation">
                 <a href="/">Home</a>
                 <span id="nav-auth"></span>
             </nav>
         </div>
     </header>
-    <main>
+    <main id="main-content" role="main">
         <div class="container">
             {% block content %}{% endblock %}
         </div>
     </main>
-    <footer>
+    <footer role="contentinfo">
         <div class="container">
             <div class="footer-logo">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 100" width="460" height="88">
@@ -132,6 +145,12 @@
         </div>
     </div>
     <script>
+        // HTML escaping helper to prevent XSS
+        function escHtml(str) {
+            if (str == null) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+
         // Auth helper used across all pages
         const Auth = {
             getToken() { return localStorage.getItem('auth_token'); },
@@ -165,13 +184,32 @@
             }
         };
 
+        // Recently viewed helper
+        const RecentlyViewed = {
+            KEY: 'recently_viewed',
+            MAX: 12,
+            add(property) {
+                let items = this.get();
+                items = items.filter(p => p.id !== property.id);
+                items.unshift({ id: property.id, title: property.title, price: property.price, primary_image: property.primary_image, slug: property.slug, city: property.city, bedrooms: property.bedrooms });
+                items = items.slice(0, this.MAX);
+                localStorage.setItem(this.KEY, JSON.stringify(items));
+            },
+            get() {
+                try { return JSON.parse(localStorage.getItem(this.KEY)) || []; } catch { return []; }
+            }
+        };
+
         // Render nav based on auth state
         (function() {
             const nav = document.getElementById('nav-auth');
             if (Auth.isLoggedIn()) {
                 nav.innerHTML = `
+                    <a href="/saved/">Saved</a>
+                    <a href="/dashboard/">Dashboard</a>
                     <a href="/my-listings/">My Listings</a>
                     <a href="/properties/new/">List Property</a>
+                    <a href="/profile/">Profile</a>
                     <a href="#" onclick="Auth.logout(); return false;">Logout</a>
                 `;
             } else {
@@ -181,21 +219,41 @@
                 `;
             }
         })();
-        // Cookie consent banner
+        // Cookie consent banner — gates analytics/tracking scripts
         (function() {
             const consent = localStorage.getItem('cookie_consent');
             if (!consent) {
                 document.getElementById('cookie-banner').style.display = 'block';
+            } else if (consent === 'accepted') {
+                enableAnalytics();
             }
             document.getElementById('cookie-accept').addEventListener('click', function() {
                 localStorage.setItem('cookie_consent', 'accepted');
                 document.getElementById('cookie-banner').style.display = 'none';
+                enableAnalytics();
             });
             document.getElementById('cookie-reject').addEventListener('click', function() {
                 localStorage.setItem('cookie_consent', 'rejected');
                 document.getElementById('cookie-banner').style.display = 'none';
+                disableAnalytics();
             });
         })();
+
+        function enableAnalytics() {
+            // Placeholder: load analytics scripts here when configured
+            // e.g. load Google Analytics, Meta Pixel, etc.
+            window._analyticsEnabled = true;
+        }
+        function disableAnalytics() {
+            window._analyticsEnabled = false;
+            // Remove any analytics cookies if present
+            document.cookie.split(';').forEach(c => {
+                const name = c.trim().split('=')[0];
+                if (name.startsWith('_ga') || name.startsWith('_gid')) {
+                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+                }
+            });
+        }
     </script>
     {% block extra_js %}{% endblock %}
 </body>

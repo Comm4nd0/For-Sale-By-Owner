@@ -65,7 +65,10 @@
 {% block content %}
 <div class="results-header">
     <h2>Search Results</h2>
-    <a href="/" class="btn btn-secondary">Modify Search</a>
+    <div style="display:flex; gap:0.5rem;">
+        <button class="btn btn-secondary" id="save-search-btn" style="display:none;" onclick="saveCurrentSearch()">Save Search</button>
+        <a href="/" class="btn btn-secondary">Modify Search</a>
+    </div>
 </div>
 <div id="active-filters" class="active-filters"></div>
 <div id="results-count" class="results-count"></div>
@@ -154,13 +157,14 @@
 
         container.className = 'property-grid';
         container.innerHTML = results.map(p => {
+            const url = p.slug ? `/properties/${p.slug}/` : `/properties/${p.id}/`;
             const imgHtml = p.primary_image
-                ? `<img src="${p.primary_image}" alt="${p.title}">`
+                ? `<img src="${p.primary_image}" alt="${escHtml(p.title)}">`
                 : `<div class="placeholder">&#8962;</div>`;
-            return `<a href="/properties/${p.id}/" class="property-card">
+            return `<a href="${url}" class="property-card">
                 ${imgHtml}
                 <div class="property-card-body">
-                    <h3>${p.title}</h3>
+                    <h3>${escHtml(p.title)} ${p.owner_is_verified ? '<span style="color:#2D6A4F; font-size:0.75rem;">&#10003; Verified</span>' : ''}</h3>
                     <div class="property-price">&pound;${Number(p.price).toLocaleString()}</div>
                     <div class="property-details">${p.property_type_display}</div>
                     <div class="property-details">${p.address_line_1}, ${p.city} ${p.postcode}</div>
@@ -168,6 +172,7 @@
                         <span>${p.bedrooms} bed</span>
                         <span>${p.bathrooms} bath</span>
                         <span>${p.reception_rooms} reception</span>
+                        ${p.epc_rating ? `<span>EPC: ${p.epc_rating}</span>` : ''}
                     </div>
                 </div>
             </a>`;
@@ -203,11 +208,55 @@
         container.innerHTML = html;
     }
 
+    // Save search feature
+    if (Auth.isLoggedIn()) {
+        document.getElementById('save-search-btn').style.display = 'inline-block';
+    }
+
+    async function saveCurrentSearch() {
+        const p = new URLSearchParams(window.location.search);
+        const body = {};
+        if (p.get('location')) body.location = p.get('location');
+        if (p.get('property_type')) body.property_type = p.get('property_type');
+        if (p.get('min_price')) body.min_price = p.get('min_price');
+        if (p.get('max_price')) body.max_price = p.get('max_price');
+        if (p.get('min_bedrooms')) body.min_bedrooms = parseInt(p.get('min_bedrooms'));
+        if (p.get('min_bathrooms')) body.min_bathrooms = parseInt(p.get('min_bathrooms'));
+        if (p.get('epc_rating')) body.epc_rating = p.get('epc_rating');
+        body.email_alerts = true;
+
+        // Build a name from the search criteria
+        const parts = [];
+        if (body.location) parts.push(body.location);
+        if (body.property_type) parts.push(TYPE_NAMES[body.property_type] || body.property_type);
+        if (body.min_bedrooms) parts.push(body.min_bedrooms + '+ bed');
+        body.name = parts.join(', ') || 'My Search';
+
+        try {
+            const res = await fetch('/api/saved-searches/', {
+                method: 'POST',
+                headers: Auth.headers(),
+                body: JSON.stringify(body),
+            });
+            const btn = document.getElementById('save-search-btn');
+            if (res.ok) {
+                btn.textContent = 'Search Saved!';
+                btn.disabled = true;
+                setTimeout(() => { btn.textContent = 'Save Search'; btn.disabled = false; }, 2000);
+            } else {
+                btn.textContent = 'Already Saved';
+                setTimeout(() => { btn.textContent = 'Save Search'; }, 2000);
+            }
+        } catch {
+            alert('Failed to save search.');
+        }
+    }
+
     // Fetch and render
     const params = new URLSearchParams(window.location.search);
     renderActiveFilters(params);
 
-    fetch('/api/properties/?' + params.toString())
+    fetch('/api/properties/?' + params.toString(), { headers: Auth.headers() })
         .then(r => r.json())
         .then(data => {
             renderResults(data);

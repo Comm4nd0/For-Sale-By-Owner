@@ -18,7 +18,10 @@
     .image-upload:hover { border-color: #2D6A4F; }
     .image-upload input { display: none; }
     .existing-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
-    .existing-image { position: relative; border-radius: 6px; overflow: hidden; border: 2px solid transparent; }
+    .existing-image { position: relative; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: grab; }
+    .existing-image.dragging { opacity: 0.5; }
+    .existing-image.drag-over { border-color: #C9872A; }
+    .reorder-hint { font-size: 0.8rem; color: #8FA89E; margin-bottom: 0.5rem; }
     .existing-image.primary { border-color: #2D6A4F; }
     .existing-image img { width: 100%; height: 110px; object-fit: cover; }
     .existing-image .actions { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(26,60,46,0.7); display: flex; justify-content: center; gap: 0.25rem; padding: 4px; }
@@ -30,6 +33,15 @@
     .new-preview-item img { width: 100%; height: 100px; object-fit: cover; }
     .new-preview-item .remove { position: absolute; top: 4px; right: 4px; background: rgba(26,60,46,0.7); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 14px; line-height: 22px; text-align: center; }
     .form-actions { margin-top: 2rem; display: flex; gap: 0.75rem; }
+    .features-checkboxes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .features-checkboxes label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.75rem; background: #F6F9F7; border: 1px solid #D4DDD9; border-radius: 20px; cursor: pointer; font-size: 0.85rem; transition: all 0.15s; }
+    .features-checkboxes label:has(input:checked) { background: #D8F3DC; border-color: #2D6A4F; color: #1A3C2E; }
+    .features-checkboxes input { display: none; }
+    .existing-floorplans { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+    .existing-floorplan { position: relative; border: 1px solid #D4DDD9; border-radius: 6px; overflow: hidden; }
+    .existing-floorplan img { width: 100%; height: 120px; object-fit: cover; }
+    .existing-floorplan .fp-title { padding: 0.3rem 0.5rem; font-size: 0.8rem; color: #4A5E56; background: #F6F9F7; }
+    .existing-floorplan .remove { position: absolute; top: 4px; right: 4px; background: rgba(176,58,46,0.8); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 14px; line-height: 22px; text-align: center; }
 </style>
 {% endblock %}
 
@@ -48,7 +60,26 @@
     if (!propertyId) window.location.href = '/';
 
     let existingImages = [];
+    let existingFloorplans = [];
     let newFiles = [];
+    let newFloorplanFiles = [];
+
+    // Client-side image compression
+    function compressImage(file, maxWidth = 1920, quality = 0.85) {
+        return new Promise((resolve) => {
+            if (file.size < 500 * 1024 || !file.type.startsWith('image/')) { resolve(file); return; }
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let w = img.width, h = img.height;
+                if (w > maxWidth) { h = (maxWidth / w) * h; w = maxWidth; }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                canvas.toBlob(blob => resolve(new File([blob], file.name, { type: 'image/jpeg' })), 'image/jpeg', quality);
+            };
+            img.src = URL.createObjectURL(file);
+        });
+    }
 
     async function loadProperty() {
         const res = await fetch(`/api/properties/${propertyId}/`, { headers: Auth.headers() });
@@ -60,15 +91,16 @@
         <form id="property-form" class="property-form">
             <div class="form-group">
                 <label for="title">Property Title</label>
-                <input type="text" id="title" value="${p.title}" required>
+                <input type="text" id="title" value="${escHtml(p.title)}" required>
             </div>
             <div class="form-row">
                 <div class="form-group">
                     <label for="property_type">Property Type</label>
                     <select id="property_type" required>
-                        ${['detached','semi_detached','terraced','flat','bungalow','cottage','land','other'].map(t =>
-                            `<option value="${t}" ${p.property_type === t ? 'selected' : ''}>${t.replace('_',' ').replace(/\\b\\w/g, c => c.toUpperCase())}</option>`
-                        ).join('')}
+                        ${['detached','semi_detached','terraced','flat','bungalow','cottage','land','other'].map(t => {
+                            const label = {detached:'Detached',semi_detached:'Semi-Detached',terraced:'Terraced',flat:'Flat/Apartment',bungalow:'Bungalow',cottage:'Cottage',land:'Land',other:'Other'}[t] || t;
+                            return `<option value="${t}" ${p.property_type === t ? 'selected' : ''}>${label}</option>`;
+                        }).join('')}
                     </select>
                 </div>
                 <div class="form-group">
@@ -78,16 +110,16 @@
             </div>
             <div class="form-group">
                 <label for="description">Description</label>
-                <textarea id="description">${p.description || ''}</textarea>
+                <textarea id="description">${escHtml(p.description || '')}</textarea>
             </div>
             <h3 class="section-title">Address</h3>
-            <div class="form-group"><label for="address_line_1">Address Line 1</label><input type="text" id="address_line_1" value="${p.address_line_1}" required></div>
-            <div class="form-group"><label for="address_line_2">Address Line 2</label><input type="text" id="address_line_2" value="${p.address_line_2 || ''}"></div>
+            <div class="form-group"><label for="address_line_1">Address Line 1</label><input type="text" id="address_line_1" value="${escHtml(p.address_line_1)}" required></div>
+            <div class="form-group"><label for="address_line_2">Address Line 2</label><input type="text" id="address_line_2" value="${escHtml(p.address_line_2 || '')}"></div>
             <div class="form-row">
-                <div class="form-group"><label for="city">City / Town</label><input type="text" id="city" value="${p.city}" required></div>
-                <div class="form-group"><label for="county">County</label><input type="text" id="county" value="${p.county || ''}"></div>
+                <div class="form-group"><label for="city">City / Town</label><input type="text" id="city" value="${escHtml(p.city)}" required></div>
+                <div class="form-group"><label for="county">County</label><input type="text" id="county" value="${escHtml(p.county || '')}"></div>
             </div>
-            <div class="form-group" style="max-width:200px;"><label for="postcode">Postcode</label><input type="text" id="postcode" value="${p.postcode}" required></div>
+            <div class="form-group" style="max-width:200px;"><label for="postcode">Postcode</label><input type="text" id="postcode" value="${escHtml(p.postcode)}" required></div>
             <h3 class="section-title">Property Details</h3>
             <div class="form-row-3">
                 <div class="form-group"><label for="bedrooms">Bedrooms</label><input type="number" id="bedrooms" value="${p.bedrooms}" min="0"></div>
@@ -95,19 +127,39 @@
                 <div class="form-group"><label for="reception_rooms">Reception Rooms</label><input type="number" id="reception_rooms" value="${p.reception_rooms}" min="0"></div>
             </div>
             <div class="form-group" style="max-width:200px;"><label for="square_feet">Square Feet</label><input type="number" id="square_feet" value="${p.square_feet || ''}" min="0"></div>
+            <div class="form-group">
+                <label for="epc_rating">EPC Rating</label>
+                <select id="epc_rating">
+                    <option value="">Not specified</option>
+                    ${['A','B','C','D','E','F','G'].map(r => `<option value="${r}" ${p.epc_rating === r ? 'selected' : ''}>${r}</option>`).join('')}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Features</label>
+                <div id="features-list" class="features-checkboxes"><span style="color:#8FA89E;">Loading...</span></div>
+            </div>
             <h3 class="section-title">Photos</h3>
+            <p class="reorder-hint">Drag and drop images to reorder them.</p>
             <div class="existing-images" id="existing-images"></div>
             <div class="image-upload" onclick="document.getElementById('image-input').click()">
                 <input type="file" id="image-input" accept="image/*" multiple>
                 <p>Click to add more photos</p>
             </div>
             <div class="new-preview" id="new-preview"></div>
+            <h3 class="section-title">Floorplans</h3>
+            <div class="existing-floorplans" id="existing-floorplans"></div>
+            <div class="image-upload" onclick="document.getElementById('floorplan-input').click()">
+                <input type="file" id="floorplan-input" accept="image/*,.pdf" multiple>
+                <p>Click to add floorplans</p>
+            </div>
+            <div class="new-preview" id="new-floorplan-preview"></div>
             <div class="form-group" style="margin-top:1.5rem;">
                 <label for="status">Listing Status</label>
                 <select id="status">
-                    ${['draft','active','under_offer','sold_stc','sold','withdrawn'].map(s =>
-                        `<option value="${s}" ${p.status === s ? 'selected' : ''}>${s.replace('_',' ').replace(/\\b\\w/g, c => c.toUpperCase())}</option>`
-                    ).join('')}
+                    ${['draft','active','under_offer','sold_stc','sold','withdrawn'].map(s => {
+                        const label = {draft:'Draft',active:'Active',under_offer:'Under Offer',sold_stc:'Sold STC',sold:'Sold',withdrawn:'Withdrawn'}[s] || s;
+                        return `<option value="${s}" ${p.status === s ? 'selected' : ''}>${label}</option>`;
+                    }).join('')}
                 </select>
             </div>
             <div class="form-actions">
@@ -117,28 +169,79 @@
         </form>`;
 
         renderExistingImages();
+        existingFloorplans = p.floorplans || [];
+        renderExistingFloorplans();
         document.getElementById('image-input').addEventListener('change', onNewFiles);
+        document.getElementById('floorplan-input').addEventListener('change', onNewFloorplans);
         document.getElementById('property-form').addEventListener('submit', onSubmit);
+
+        // Load features
+        const selectedFeatureIds = (p.features || []).map(Number);
+        fetch('/api/features/', { headers: Auth.headers() })
+            .then(r => r.json())
+            .then(features => {
+                const list = Array.isArray(features) ? features : (features.results || []);
+                const container = document.getElementById('features-list');
+                if (!list.length) { container.innerHTML = ''; return; }
+                container.innerHTML = list.map(f =>
+                    `<label><input type="checkbox" name="features" value="${f.id}" ${selectedFeatureIds.includes(f.id) ? 'checked' : ''}> ${f.icon ? f.icon + ' ' : ''}${f.name}</label>`
+                ).join('');
+            }).catch(() => { document.getElementById('features-list').innerHTML = ''; });
     }
+
+    function renderExistingFloorplans() {
+        const container = document.getElementById('existing-floorplans');
+        container.innerHTML = existingFloorplans.map(fp => `
+            <div class="existing-floorplan">
+                <img src="${fp.file}" alt="${fp.title}">
+                <div class="fp-title">${fp.title}</div>
+                <button type="button" class="remove" onclick="deleteFloorplan(${fp.id})">&times;</button>
+            </div>
+        `).join('');
+    }
+
+    async function deleteFloorplan(fpId) {
+        if (!confirm('Delete this floorplan?')) return;
+        await fetch(`/api/properties/${propertyId}/floorplans/${fpId}/`, { method: 'DELETE', headers: Auth.headers(false) });
+        existingFloorplans = existingFloorplans.filter(fp => fp.id !== fpId);
+        renderExistingFloorplans();
+    }
+
+    function onNewFloorplans(e) {
+        const files = Array.from(e.target.files);
+        const maxNew = 5 - existingFloorplans.length - newFloorplanFiles.length;
+        newFloorplanFiles = [...newFloorplanFiles, ...files].slice(0, Math.max(0, maxNew));
+        const container = document.getElementById('new-floorplan-preview');
+        container.innerHTML = newFloorplanFiles.map((f, i) => `
+            <div class="new-preview-item">
+                ${f.type.startsWith('image/') ? `<img src="${URL.createObjectURL(f)}" alt="Floorplan">` : `<div style="width:100%;height:100px;background:#D8F3DC;display:flex;align-items:center;justify-content:center;font-size:0.8rem;">${f.name}</div>`}
+                <button type="button" class="remove" onclick="removeNewFloorplan(${i})">&times;</button>
+            </div>
+        `).join('');
+    }
+
+    function removeNewFloorplan(i) { newFloorplanFiles.splice(i, 1); onNewFloorplans({ target: { files: [] } }); }
 
     function renderExistingImages() {
         const container = document.getElementById('existing-images');
         container.innerHTML = existingImages.map(img => `
-            <div class="existing-image ${img.is_primary ? 'primary' : ''}">
+            <div class="existing-image ${img.is_primary ? 'primary' : ''}" data-id="${img.id}">
                 ${img.is_primary ? '<span class="primary-badge">Primary</span>' : ''}
-                <img src="${img.image}" alt="${img.caption || ''}">
+                <img src="${img.image}" alt="${escHtml(img.caption || '')}">
                 <div class="actions">
                     ${!img.is_primary ? `<button type="button" onclick="setPrimary(${img.id})" title="Set as primary">&#9733;</button>` : ''}
                     <button type="button" onclick="deleteImage(${img.id})" title="Delete">&times;</button>
                 </div>
             </div>
         `).join('');
+        setupDragDrop();
     }
 
-    function onNewFiles(e) {
+    async function onNewFiles(e) {
         const files = Array.from(e.target.files);
+        const compressed = await Promise.all(files.map(f => compressImage(f)));
         const maxNew = 10 - existingImages.length - newFiles.length;
-        newFiles = [...newFiles, ...files].slice(0, Math.max(0, maxNew));
+        newFiles = [...newFiles, ...compressed].slice(0, Math.max(0, maxNew));
         const container = document.getElementById('new-preview');
         container.innerHTML = newFiles.map((f, i) => `
             <div class="new-preview-item">
@@ -196,6 +299,8 @@
         };
         const sqft = document.getElementById('square_feet').value;
         if (sqft) body.square_feet = parseInt(sqft); else body.square_feet = null;
+        body.epc_rating = document.getElementById('epc_rating').value;
+        body.features = Array.from(document.querySelectorAll('input[name="features"]:checked')).map(cb => parseInt(cb.value));
 
         try {
             const res = await fetch(`/api/properties/${propertyId}/`, {
@@ -228,13 +333,30 @@
                 }
             }
 
+            // Upload new floorplans
+            if (newFloorplanFiles.length > 0) {
+                btn.textContent = 'Uploading floorplans...';
+                for (const fp of newFloorplanFiles) {
+                    const fd = new FormData();
+                    fd.append('file', fp);
+                    fd.append('title', fp.name.replace(/\.[^.]+$/, '') || 'Floorplan');
+                    await fetch(`/api/properties/${propertyId}/floorplans/`, {
+                        method: 'POST', headers: Auth.headers(false), body: fd,
+                    });
+                }
+                newFloorplanFiles = [];
+                document.getElementById('new-floorplan-preview').innerHTML = '';
+            }
+
             successEl.textContent = 'Property updated successfully.';
             successEl.style.display = 'block';
-            // Refresh images
+            // Refresh images and floorplans
             const r2 = await fetch(`/api/properties/${propertyId}/`, { headers: Auth.headers() });
             const p2 = await r2.json();
             existingImages = p2.images || [];
+            existingFloorplans = p2.floorplans || [];
             renderExistingImages();
+            renderExistingFloorplans();
         } catch (err) {
             errorEl.textContent = err.message || 'Failed to update property.';
             errorEl.style.display = 'block';
@@ -242,6 +364,43 @@
 
         btn.disabled = false;
         btn.textContent = 'Save Changes';
+    }
+
+    // Drag and drop reorder
+    let draggedId = null;
+    function setupDragDrop() {
+        document.querySelectorAll('.existing-image').forEach(el => {
+            el.draggable = true;
+            el.addEventListener('dragstart', e => {
+                draggedId = el.dataset.id;
+                el.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            el.addEventListener('dragend', () => {
+                el.classList.remove('dragging');
+                document.querySelectorAll('.existing-image').forEach(x => x.classList.remove('drag-over'));
+            });
+            el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+            el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+            el.addEventListener('drop', async e => {
+                e.preventDefault();
+                el.classList.remove('drag-over');
+                const targetId = el.dataset.id;
+                if (draggedId === targetId) return;
+                // Reorder in array
+                const fromIdx = existingImages.findIndex(i => i.id == draggedId);
+                const toIdx = existingImages.findIndex(i => i.id == targetId);
+                const [moved] = existingImages.splice(fromIdx, 1);
+                existingImages.splice(toIdx, 0, moved);
+                renderExistingImages();
+                setupDragDrop();
+                // Save new order
+                await fetch(`/api/properties/${propertyId}/images/reorder/`, {
+                    method: 'POST', headers: Auth.headers(),
+                    body: JSON.stringify({ order: existingImages.map(i => i.id) }),
+                });
+            });
+        });
     }
 
     loadProperty();

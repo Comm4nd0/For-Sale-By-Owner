@@ -23,6 +23,8 @@
     .status-sold_stc { background: #FFF0D4; color: #C9872A; }
     .status-sold { background: #D8F3DC; color: #2D6A4F; }
     .status-withdrawn { background: #f8d7d4; color: #B03A2E; }
+    .status-pending_review { background: #FFF0D4; color: #C9872A; }
+    .status-rejected { background: #f8d7d4; color: #B03A2E; }
     .listing-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #D4DDD9; }
     .listing-actions a { font-size: 0.85rem; }
     .empty-state { text-align: center; padding: 4rem 2rem; color: #4A5E56; }
@@ -45,14 +47,9 @@
 
     async function loadListings() {
         try {
-            const meRes = await fetch('/auth/users/me/', { headers: Auth.headers() });
-            if (!meRes.ok) { Auth.clear(); window.location.href = '/login/'; return; }
-            const me = await meRes.json();
-
-            const res = await fetch('/api/properties/', { headers: Auth.headers() });
+            const res = await fetch('/api/properties/?mine=true', { headers: Auth.headers() });
             const data = await res.json();
-            const results = data.results || data;
-            const myProperties = results.filter(p => p.owner === me.id);
+            const myProperties = data.results || data;
 
             const container = document.getElementById('listings');
             if (myProperties.length === 0) {
@@ -67,23 +64,25 @@
             container.className = 'listings-grid';
             container.innerHTML = myProperties.map(p => {
                 const imgHtml = p.primary_image
-                    ? `<img class="listing-image" src="${p.primary_image}" alt="${p.title}">`
+                    ? `<img class="listing-image" src="${p.primary_image}" alt="${escHtml(p.title)}">`
                     : `<div class="listing-placeholder">&#8962;</div>`;
                 return `
                 <div class="listing-card">
                     ${imgHtml}
                     <div class="listing-body">
-                        <h3>${p.title}</h3>
+                        <h3>${escHtml(p.title)}</h3>
                         <div class="listing-price">&pound;${Number(p.price).toLocaleString()}</div>
-                        <div class="listing-address">${p.address_line_1}, ${p.city} ${p.postcode}</div>
+                        <div class="listing-address">${escHtml(p.address_line_1)}, ${escHtml(p.city)} ${escHtml(p.postcode)}</div>
                         <div class="listing-meta">
                             <span>${p.bedrooms} bed</span>
                             <span>${p.bathrooms} bath</span>
                             <span>${p.reception_rooms} recep</span>
+                            <span>${p.view_count || 0} views</span>
                         </div>
                         <span class="status-badge status-${p.status}">${(p.status_display || p.status).replace('_', ' ')}</span>
+                        ${p.status === 'pending_review' ? '<span class="status-badge" style="background:#FFF0D4; color:#C9872A; margin-left:0.5rem;">Awaiting Moderation</span>' : ''}
                         <div class="listing-actions">
-                            <a href="/properties/${p.id}/" class="btn btn-secondary">View</a>
+                            <a href="${p.slug ? '/properties/' + p.slug + '/' : '/properties/' + p.id + '/'}" class="btn btn-secondary">View</a>
                             <a href="/properties/${p.id}/edit/" class="btn btn-secondary">Edit</a>
                         </div>
                     </div>

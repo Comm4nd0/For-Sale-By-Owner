@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Seller Dashboard - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-title { color: #1A3C2E; margin-bottom: 1.5rem; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: #FFFFFF; border: 1px solid #D4DDD9; border-radius: 8px; padding: 1.25rem; text-align: center; }
+    .stat-card .value { font-size: 2rem; font-weight: 700; color: #1A3C2E; }
+    .stat-card .label { font-size: 0.85rem; color: #4A5E56; margin-top: 0.25rem; }
+    .stat-card.highlight { border-color: #2D6A4F; background: #D8F3DC; }
+
+    .dash-section { margin-bottom: 2rem; }
+    .dash-section h3 { color: #1A3C2E; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #D4DDD9; }
+
+    .tab-nav { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 2px solid #D4DDD9; }
+    .tab-btn { padding: 0.6rem 1.25rem; background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; font-size: 0.95rem; font-family: inherit; color: #4A5E56; }
+    .tab-btn.active { color: #1A3C2E; font-weight: 600; border-bottom-color: #2D6A4F; }
+    .tab-btn:hover { color: #1A3C2E; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .enquiry-list { list-style: none; }
+    .enquiry-item { background: #FFFFFF; border: 1px solid #D4DDD9; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; }
+    .enquiry-item.unread { border-left: 3px solid #2D6A4F; }
+    .enquiry-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .enquiry-from { font-weight: 600; color: #1A3C2E; }
+    .enquiry-date { font-size: 0.8rem; color: #8FA89E; }
+    .enquiry-property { font-size: 0.85rem; color: #4A5E56; margin-bottom: 0.25rem; }
+    .enquiry-message { color: #1C2B25; font-size: 0.9rem; }
+    .enquiry-contact { font-size: 0.85rem; color: #4A5E56; margin-top: 0.5rem; }
+    .enquiry-actions { margin-top: 0.5rem; display: flex; gap: 0.5rem; }
+
+    .viewing-item { background: #FFFFFF; border: 1px solid #D4DDD9; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; }
+    .viewing-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .viewing-status { font-size: 0.75rem; padding: 2px 8px; border-radius: 3px; font-weight: 600; }
+    .status-pending { background: #FFF3CD; color: #856404; }
+    .status-confirmed { background: #D8F3DC; color: #1A3C2E; }
+    .status-declined { background: #f8d7d4; color: #B03A2E; }
+    .status-completed { background: #D4DDD9; color: #4A5E56; }
+    .status-cancelled { background: #D4DDD9; color: #4A5E56; }
+    .viewing-details { font-size: 0.9rem; color: #1C2B25; }
+    .viewing-actions { margin-top: 0.5rem; display: flex; gap: 0.5rem; }
+
+    .pagination { display: flex; justify-content: center; gap: 0.75rem; margin-top: 1rem; }
+    .pagination button { padding: 0.4rem 1rem; border-radius: 6px; border: 1px solid #D4DDD9; background: white; cursor: pointer; font-family: inherit; font-size: 0.9rem; }
+    .pagination button:hover { background: #D8F3DC; }
+    .pagination button:disabled { opacity: 0.4; cursor: default; }
+
+    .empty-state { text-align: center; padding: 3rem 1rem; color: #4A5E56; }
+    .empty-state p { margin-bottom: 1rem; }
+
+    @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 class="page-title">Seller Dashboard</h2>
+<div id="dashboard-content"><p>Loading...</p></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+
+    let enquiryPage = 1;
+    let viewingPage = 1;
+
+    async function loadDashboard() {
+        try {
+            const statsRes = await fetch('/api/dashboard/stats/', { headers: Auth.headers() });
+            const stats = await statsRes.json();
+
+            document.getElementById('dashboard-content').innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="value">${stats.active_listings}</div><div class="label">Active Listings</div></div>
+                    <div class="stat-card"><div class="value">${stats.total_listings}</div><div class="label">Total Listings</div></div>
+                    <div class="stat-card"><div class="value">${stats.total_views}</div><div class="label">Total Views</div></div>
+                    <div class="stat-card ${stats.unread_enquiries > 0 ? 'highlight' : ''}"><div class="value">${stats.unread_enquiries}</div><div class="label">Unread Enquiries</div></div>
+                    <div class="stat-card"><div class="value">${stats.total_enquiries}</div><div class="label">Total Enquiries</div></div>
+                    <div class="stat-card"><div class="value">${stats.total_saves}</div><div class="label">Times Saved</div></div>
+                </div>
+
+                <div class="tab-nav">
+                    <button class="tab-btn active" onclick="switchTab('enquiries', this)">Enquiries</button>
+                    <button class="tab-btn" onclick="switchTab('viewings', this)">Viewing Requests</button>
+                </div>
+
+                <div class="tab-content active" id="tab-enquiries">
+                    <div id="enquiry-list"></div>
+                    <div id="enquiry-pagination" class="pagination"></div>
+                </div>
+                <div class="tab-content" id="tab-viewings">
+                    <div id="viewing-list"></div>
+                    <div id="viewing-pagination" class="pagination"></div>
+                </div>
+            `;
+
+            loadEnquiries();
+            loadViewings();
+        } catch (err) {
+            document.getElementById('dashboard-content').innerHTML = '<div class="alert alert-error">Failed to load dashboard.</div>';
+        }
+    }
+
+    function switchTab(tab, btn) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + tab).classList.add('active');
+    }
+
+    async function loadEnquiries() {
+        const res = await fetch(`/api/enquiries/received/?page=${enquiryPage}`, { headers: Auth.headers() });
+        const data = await res.json();
+        const enquiries = data.results || data;
+        const listEl = document.getElementById('enquiry-list');
+
+        if (!enquiries.length) {
+            listEl.innerHTML = '<div class="empty-state"><p>No enquiries yet.</p></div>';
+            document.getElementById('enquiry-pagination').innerHTML = '';
+            return;
+        }
+
+        listEl.innerHTML = enquiries.map(e => `
+            <div class="enquiry-item ${e.is_read ? '' : 'unread'}">
+                <div class="enquiry-header">
+                    <span class="enquiry-from">${escHtml(e.name)}</span>
+                    <span class="enquiry-date">${new Date(e.created_at).toLocaleString()}</span>
+                </div>
+                <div class="enquiry-property">Re: ${escHtml(e.property_title)}</div>
+                <div class="enquiry-message">${escHtml(e.message)}</div>
+                <div class="enquiry-contact">${escHtml(e.email)} ${e.phone ? ' &bull; ' + escHtml(e.phone) : ''}</div>
+                <div class="enquiry-actions">
+                    ${!e.is_read ? `<button class="btn btn-secondary" style="font-size:0.8rem; padding:0.3rem 0.8rem;" onclick="markRead(${e.id}, this)">Mark Read</button>` : '<span style="font-size:0.8rem; color:#8FA89E;">Read</span>'}
+                    <a href="mailto:${e.email}?subject=Re: ${encodeURIComponent(e.property_title)}" class="btn btn-primary" style="font-size:0.8rem; padding:0.3rem 0.8rem;">Reply</a>
+                </div>
+            </div>
+        `).join('');
+
+        // Pagination
+        const pagEl = document.getElementById('enquiry-pagination');
+        pagEl.innerHTML = `
+            <button ${!data.previous ? 'disabled' : ''} onclick="enquiryPage--; loadEnquiries();">&laquo; Prev</button>
+            <span style="padding:0.4rem 0.5rem; color:#4A5E56; font-size:0.9rem;">Page ${enquiryPage}</span>
+            <button ${!data.next ? 'disabled' : ''} onclick="enquiryPage++; loadEnquiries();">Next &raquo;</button>
+        `;
+    }
+
+    async function loadViewings() {
+        const res = await fetch(`/api/viewings/received/?page=${viewingPage}`, { headers: Auth.headers() });
+        const data = await res.json();
+        const viewings = data.results || data;
+        const listEl = document.getElementById('viewing-list');
+
+        if (!viewings.length) {
+            listEl.innerHTML = '<div class="empty-state"><p>No viewing requests yet.</p></div>';
+            document.getElementById('viewing-pagination').innerHTML = '';
+            return;
+        }
+
+        listEl.innerHTML = viewings.map(v => `
+            <div class="viewing-item">
+                <div class="viewing-header">
+                    <span class="enquiry-from">${escHtml(v.name)}</span>
+                    <span class="viewing-status status-${escHtml(v.status)}">${escHtml(v.status_display)}</span>
+                </div>
+                <div class="enquiry-property">Re: ${escHtml(v.property_title)}</div>
+                <div class="viewing-details">
+                    <strong>Date:</strong> ${new Date(v.preferred_date + 'T00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} at ${escHtml(v.preferred_time)}
+                    ${v.alternative_date ? `<br><strong>Alt:</strong> ${new Date(v.alternative_date + 'T00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} at ${escHtml(v.alternative_time)}` : ''}
+                    ${v.message ? `<br><strong>Message:</strong> ${escHtml(v.message)}` : ''}
+                </div>
+                <div class="enquiry-contact">${escHtml(v.email)} ${v.phone ? ' &bull; ' + escHtml(v.phone) : ''}</div>
+                ${v.status === 'pending' ? `
+                <div class="viewing-actions">
+                    <button class="btn btn-primary" style="font-size:0.8rem; padding:0.3rem 0.8rem;" onclick="updateViewing(${v.id}, 'confirmed')">Confirm</button>
+                    <button class="btn btn-danger" style="font-size:0.8rem; padding:0.3rem 0.8rem;" onclick="updateViewing(${v.id}, 'declined')">Decline</button>
+                </div>` : ''}
+                ${v.status === 'confirmed' ? `
+                <div class="viewing-actions">
+                    <button class="btn btn-secondary" style="font-size:0.8rem; padding:0.3rem 0.8rem;" onclick="updateViewing(${v.id}, 'completed')">Mark Completed</button>
+                </div>` : ''}
+            </div>
+        `).join('');
+
+        const pagEl = document.getElementById('viewing-pagination');
+        pagEl.innerHTML = `
+            <button ${!data.previous ? 'disabled' : ''} onclick="viewingPage--; loadViewings();">&laquo; Prev</button>
+            <span style="padding:0.4rem 0.5rem; color:#4A5E56; font-size:0.9rem;">Page ${viewingPage}</span>
+            <button ${!data.next ? 'disabled' : ''} onclick="viewingPage++; loadViewings();">Next &raquo;</button>
+        `;
+    }
+
+    async function markRead(id, btn) {
+        await fetch(`/api/enquiries/${id}/`, {
+            method: 'PATCH',
+            headers: Auth.headers(),
+            body: JSON.stringify({ is_read: true }),
+        });
+        btn.closest('.enquiry-item').classList.remove('unread');
+        btn.outerHTML = '<span style="font-size:0.8rem; color:#8FA89E;">Read</span>';
+    }
+
+    async function updateViewing(id, newStatus) {
+        await fetch(`/api/viewings/${id}/update_status/`, {
+            method: 'PATCH',
+            headers: Auth.headers(),
+            body: JSON.stringify({ status: newStatus }),
+        });
+        loadViewings();
+    }
+
+    loadDashboard();
+</script>
+{% endblock %}
