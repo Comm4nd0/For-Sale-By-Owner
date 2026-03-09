@@ -29,11 +29,7 @@
         .hamburger.active span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
         .hamburger.active span:nth-child(2) { opacity: 0; }
         .hamburger.active span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
-        .notification-bell { position: relative; display: inline-flex; align-items: center; text-decoration: none; margin-left: 1rem; }
-        .notification-bell svg { width: 22px; height: 22px; fill: rgba(255,255,255,0.85); }
-        .notification-bell:hover svg { fill: white; }
-        .notification-bell .bell-badge { position: absolute; top: -5px; right: -8px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #B03A2E; color: white; font-size: 0.65rem; font-weight: 700; display: flex; align-items: center; justify-content: center; line-height: 1; }
-        .notification-bell .bell-badge.hidden { display: none; }
+        .nav-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #B03A2E; color: white; font-size: 0.7rem; font-weight: 700; line-height: 1; margin-left: 0.35rem; vertical-align: middle; }
         .nav-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 999; }
         .nav-overlay.open { display: block; }
         @media (max-width: 768px) {
@@ -129,10 +125,6 @@
                 </a>
             </div>
             <nav id="main-nav" role="navigation" aria-label="Main navigation">
-                <a href="/dashboard/" class="notification-bell" id="nav-bell" style="display:none;" title="Notifications">
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
-                    <span class="bell-badge hidden" id="bell-badge">0</span>
-                </a>
                 <div class="nav-links" id="nav-links">
                     <div class="nav-drawer-header">
                         <a href="/" class="nav-brand">For Sale By Owner</a>
@@ -268,7 +260,7 @@
             if (Auth.isLoggedIn()) {
                 nav.innerHTML = `
                     <a href="/saved/">Saved</a>
-                    <a href="/dashboard/">Dashboard</a>
+                    <a href="/dashboard/" id="nav-dashboard-link">Dashboard</a>
                     <a href="/my-listings/">My Listings</a>
                     <a href="/properties/new/">List Property</a>
                     <a href="/profile/">Profile</a>
@@ -282,19 +274,17 @@
             }
         })();
 
-        // Notification bell — show when logged in and fetch counts
+        // Dashboard notification badge — show unread/pending count
         (function() {
             if (!Auth.isLoggedIn()) return;
-            const bell = document.getElementById('nav-bell');
-            const badge = document.getElementById('bell-badge');
-            if (!bell || !badge) return;
-            bell.style.display = 'inline-flex';
+            const link = document.getElementById('nav-dashboard-link');
+            if (!link) return;
             Auth.authFetch('/api/notifications/counts/', { headers: Auth.headers() })
                 .then(r => r.ok ? r.json() : null)
                 .then(data => {
                     if (data && data.total > 0) {
-                        badge.textContent = data.total > 99 ? '99+' : data.total;
-                        badge.classList.remove('hidden');
+                        const count = data.total > 99 ? '99+' : data.total;
+                        link.innerHTML = `Dashboard <span class="nav-badge">${count}</span>`;
                     }
                 })
                 .catch(() => {});
