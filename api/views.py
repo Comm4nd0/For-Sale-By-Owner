@@ -48,6 +48,17 @@ class PropertyViewSet(viewsets.ModelViewSet):
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated(), IsOwnerOrReadOnly()]
 
+    def get_object(self):
+        """Support lookup by slug as well as numeric pk."""
+        lookup = self.kwargs.get('pk', '')
+        queryset = self.filter_queryset(self.get_queryset())
+        if lookup.isdigit():
+            obj = get_object_or_404(queryset, pk=lookup)
+        else:
+            obj = get_object_or_404(queryset, slug=lookup)
+        self.check_object_permissions(self.request, obj)
+        return obj
+
     def get_queryset(self):
         queryset = Property.objects.all().select_related('owner').prefetch_related('images')
         status_filter = self.request.query_params.get('status')
