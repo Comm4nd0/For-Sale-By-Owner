@@ -6,6 +6,7 @@ from .models import (
     Property, PropertyImage, PropertyFloorplan, PropertyFeature,
     PriceHistory, SavedProperty, Enquiry, PropertyView,
     ViewingRequest, SavedSearch, PushNotificationDevice, Reply,
+    ServiceCategory, ServiceProvider, ServiceProviderReview,
 )
 from .notifications import notify_listing_approved, notify_listing_rejected
 
@@ -230,4 +231,52 @@ class PushNotificationDeviceAdmin(admin.ModelAdmin):
     list_display = ['user', 'platform', 'is_active', 'created_at']
     list_filter = ['platform', 'is_active']
     search_fields = ['user__email', 'token']
+    readonly_fields = ['created_at']
+
+
+# ── Service Provider models ──────────────────────────────────────
+
+@admin.register(ServiceCategory)
+class ServiceCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'slug', 'icon', 'order']
+    list_editable = ['order']
+    search_fields = ['name']
+    prepopulated_fields = {'slug': ('name',)}
+
+
+class ServiceProviderReviewInline(admin.TabularInline):
+    model = ServiceProviderReview
+    extra = 0
+    readonly_fields = ['reviewer', 'rating', 'comment', 'created_at']
+
+
+@admin.register(ServiceProvider)
+class ServiceProviderAdmin(admin.ModelAdmin):
+    list_display = ['business_name', 'owner', 'status', 'is_verified', 'review_count_display', 'created_at']
+    list_filter = ['status', 'is_verified', 'categories', 'created_at']
+    list_editable = ['status', 'is_verified']
+    search_fields = ['business_name', 'owner__email', 'coverage_counties', 'coverage_postcodes']
+    readonly_fields = ['slug', 'created_at', 'updated_at']
+    filter_horizontal = ['categories']
+    inlines = [ServiceProviderReviewInline]
+    actions = ['approve_providers', 'verify_providers']
+
+    def review_count_display(self, obj):
+        return obj.reviews.count()
+    review_count_display.short_description = 'Reviews'
+
+    @admin.action(description='Approve selected providers (set Active)')
+    def approve_providers(self, request, queryset):
+        queryset.update(status='active')
+
+    @admin.action(description='Mark as verified')
+    def verify_providers(self, request, queryset):
+        queryset.update(is_verified=True)
+
+
+@admin.register(ServiceProviderReview)
+class ServiceProviderReviewAdmin(admin.ModelAdmin):
+    list_display = ['provider', 'reviewer', 'rating', 'created_at']
+    list_filter = ['rating', 'created_at']
+    search_fields = ['provider__business_name', 'reviewer__email', 'comment']
     readonly_fields = ['created_at']

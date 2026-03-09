@@ -377,3 +377,129 @@ class PushNotificationDevice(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.platform}"
+
+
+class ServiceCategory(models.Model):
+    """A predefined category of service (e.g. EPC Inspections, Conveyancing)."""
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=110, unique=True, blank=True)
+    icon = models.CharField(max_length=50, blank=True, help_text='Optional icon name or emoji')
+    description = models.TextField(blank=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'name']
+        verbose_name_plural = 'Service categories'
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
+class ServiceProvider(models.Model):
+    """A service provider listing, advertising services to property buyers/sellers."""
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('pending_review', 'Pending Review'),
+        ('active', 'Active'),
+        ('suspended', 'Suspended'),
+        ('withdrawn', 'Withdrawn'),
+    ]
+
+    owner = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='service_provider'
+    )
+    business_name = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=220, unique=True, blank=True)
+    description = models.TextField(blank=True)
+    categories = models.ManyToManyField(ServiceCategory, related_name='providers')
+
+    # Contact
+    contact_email = models.EmailField()
+    contact_phone = models.CharField(max_length=20, blank=True)
+    website = models.URLField(blank=True)
+
+    # Coverage (geographic targeting)
+    coverage_counties = models.TextField(
+        blank=True,
+        help_text='Comma-separated county names, e.g. "Gloucestershire, Oxfordshire"'
+    )
+    coverage_postcodes = models.TextField(
+        blank=True,
+        help_text='Comma-separated postcode prefixes, e.g. "GL, OX, BS"'
+    )
+
+    # Branding
+    logo = models.ImageField(upload_to='services/logos/', blank=True, null=True)
+
+    # Business details
+    pricing_info = models.TextField(blank=True, help_text='Free-text pricing or "from" prices')
+    years_established = models.PositiveIntegerField(null=True, blank=True)
+
+    # Moderation
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    is_verified = models.BooleanField(default=False, help_text='Admin-verified business')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.business_name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.business_name)
+            slug = base
+            n = 1
+            while ServiceProvider.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base}-{n}"
+                n += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+    @property
+    def coverage_counties_list(self):
+        return [c.strip() for c in self.coverage_counties.split(',') if c.strip()]
+
+    @property
+    def coverage_postcodes_list(self):
+        return [p.strip().upper() for p in self.coverage_postcodes.split(',') if p.strip()]
+
+    @property
+    def average_rating(self):
+        avg = self.reviews.aggregate(models.Avg('rating'))['rating__avg']
+        return round(avg, 1) if avg else None
+
+    @property
+    def review_count(self):
+        return self.reviews.count()
+
+
+class ServiceProviderReview(models.Model):
+    """A rating and review left by a user for a service provider."""
+    RATING_CHOICES = [(i, str(i)) for i in range(1, 6)]
+
+    provider = models.ForeignKey(
+        ServiceProvider, on_delete=models.CASCADE, related_name='reviews'
+    )
+    reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='service_reviews'
+    )
+    rating = models.PositiveIntegerField(choices=RATING_CHOICES)
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['provider', 'reviewer']
+
+    def __str__(self):
+        return f"{self.reviewer.email} rated {self.provider.business_name} {self.rating}/5"

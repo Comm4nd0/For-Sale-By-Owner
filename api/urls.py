@@ -9,6 +9,8 @@ router.register(r'enquiries', views.EnquiryViewSet, basename='enquiry')
 router.register(r'viewings', views.ViewingRequestViewSet, basename='viewing-request')
 router.register(r'saved-searches', views.SavedSearchViewSet, basename='saved-search')
 router.register(r'features', views.PropertyFeatureViewSet, basename='property-feature')
+router.register(r'service-categories', views.ServiceCategoryViewSet, basename='service-category')
+router.register(r'service-providers', views.ServiceProviderViewSet, basename='service-provider')
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -50,4 +52,21 @@ urlpatterns = [
     path('notifications/counts/', views.notification_counts, name='notification-counts'),
     path('profile/', views.user_profile, name='user-profile'),
     path('push/register/', views.register_push_device, name='push-register'),
+    # Service provider reviews (nested)
+    path(
+        'service-providers/<int:provider_pk>/reviews/',
+        views.ServiceProviderReviewViewSet.as_view({'get': 'list', 'post': 'create'}),
+        name='service-provider-reviews-list',
+    ),
+    path(
+        'service-providers/<int:provider_pk>/reviews/<int:pk>/',
+        views.ServiceProviderReviewViewSet.as_view({'get': 'retrieve', 'delete': 'destroy'}),
+        name='service-provider-reviews-detail',
+    ),
+    # Property-scoped service providers
+    path(
+        'properties/<int:property_pk>/services/',
+        views.property_services,
+        name='property-services',
+    ),
 ]

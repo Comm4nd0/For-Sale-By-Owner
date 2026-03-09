@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Register Your Service - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .register-header { margin-bottom: 2rem; }
+    .register-header h1 { font-size: 1.6rem; color: #1A3C2E; margin-bottom: 0.25rem; }
+    .register-header p { color: #4A5E56; }
+
+    .form-card { background: #FFFFFF; border: 1px solid #D4DDD9; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .form-card h3 { color: #1A3C2E; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #D4DDD9; font-size: 1.1rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; margin-bottom: 0.3rem; font-size: 0.85rem; font-weight: 500; color: #4A5E56; }
+    .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 0.6rem; border: 1px solid #D4DDD9; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
+    .form-group textarea { min-height: 100px; resize: vertical; }
+    .form-group small { display: block; margin-top: 0.25rem; font-size: 0.8rem; color: #8FA89E; }
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    .category-checkboxes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .category-checkboxes label {
+        display: inline-flex; align-items: center; gap: 0.35rem;
+        padding: 0.4rem 0.75rem; border-radius: 20px; font-size: 0.85rem;
+        border: 1px solid #D4DDD9; background: #FFFFFF; color: #1A3C2E;
+        cursor: pointer; transition: all 0.15s;
+    }
+    .category-checkboxes input[type="checkbox"] { display: none; }
+    .category-checkboxes input[type="checkbox"]:checked + label {
+        background: #2D6A4F; color: white; border-color: #2D6A4F;
+    }
+
+    .logo-preview { margin-top: 0.5rem; }
+    .logo-preview img { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; border: 1px solid #D4DDD9; }
+
+    @media (max-width: 768px) {
+        .form-row-2 { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="register-header">
+    <h1 id="page-title">Register Your Service</h1>
+    <p id="page-subtitle">Advertise your business to property buyers and sellers in your area.</p>
+</div>
+
+<div id="form-alert" class="alert" style="display:none;"></div>
+
+<form id="service-form" onsubmit="handleSubmit(event)">
+    <div class="form-card">
+        <h3>Business Information</h3>
+        <div class="form-group">
+            <label>Business Name *</label>
+            <input type="text" id="business_name" required>
+        </div>
+        <div class="form-group">
+            <label>Description *</label>
+            <textarea id="description" required placeholder="Tell potential customers about your business, experience and what services you offer..."></textarea>
+        </div>
+        <div class="form-group">
+            <label>Categories *</label>
+            <div id="category-checkboxes" class="category-checkboxes">
+                <p style="color:#8FA89E;">Loading categories...</p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Years Established</label>
+            <input type="number" id="years_established" min="0" placeholder="e.g. 10">
+        </div>
+        <div class="form-group">
+            <label>Pricing Information</label>
+            <textarea id="pricing_info" placeholder="e.g. EPC certificates from &pound;45, Free quotes available..."></textarea>
+        </div>
+        <div class="form-group">
+            <label>Business Logo</label>
+            <input type="file" id="logo" accept="image/*">
+            <div class="logo-preview" id="logo-preview"></div>
+        </div>
+    </div>
+
+    <div class="form-card">
+        <h3>Contact Information</h3>
+        <div class="form-row-2">
+            <div class="form-group">
+                <label>Contact Email *</label>
+                <input type="email" id="contact_email" required>
+            </div>
+            <div class="form-group">
+                <label>Contact Phone</label>
+                <input type="tel" id="contact_phone" placeholder="e.g. 01234 567890">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Website</label>
+            <input type="url" id="website" placeholder="https://www.example.com">
+        </div>
+    </div>
+
+    <div class="form-card">
+        <h3>Coverage Area</h3>
+        <p style="font-size:0.9rem; color:#4A5E56; margin-bottom:1rem;">Specify the areas you cover so customers can find you when searching by location.</p>
+        <div class="form-group">
+            <label>Counties</label>
+            <input type="text" id="coverage_counties" placeholder="e.g. Gloucestershire, Oxfordshire, Wiltshire">
+            <small>Comma-separated list of counties you cover</small>
+        </div>
+        <div class="form-group">
+            <label>Postcode Prefixes</label>
+            <input type="text" id="coverage_postcodes" placeholder="e.g. GL, OX, SN, BS">
+            <small>Comma-separated list of postcode prefixes you cover</small>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary" id="submit-btn" style="width:100%; padding:0.75rem; font-size:1rem;">Register Service</button>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) { /* redirects */ }
+
+    let isEditing = false;
+    let existingData = null;
+    let categories = [];
+
+    // Check if user already has a service provider profile
+    async function checkExisting() {
+        try {
+            const res = await Auth.authFetch('/api/service-providers/?mine=true', { headers: Auth.headers() });
+            const data = await res.json();
+            const results = data.results || data;
+            if (results.length > 0) {
+                // User already has a profile — redirect to my-service
+                window.location.href = '/my-service/';
+            }
+        } catch {}
+    }
+
+    // Load categories
+    async function loadCategories() {
+        try {
+            const res = await Auth.authFetch('/api/service-categories/', { headers: Auth.headers() });
+            categories = await res.json();
+            const container = document.getElementById('category-checkboxes');
+            container.innerHTML = categories.map(c =>
+                `<span><input type="checkbox" id="cat-${c.id}" value="${c.id}"><label for="cat-${c.id}">${escHtml(c.name)}</label></span>`
+            ).join('');
+        } catch {
+            document.getElementById('category-checkboxes').innerHTML = '<p style="color:#B03A2E;">Failed to load categories.</p>';
+        }
+    }
+
+    // Pre-fill user email
+    async function prefillUser() {
+        try {
+            const res = await fetch('/auth/users/me/', { headers: Auth.headers() });
+            const user = await res.json();
+            const emailEl = document.getElementById('contact_email');
+            if (emailEl && !emailEl.value) emailEl.value = user.email;
+        } catch {}
+    }
+
+    // Logo preview
+    document.getElementById('logo').addEventListener('change', function() {
+        const file = this.files[0];
+        const preview = document.getElementById('logo-preview');
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = e => { preview.innerHTML = `<img src="${e.target.result}" alt="Logo preview">`; };
+            reader.readAsDataURL(file);
+        } else {
+            preview.innerHTML = '';
+        }
+    });
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+        const btn = document.getElementById('submit-btn');
+        const msgEl = document.getElementById('form-alert');
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+        msgEl.style.display = 'none';
+
+        // Collect selected categories
+        const selectedCats = [];
+        document.querySelectorAll('#category-checkboxes input[type="checkbox"]:checked').forEach(cb => {
+            selectedCats.push(parseInt(cb.value));
+        });
+
+        if (selectedCats.length === 0) {
+            msgEl.className = 'alert alert-error';
+            msgEl.textContent = 'Please select at least one category.';
+            msgEl.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = isEditing ? 'Update Service' : 'Register Service';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('business_name', document.getElementById('business_name').value);
+        formData.append('description', document.getElementById('description').value);
+        formData.append('contact_email', document.getElementById('contact_email').value);
+        formData.append('contact_phone', document.getElementById('contact_phone').value);
+        formData.append('website', document.getElementById('website').value);
+        formData.append('coverage_counties', document.getElementById('coverage_counties').value);
+        formData.append('coverage_postcodes', document.getElementById('coverage_postcodes').value);
+        formData.append('pricing_info', document.getElementById('pricing_info').value);
+        const years = document.getElementById('years_established').value;
+        if (years) formData.append('years_established', years);
+        selectedCats.forEach(id => formData.append('category_ids', id));
+
+        const logoFile = document.getElementById('logo').files[0];
+        if (logoFile) formData.append('logo', logoFile);
+
+        try {
+            const url = isEditing ? `/api/service-providers/${existingData.id}/` : '/api/service-providers/';
+            const method = isEditing ? 'PATCH' : 'POST';
+            const headers = { 'X-CSRFToken': Auth.getCSRFToken() };
+            const token = Auth.getToken();
+            if (token) headers['Authorization'] = 'Token ' + token;
+
+            const res = await fetch(url, { method, headers, body: formData });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.detail || Object.values(data).flat().join(', '));
+            }
+
+            const result = await res.json();
+            window.location.href = '/my-service/';
+        } catch (err) {
+            msgEl.className = 'alert alert-error';
+            msgEl.textContent = err.message || 'Failed to save. Please try again.';
+            msgEl.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        btn.disabled = false;
+        btn.textContent = isEditing ? 'Update Service' : 'Register Service';
+    }
+
+    checkExisting();
+    loadCategories();
+    prefillUser();
+</script>
+{% endblock %}

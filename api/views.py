@@ -15,6 +15,7 @@ from .models import (
     Property, PropertyImage, PropertyFloorplan, PropertyFeature,
     PriceHistory, SavedProperty, Enquiry, PropertyView,
     ViewingRequest, SavedSearch, PushNotificationDevice, Reply,
+    ServiceCategory, ServiceProvider, ServiceProviderReview,
 )
 from .serializers import (
     PropertySerializer, PropertyListSerializer, PropertyImageSerializer,
@@ -22,6 +23,8 @@ from .serializers import (
     SavedPropertySerializer, EnquirySerializer, DashboardStatsSerializer,
     ViewingRequestSerializer, SavedSearchSerializer, UserProfileSerializer,
     ReplySerializer,
+    ServiceCategorySerializer, ServiceProviderListSerializer,
+    ServiceProviderDetailSerializer, ServiceProviderReviewSerializer,
 )
 from .notifications import notify_new_enquiry, notify_viewing_request, notify_reply
 
@@ -509,3 +512,126 @@ def register_push_device(request):
         defaults={'user': request.user, 'platform': platform, 'is_active': True},
     )
     return Response({'registered': True, 'created': created})
+
+
+# ── Service Provider views ───────────────────────────────────────
+
+class IsServiceProviderOwnerOrReadOnly(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return obj.owner == request.user
+
+
+class ServiceCategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only list of available service categories."""
+    serializer_class = ServiceCategorySerializer
+    queryset = ServiceCategory.objects.all()
+    permission_classes = [permissions.AllowAny]
+    pagination_class = None
+
+
+class ServiceProviderViewSet(viewsets.ModelViewSet):
+    serializer_class = ServiceProviderDetailSerializer
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ServiceProviderListSerializer
+        return ServiceProviderDetailSerializer
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated(), IsServiceProviderOwnerOrReadOnly()]
+
+    def get_object(self):
+        lookup = self.kwargs.get('pk', '')
+        queryset = self.filter_queryset(self.get_queryset())
+        if lookup.isdigit():
+            obj = get_object_or_404(queryset, pk=lookup)
+        else:
+            obj = get_object_or_404(queryset, slug=lookup)
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+    def get_queryset(self):
+        queryset = ServiceProvider.objects.all().select_related('owner').prefetch_related('categories', 'reviews')
+
+        if self.action == 'list':
+            if self.request.user.is_authenticated and self.request.query_params.get('mine') == 'true':
+                queryset = queryset.filter(owner=self.request.user)
+            else:
+                queryset = queryset.filter(status='active')
+
+        category = self.request.query_params.get('category')
+        if category:
+            queryset = queryset.filter(categories__slug=category)
+
+        location = self.request.query_params.get('location')
+        if location:
+            queryset = queryset.filter(
+                Q(coverage_counties__icontains=location) |
+                Q(coverage_postcodes__icontains=location)
+            )
+
+        return queryset.distinct()
+
+    def perform_create(self, serializer):
+        if ServiceProvider.objects.filter(owner=self.request.user).exists():
+            raise ValidationError("You already have a service provider listing.")
+        serializer.save(owner=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+
+class ServiceProviderReviewViewSet(viewsets.ModelViewSet):
+    serializer_class = ServiceProviderReviewSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'delete']
+
+    def get_queryset(self):
+        return ServiceProviderReview.objects.filter(
+            provider_id=self.kwargs['provider_pk']
+        ).select_related('reviewer')
+
+    def perform_create(self, serializer):
+        provider = get_object_or_404(ServiceProvider, pk=self.kwargs['provider_pk'])
+        if provider.owner == self.request.user:
+            raise ValidationError("You cannot review your own service.")
+        if ServiceProviderReview.objects.filter(
+            provider=provider, reviewer=self.request.user
+        ).exists():
+            raise ValidationError("You have already reviewed this service provider.")
+        serializer.save(provider=provider, reviewer=self.request.user)
+
+    def perform_destroy(self, instance):
+        if instance.reviewer != self.request.user:
+            raise PermissionDenied("You can only delete your own reviews.")
+        instance.delete()
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def property_services(request, property_pk):
+    """Return active service providers that cover the property's location."""
+    prop = get_object_or_404(Property, pk=property_pk)
+    postcode_prefix = prop.postcode.split()[0] if prop.postcode else ''
+    county = prop.county
+
+    providers = ServiceProvider.objects.filter(status='active').prefetch_related('categories')
+    if postcode_prefix or county:
+        providers = providers.filter(
+            Q(coverage_postcodes__icontains=postcode_prefix) |
+            Q(coverage_counties__icontains=county)
+        ).distinct()
+    else:
+        providers = providers.none()
+
+    category = request.query_params.get('category')
+    if category:
+        providers = providers.filter(categories__slug=category)
+
+    serializer = ServiceProviderListSerializer(providers[:20], many=True, context={'request': request})
+    return Response(serializer.data)

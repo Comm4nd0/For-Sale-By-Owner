@@ -4,6 +4,7 @@ from .models import (
     Property, PropertyImage, PropertyFloorplan, PropertyFeature,
     PriceHistory, SavedProperty, Enquiry, PropertyView,
     ViewingRequest, SavedSearch, Reply,
+    ServiceCategory, ServiceProvider, ServiceProviderReview,
 )
 
 User = get_user_model()
@@ -233,3 +234,91 @@ class DashboardStatsSerializer(serializers.Serializer):
     total_enquiries = serializers.IntegerField()
     unread_enquiries = serializers.IntegerField()
     total_saves = serializers.IntegerField()
+
+
+# ── Service Provider serializers ─────────────────────────────────
+
+class ServiceCategorySerializer(serializers.ModelSerializer):
+    provider_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ServiceCategory
+        fields = ['id', 'name', 'slug', 'icon', 'description', 'order', 'provider_count']
+
+    def get_provider_count(self, obj):
+        return obj.providers.filter(status='active').count()
+
+
+class ServiceProviderReviewSerializer(serializers.ModelSerializer):
+    reviewer_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ServiceProviderReview
+        fields = ['id', 'provider', 'reviewer', 'reviewer_name', 'rating', 'comment', 'created_at']
+        read_only_fields = ['id', 'reviewer', 'created_at']
+
+    def get_reviewer_name(self, obj):
+        return obj.reviewer.get_full_name() or 'User'
+
+
+class ServiceProviderListSerializer(serializers.ModelSerializer):
+    """Lighter serializer for list views."""
+    logo = RelativeImageField()
+    categories = ServiceCategorySerializer(many=True, read_only=True)
+    average_rating = serializers.SerializerMethodField()
+    review_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ServiceProvider
+        fields = [
+            'id', 'business_name', 'slug', 'description',
+            'categories', 'coverage_counties', 'coverage_postcodes',
+            'logo', 'is_verified', 'pricing_info',
+            'average_rating', 'review_count',
+            'created_at',
+        ]
+
+    def get_average_rating(self, obj):
+        return obj.average_rating
+
+    def get_review_count(self, obj):
+        return obj.review_count
+
+
+class ServiceProviderDetailSerializer(ServiceProviderListSerializer):
+    """Full serializer for detail/create/update views."""
+    reviews = ServiceProviderReviewSerializer(many=True, read_only=True)
+    owner_name = serializers.SerializerMethodField()
+    category_ids = serializers.PrimaryKeyRelatedField(
+        queryset=ServiceCategory.objects.all(),
+        many=True, write_only=True, required=False,
+        source='categories',
+    )
+
+    class Meta(ServiceProviderListSerializer.Meta):
+        fields = ServiceProviderListSerializer.Meta.fields + [
+            'owner', 'owner_name',
+            'contact_email', 'contact_phone', 'website',
+            'years_established',
+            'status', 'reviews',
+            'updated_at',
+            'category_ids',
+        ]
+        read_only_fields = ['id', 'owner', 'slug', 'is_verified', 'created_at', 'updated_at']
+
+    def get_owner_name(self, obj):
+        return obj.owner.get_full_name() or obj.owner.email
+
+    def create(self, validated_data):
+        categories = validated_data.pop('categories', [])
+        instance = super().create(validated_data)
+        if categories:
+            instance.categories.set(categories)
+        return instance
+
+    def update(self, instance, validated_data):
+        categories = validated_data.pop('categories', None)
+        instance = super().update(instance, validated_data)
+        if categories is not None:
+            instance.categories.set(categories)
+        return instance

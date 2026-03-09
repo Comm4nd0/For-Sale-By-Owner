@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Service Provider - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .provider-header { display: flex; gap: 1.5rem; align-items: flex-start; margin-bottom: 2rem; flex-wrap: wrap; }
+    .provider-logo-lg { width: 100px; height: 100px; border-radius: 12px; object-fit: cover; background: #D8F3DC; flex-shrink: 0; }
+    .provider-logo-lg-placeholder { width: 100px; height: 100px; border-radius: 12px; background: #D8F3DC; display: flex; align-items: center; justify-content: center; color: #8FA89E; font-size: 2.5rem; flex-shrink: 0; }
+    .provider-header-info { flex: 1; min-width: 0; }
+    .provider-header-info h1 { font-size: 1.6rem; color: #1A3C2E; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .verified-badge { display: inline-flex; align-items: center; gap: 0.3rem; background: #D8F3DC; color: #1A3C2E; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+    .provider-cats-lg { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+    .provider-cat-tag-lg { background: #D8F3DC; color: #1A3C2E; padding: 0.25rem 0.65rem; border-radius: 14px; font-size: 0.85rem; }
+    .provider-rating-lg { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.5rem; font-size: 1rem; color: #C9872A; }
+    .provider-rating-lg .count { color: #8FA89E; font-size: 0.9rem; }
+
+    .detail-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
+    .detail-section { margin-bottom: 1.5rem; }
+    .detail-section h3 { color: #1A3C2E; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid #D4DDD9; }
+
+    .info-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #eee; }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: #4A5E56; }
+    .info-value { font-weight: 500; color: #1A3C2E; }
+    .info-value a { color: #2D6A4F; text-decoration: underline; }
+
+    .coverage-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .coverage-tag { background: #D8F3DC; color: #1A3C2E; padding: 0.25rem 0.65rem; border-radius: 14px; font-size: 0.85rem; }
+
+    /* Contact card */
+    .contact-card { background: #FFFFFF; border: 1px solid #D4DDD9; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .contact-card h3 { color: #1A3C2E; margin-bottom: 0.75rem; font-size: 1.1rem; }
+    .contact-item { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-size: 0.95rem; color: #4A5E56; }
+    .contact-item a { color: #2D6A4F; text-decoration: underline; }
+
+    /* Reviews */
+    .reviews-list { display: flex; flex-direction: column; gap: 1rem; }
+    .review-card { background: #FFFFFF; border: 1px solid #D4DDD9; border-radius: 8px; padding: 1rem; }
+    .review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .review-author { font-weight: 600; color: #1A3C2E; }
+    .review-date { font-size: 0.8rem; color: #8FA89E; }
+    .review-stars { color: #C9872A; margin-bottom: 0.35rem; }
+    .review-text { font-size: 0.9rem; color: #4A5E56; line-height: 1.5; }
+    .review-actions { margin-top: 0.5rem; }
+    .review-actions button { background: none; border: none; color: #B03A2E; cursor: pointer; font-size: 0.8rem; }
+
+    /* Review form */
+    .review-form-section { background: #FFFFFF; border: 1px solid #D4DDD9; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .review-form-section h3 { color: #1A3C2E; margin-bottom: 0.75rem; font-size: 1.1rem; }
+    .review-form-section .form-group { margin-bottom: 0.75rem; }
+    .review-form-section label { display: block; margin-bottom: 0.2rem; font-size: 0.85rem; font-weight: 500; color: #4A5E56; }
+    .review-form-section textarea { width: 100%; padding: 0.5rem; border: 1px solid #D4DDD9; border-radius: 6px; font-size: 0.9rem; font-family: inherit; min-height: 80px; resize: vertical; }
+    .star-input { display: flex; gap: 0.25rem; cursor: pointer; font-size: 1.5rem; color: #D4DDD9; }
+    .star-input span.active { color: #C9872A; }
+    .star-input span:hover, .star-input span:hover ~ span { color: #C9872A; }
+
+    @media (max-width: 768px) {
+        .detail-grid { grid-template-columns: 1fr; }
+        .provider-header { flex-direction: column; align-items: center; text-align: center; }
+        .provider-header-info h1 { justify-content: center; }
+        .provider-cats-lg { justify-content: center; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="provider-content">
+    <p>Loading...</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const pathParts = window.location.pathname.match(/\/services\/([^/]+)/);
+    const providerSlug = pathParts ? pathParts[1] : null;
+    if (!providerSlug) window.location.href = '/services/';
+
+    let providerData = null;
+    let currentUserId = null;
+    let selectedRating = 0;
+
+    function renderStars(rating) {
+        if (!rating) return '';
+        const full = Math.floor(rating);
+        const half = rating - full >= 0.5 ? 1 : 0;
+        return '&#9733;'.repeat(full) + (half ? '&#9734;' : '') + '&#9734;'.repeat(5 - full - half);
+    }
+
+    function renderReview(r) {
+        const date = new Date(r.created_at).toLocaleDateString();
+        const deleteBtn = (currentUserId && r.reviewer === currentUserId)
+            ? `<div class="review-actions"><button onclick="deleteReview(${r.id})">Delete my review</button></div>`
+            : '';
+        return `<div class="review-card">
+            <div class="review-header">
+                <span class="review-author">${escHtml(r.reviewer_name)}</span>
+                <span class="review-date">${date}</span>
+            </div>
+            <div class="review-stars">${'&#9733;'.repeat(r.rating)}${'&#9734;'.repeat(5 - r.rating)}</div>
+            ${r.comment ? `<div class="review-text">${escHtml(r.comment)}</div>` : ''}
+            ${deleteBtn}
+        </div>`;
+    }
+
+    function setStarRating(n) {
+        selectedRating = n;
+        document.querySelectorAll('.star-input span').forEach((s, i) => {
+            s.classList.toggle('active', i < n);
+        });
+    }
+
+    async function submitReview(e) {
+        e.preventDefault();
+        if (!selectedRating) { alert('Please select a rating.'); return; }
+        const btn = e.target.querySelector('button[type="submit"]');
+        const msgEl = document.getElementById('review-msg');
+        btn.disabled = true;
+        btn.textContent = 'Submitting...';
+        msgEl.style.display = 'none';
+
+        try {
+            const res = await fetch(`/api/service-providers/${providerData.id}/reviews/`, {
+                method: 'POST',
+                headers: Auth.headers(),
+                body: JSON.stringify({
+                    rating: selectedRating,
+                    comment: document.getElementById('review-comment').value,
+                }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.detail || Object.values(data).flat().join(', '));
+            }
+            msgEl.className = 'alert alert-success';
+            msgEl.textContent = 'Review submitted! Thank you.';
+            msgEl.style.display = 'block';
+            e.target.reset();
+            selectedRating = 0;
+            document.querySelectorAll('.star-input span').forEach(s => s.classList.remove('active'));
+            // Reload reviews
+            loadReviews();
+        } catch (err) {
+            msgEl.className = 'alert alert-error';
+            msgEl.textContent = err.message || 'Failed to submit review.';
+            msgEl.style.display = 'block';
+        }
+        btn.disabled = false;
+        btn.textContent = 'Submit Review';
+    }
+
+    async function deleteReview(reviewId) {
+        if (!confirm('Delete your review?')) return;
+        try {
+            await fetch(`/api/service-providers/${providerData.id}/reviews/${reviewId}/`, {
+                method: 'DELETE',
+                headers: Auth.headers(),
+            });
+            loadReviews();
+        } catch {}
+    }
+
+    async function loadReviews() {
+        try {
+            const res = await Auth.authFetch(`/api/service-providers/${providerData.id}/reviews/`, { headers: Auth.headers() });
+            const reviews = await res.json();
+            const container = document.getElementById('reviews-list');
+            if (reviews.length) {
+                container.innerHTML = reviews.map(renderReview).join('');
+            } else {
+                container.innerHTML = '<p style="color:#8FA89E;">No reviews yet. Be the first!</p>';
+            }
+        } catch {}
+    }
+
+    // Get current user
+    if (Auth.isLoggedIn()) {
+        fetch('/auth/users/me/', { headers: Auth.headers() })
+            .then(r => r.json())
+            .then(u => { currentUserId = u.id; })
+            .catch(() => {});
+    }
+
+    // Load provider
+    Auth.authFetch(`/api/service-providers/${providerSlug}/`, { headers: Auth.headers() })
+        .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+        .then(p => {
+            providerData = p;
+            document.title = `${p.business_name} - For Sale By Owner`;
+
+            const logoHtml = p.logo
+                ? `<img src="${p.logo}" alt="${escHtml(p.business_name)}" class="provider-logo-lg">`
+                : `<div class="provider-logo-lg-placeholder">&#9881;</div>`;
+
+            const catTags = (p.categories || []).map(c =>
+                `<span class="provider-cat-tag-lg">${escHtml(c.name)}</span>`
+            ).join('');
+
+            const ratingHtml = p.average_rating
+                ? `<div class="provider-rating-lg">${renderStars(p.average_rating)} ${p.average_rating.toFixed(1)} <span class="count">(${p.review_count} review${p.review_count !== 1 ? 's' : ''})</span></div>`
+                : `<div class="provider-rating-lg"><span class="count">No reviews yet</span></div>`;
+
+            const counties = p.coverage_counties ? p.coverage_counties.split(',').map(s => s.trim()).filter(Boolean) : [];
+            const postcodes = p.coverage_postcodes ? p.coverage_postcodes.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+            const coverageHtml = (counties.length || postcodes.length) ? `
+                <div class="detail-section">
+                    <h3>Coverage Area</h3>
+                    ${counties.length ? `<p style="margin-bottom:0.5rem;font-size:0.9rem;color:#4A5E56;">Counties:</p><div class="coverage-tags" style="margin-bottom:0.75rem;">${counties.map(c => `<span class="coverage-tag">${escHtml(c)}</span>`).join('')}</div>` : ''}
+                    ${postcodes.length ? `<p style="margin-bottom:0.5rem;font-size:0.9rem;color:#4A5E56;">Postcode areas:</p><div class="coverage-tags">${postcodes.map(pc => `<span class="coverage-tag">${escHtml(pc)}</span>`).join('')}</div>` : ''}
+                </div>` : '';
+
+            const contactHtml = `
+                <div class="contact-card">
+                    <h3>Contact Details</h3>
+                    ${p.contact_email ? `<div class="contact-item">&#9993; <a href="mailto:${escHtml(p.contact_email)}">${escHtml(p.contact_email)}</a></div>` : ''}
+                    ${p.contact_phone ? `<div class="contact-item">&#9742; <a href="tel:${escHtml(p.contact_phone)}">${escHtml(p.contact_phone)}</a></div>` : ''}
+                    ${p.website ? `<div class="contact-item">&#127760; <a href="${escHtml(p.website)}" target="_blank" rel="noopener">${escHtml(p.website)}</a></div>` : ''}
+                </div>`;
+
+            const reviewFormHtml = Auth.isLoggedIn() ? `
+                <div class="review-form-section">
+                    <h3>Leave a Review</h3>
+                    <div id="review-msg" class="alert" style="display:none;"></div>
+                    <form onsubmit="submitReview(event)">
+                        <div class="form-group">
+                            <label>Rating</label>
+                            <div class="star-input">
+                                ${[1,2,3,4,5].map(n => `<span onclick="setStarRating(${n})">&#9733;</span>`).join('')}
+                            </div>
+                        </div>
+                        <div class="form-group"><label>Comment (optional)</label><textarea id="review-comment"></textarea></div>
+                        <button type="submit" class="btn btn-primary" style="width:100%;">Submit Review</button>
+                    </form>
+                </div>` : `
+                <div class="review-form-section">
+                    <h3>Leave a Review</h3>
+                    <p style="color:#4A5E56;"><a href="/login/?next=${encodeURIComponent(window.location.pathname)}">Log in</a> to leave a review.</p>
+                </div>`;
+
+            document.getElementById('provider-content').innerHTML = `
+                <div class="provider-header">
+                    ${logoHtml}
+                    <div class="provider-header-info">
+                        <h1>${escHtml(p.business_name)} ${p.is_verified ? '<span class="verified-badge">&#10003; Verified</span>' : ''}</h1>
+                        <div class="provider-cats-lg">${catTags}</div>
+                        ${ratingHtml}
+                    </div>
+                </div>
+                <div class="detail-grid">
+                    <div>
+                        ${p.description ? `<div class="detail-section"><h3>About</h3><p style="line-height:1.6;color:#4A5E56;">${escHtml(p.description).replace(/\n/g, '<br>')}</p></div>` : ''}
+                        ${coverageHtml}
+                        ${p.pricing_info ? `<div class="detail-section"><h3>Pricing</h3><p style="line-height:1.6;color:#4A5E56;">${escHtml(p.pricing_info).replace(/\n/g, '<br>')}</p></div>` : ''}
+                        <div class="detail-section">
+                            <h3>Reviews</h3>
+                            <div id="reviews-list" class="reviews-list"><p style="color:#8FA89E;">Loading reviews...</p></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="contact-card">
+                            <h3>Details</h3>
+                            ${p.years_established ? `<div class="info-row"><span class="info-label">Established</span><span class="info-value">${p.years_established} years</span></div>` : ''}
+                            <div class="info-row"><span class="info-label">Listed by</span><span class="info-value">${escHtml(p.owner_name || '')}</span></div>
+                        </div>
+                        ${contactHtml}
+                        ${reviewFormHtml}
+                        <a href="/services/" class="btn btn-secondary" style="display:block;text-align:center;">Back to Directory</a>
+                    </div>
+                </div>
+            `;
+
+            loadReviews();
+        })
+        .catch(() => {
+            document.getElementById('provider-content').innerHTML = '<div class="alert alert-error">Service provider not found.</div>';
+        });
+</script>
+{% endblock %}

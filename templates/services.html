@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+
+{% block title %}Local Services - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .services-hero { background: linear-gradient(135deg, #1A3C2E 0%, #2D6A4F 100%); color: white; padding: 2.5rem 0; margin: -2rem 0 2rem; }
+    .services-hero h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+    .services-hero p { opacity: 0.85; font-size: 1rem; }
+
+    .search-bar { display: flex; gap: 0.75rem; margin-top: 1.25rem; flex-wrap: wrap; }
+    .search-bar input { flex: 1; min-width: 200px; padding: 0.6rem 0.75rem; border: none; border-radius: 6px; font-size: 0.95rem; font-family: inherit; }
+    .search-bar select { padding: 0.6rem 0.75rem; border: none; border-radius: 6px; font-size: 0.95rem; font-family: inherit; min-width: 180px; }
+    .search-bar .btn { white-space: nowrap; }
+
+    .categories-strip { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .cat-chip {
+        display: inline-flex; align-items: center; gap: 0.35rem;
+        padding: 0.4rem 0.85rem; border-radius: 20px; font-size: 0.85rem;
+        border: 1px solid #D4DDD9; background: #FFFFFF; color: #1A3C2E;
+        cursor: pointer; text-decoration: none; transition: all 0.15s;
+    }
+    .cat-chip:hover, .cat-chip.active { background: #2D6A4F; color: white; border-color: #2D6A4F; }
+    .cat-chip .material-icons { font-size: 1rem; }
+
+    .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem; }
+    .results-header h2 { color: #1A3C2E; font-size: 1.3rem; }
+    .results-count { color: #4A5E56; font-size: 0.9rem; }
+
+    .provider-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem; }
+    .provider-card { border: 1px solid #D4DDD9; border-radius: 8px; overflow: hidden; background: #FFFFFF; text-decoration: none; color: inherit; display: block; transition: box-shadow 0.2s; }
+    .provider-card:hover { box-shadow: 0 4px 12px rgba(26,60,46,0.12); }
+    .provider-card-body { padding: 1.25rem; }
+    .provider-card-top { display: flex; gap: 1rem; align-items: flex-start; }
+    .provider-logo { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; background: #D8F3DC; flex-shrink: 0; }
+    .provider-logo-placeholder { width: 60px; height: 60px; border-radius: 8px; background: #D8F3DC; display: flex; align-items: center; justify-content: center; color: #8FA89E; font-size: 1.5rem; flex-shrink: 0; }
+    .provider-info { flex: 1; min-width: 0; }
+    .provider-name { font-size: 1.1rem; font-weight: 600; color: #1A3C2E; margin-bottom: 0.15rem; display: flex; align-items: center; gap: 0.4rem; }
+    .provider-name .verified { color: #2D6A4F; font-size: 0.75rem; }
+    .provider-cats { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.35rem; }
+    .provider-cat-tag { background: #D8F3DC; color: #1A3C2E; padding: 0.15rem 0.5rem; border-radius: 10px; font-size: 0.75rem; }
+    .provider-coverage { margin-top: 0.6rem; font-size: 0.85rem; color: #4A5E56; }
+    .provider-rating { display: flex; align-items: center; gap: 0.3rem; margin-top: 0.5rem; font-size: 0.85rem; color: #C9872A; }
+    .provider-rating .count { color: #8FA89E; }
+
+    .empty-state { text-align: center; padding: 4rem 1rem; }
+    .empty-state h3 { color: #1A3C2E; margin-bottom: 0.75rem; }
+    .empty-state p { color: #4A5E56; margin-bottom: 1.5rem; }
+
+    .load-more-sentinel { display: flex; justify-content: center; padding: 2rem 0; }
+    .spinner { width: 32px; height: 32px; border: 3px solid #D4DDD9; border-top-color: #2D6A4F; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .end-of-results { text-align: center; padding: 1.5rem 0; color: #8FA89E; font-size: 0.9rem; }
+
+    .cta-banner { background: #D8F3DC; border-radius: 8px; padding: 1.5rem 2rem; text-align: center; margin-top: 2rem; }
+    .cta-banner h3 { color: #1A3C2E; margin-bottom: 0.5rem; }
+    .cta-banner p { color: #4A5E56; margin-bottom: 1rem; }
+
+    @media (max-width: 768px) {
+        .provider-grid { grid-template-columns: 1fr; }
+        .search-bar { flex-direction: column; }
+        .search-bar input, .search-bar select { min-width: 100%; }
+    }
+</style>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="services-hero" style="margin-left:-20px; margin-right:-20px; padding-left:20px; padding-right:20px;">
+    <div style="max-width:1200px; margin:0 auto;">
+        <h1>Find Local Services</h1>
+        <p>Trusted professionals to help you buy, sell and move home</p>
+        <div class="search-bar">
+            <input type="text" id="location-input" placeholder="Enter town, county or postcode prefix..." value="">
+            <select id="category-select">
+                <option value="">All Categories</option>
+            </select>
+            <button class="btn btn-primary" onclick="applySearch()">Search</button>
+        </div>
+    </div>
+</div>
+
+<div id="categories-strip" class="categories-strip"></div>
+
+<div class="results-header">
+    <h2 id="results-title">All Service Providers</h2>
+    <span class="results-count" id="results-count"></span>
+</div>
+
+<div id="results">
+    <p>Loading...</p>
+</div>
+<div id="load-more" class="load-more-sentinel" style="display:none;">
+    <div class="spinner"></div>
+</div>
+<div id="end-of-results" class="end-of-results" style="display:none;"></div>
+
+<div class="cta-banner">
+    <h3>Are you a local service provider?</h3>
+    <p>Advertise your services to property buyers and sellers in your area.</p>
+    <a href="/services/register/" class="btn btn-primary">Register Your Business</a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let categories = [];
+    let activeCategory = '';
+    let nextPage = 1;
+    let totalCount = 0;
+    let loadedCount = 0;
+    let isLoading = false;
+    let hasMore = true;
+
+    function renderStars(rating) {
+        if (!rating) return '';
+        const full = Math.floor(rating);
+        const half = rating - full >= 0.5 ? 1 : 0;
+        const empty = 5 - full - half;
+        return '&#9733;'.repeat(full) + (half ? '&#9734;' : '') + '&#9734;'.repeat(empty);
+    }
+
+    function renderCard(p) {
+        const url = p.slug ? `/services/${p.slug}/` : `/services/${p.id}/`;
+        const logoHtml = p.logo
+            ? `<img src="${p.logo}" alt="${escHtml(p.business_name)}" class="provider-logo">`
+            : `<div class="provider-logo-placeholder">&#9881;</div>`;
+        const catTags = (p.categories || []).map(c =>
+            `<span class="provider-cat-tag">${escHtml(c.name)}</span>`
+        ).join('');
+        const coverage = p.coverage_counties || p.coverage_postcodes || '';
+        const ratingHtml = p.average_rating
+            ? `<div class="provider-rating">${renderStars(p.average_rating)} ${p.average_rating.toFixed(1)} <span class="count">(${p.review_count} review${p.review_count !== 1 ? 's' : ''})</span></div>`
+            : `<div class="provider-rating"><span class="count">No reviews yet</span></div>`;
+
+        return `<a href="${url}" class="provider-card">
+            <div class="provider-card-body">
+                <div class="provider-card-top">
+                    ${logoHtml}
+                    <div class="provider-info">
+                        <div class="provider-name">
+                            ${escHtml(p.business_name)}
+                            ${p.is_verified ? '<span class="verified">&#10003; Verified</span>' : ''}
+                        </div>
+                        <div class="provider-cats">${catTags}</div>
+                    </div>
+                </div>
+                ${coverage ? `<div class="provider-coverage">&#128205; ${escHtml(coverage)}</div>` : ''}
+                ${ratingHtml}
+            </div>
+        </a>`;
+    }
+
+    function appendResults(data) {
+        const container = document.getElementById('results');
+        const results = data.results || data;
+        totalCount = data.count || results.length;
+
+        if (loadedCount === 0 && results.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <h3>No service providers found</h3>
+                    <p>Try a different location or category.</p>
+                    <button class="btn btn-secondary" onclick="clearFilters()">Clear Filters</button>
+                </div>`;
+            hasMore = false;
+            return;
+        }
+
+        if (loadedCount === 0) {
+            container.className = 'provider-grid';
+            container.innerHTML = '';
+        }
+
+        container.insertAdjacentHTML('beforeend', results.map(renderCard).join(''));
+        loadedCount += results.length;
+
+        document.getElementById('results-count').textContent =
+            `Showing ${loadedCount} of ${totalCount} provider${totalCount === 1 ? '' : 's'}`;
+
+        hasMore = !!data.next;
+        if (!hasMore && loadedCount > 0) {
+            document.getElementById('load-more').style.display = 'none';
+            if (totalCount > 20) {
+                const endEl = document.getElementById('end-of-results');
+                endEl.textContent = `All ${totalCount} providers loaded`;
+                endEl.style.display = 'block';
+            }
+        }
+    }
+
+    async function loadNextPage() {
+        if (isLoading || !hasMore) return;
+        isLoading = true;
+        document.getElementById('load-more').style.display = 'flex';
+
+        try {
+            const params = new URLSearchParams();
+            params.set('page', nextPage);
+            const loc = document.getElementById('location-input').value.trim();
+            if (loc) params.set('location', loc);
+            if (activeCategory) params.set('category', activeCategory);
+
+            const res = await Auth.authFetch('/api/service-providers/?' + params.toString(), { headers: Auth.headers() });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            appendResults(data);
+            nextPage++;
+        } catch (err) {
+            console.error('Fetch error:', err);
+            hasMore = false;
+            document.getElementById('load-more').style.display = 'none';
+            if (loadedCount === 0) {
+                document.getElementById('results').innerHTML =
+                    `<div class="empty-state"><p>Failed to load results. Please try again.</p></div>`;
+            }
+        }
+        isLoading = false;
+    }
+
+    function resetAndLoad() {
+        nextPage = 1;
+        totalCount = 0;
+        loadedCount = 0;
+        hasMore = true;
+        document.getElementById('results').innerHTML = '<p>Loading...</p>';
+        document.getElementById('results').className = '';
+        document.getElementById('end-of-results').style.display = 'none';
+        loadNextPage();
+    }
+
+    function applySearch() {
+        const loc = document.getElementById('location-input').value.trim();
+        const cat = document.getElementById('category-select').value;
+        activeCategory = cat;
+        updateCategoryChips();
+        updateTitle();
+        resetAndLoad();
+    }
+
+    function clearFilters() {
+        document.getElementById('location-input').value = '';
+        document.getElementById('category-select').value = '';
+        activeCategory = '';
+        updateCategoryChips();
+        updateTitle();
+        resetAndLoad();
+    }
+
+    function selectCategory(slug) {
+        activeCategory = activeCategory === slug ? '' : slug;
+        document.getElementById('category-select').value = activeCategory;
+        updateCategoryChips();
+        updateTitle();
+        resetAndLoad();
+    }
+
+    function updateCategoryChips() {
+        const strip = document.getElementById('categories-strip');
+        strip.innerHTML = categories.map(c =>
+            `<span class="cat-chip ${activeCategory === c.slug ? 'active' : ''}" onclick="selectCategory('${c.slug}')">
+                <span class="material-icons">${c.icon || 'build'}</span>
+                ${escHtml(c.name)}
+            </span>`
+        ).join('');
+    }
+
+    function updateTitle() {
+        const title = document.getElementById('results-title');
+        const loc = document.getElementById('location-input').value.trim();
+        const cat = categories.find(c => c.slug === activeCategory);
+        let text = 'All Service Providers';
+        if (cat && loc) text = `${cat.name} in ${loc}`;
+        else if (cat) text = cat.name;
+        else if (loc) text = `Services in ${loc}`;
+        title.textContent = text;
+    }
+
+    // Load categories then kick off
+    Auth.authFetch('/api/service-categories/', { headers: Auth.headers() })
+        .then(r => r.json())
+        .then(data => {
+            categories = data;
+            const select = document.getElementById('category-select');
+            categories.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.slug;
+                opt.textContent = c.name;
+                select.appendChild(opt);
+            });
+            updateCategoryChips();
+        })
+        .catch(() => {});
+
+    // IntersectionObserver for infinite scroll
+    const sentinel = document.getElementById('load-more');
+    const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoading) loadNextPage();
+    }, { rootMargin: '400px' });
+    observer.observe(sentinel);
+
+    loadNextPage();
+</script>
+{% endblock %}
