@@ -257,14 +257,22 @@
     renderActiveFilters(params);
 
     fetch('/api/properties/?' + params.toString(), { headers: Auth.headers() })
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) {
+                return r.text().then(body => {
+                    throw new Error(`HTTP ${r.status}: ${body}`);
+                });
+            }
+            return r.json();
+        })
         .then(data => {
             renderResults(data);
             renderPagination(data);
         })
-        .catch(() => {
+        .catch(err => {
+            console.error('Search fetch error:', err);
             document.getElementById('results').innerHTML =
-                '<div class="empty-state"><p>Failed to load results. Please try again.</p></div>';
+                `<div class="empty-state"><p>Failed to load results: ${escHtml(err.message)}. Please try again.</p></div>`;
         });
 </script>
 {% endblock %}
