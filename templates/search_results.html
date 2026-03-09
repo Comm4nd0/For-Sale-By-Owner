@@ -256,7 +256,7 @@
     const params = new URLSearchParams(window.location.search);
     renderActiveFilters(params);
 
-    fetch('/api/properties/?' + params.toString(), { headers: Auth.headers() })
+    Auth.authFetch('/api/properties/?' + params.toString(), { headers: Auth.headers() })
         .then(r => {
             if (!r.ok) {
                 return r.text().then(body => {

@@ -334,7 +334,7 @@
         btn.textContent = 'Send Enquiry';
     }
 
-    fetch(`/api/properties/${propertyIdOrSlug}/`, { headers: Auth.headers() })
+    Auth.authFetch(`/api/properties/${propertyIdOrSlug}/`, { headers: Auth.headers() })
         .then(r => { if (!r.ok) throw new Error(); return r.json(); })
         .then(p => {
             propertyData = p;
@@ -559,7 +559,7 @@
             }
 
             // Load similar properties
-            fetch(`/api/properties/${p.id}/similar/`, { headers: Auth.headers() })
+            Auth.authFetch(`/api/properties/${p.id}/similar/`, { headers: Auth.headers() })
                 .then(r => r.json())
                 .then(similar => {
                     if (!similar.length) return;

@@ -227,6 +227,16 @@
                 }
                 return true;
             },
+            async authFetch(url, options = {}) {
+                const res = await fetch(url, options.headers ? options : { ...options, headers: this.headers(options.json !== false) });
+                if (res.status === 401 && this.getToken()) {
+                    // Token is stale (e.g. DB was flushed) — clear and retry as anonymous
+                    this.clear();
+                    const { Authorization, ...cleanHeaders } = options.headers || {};
+                    return fetch(url, { ...options, headers: cleanHeaders });
+                }
+                return res;
+            },
             async logout() {
                 try {
                     await fetch('/auth/token/logout/', { method: 'POST', headers: this.headers() });
@@ -279,10 +289,10 @@
             const badge = document.getElementById('bell-badge');
             if (!bell || !badge) return;
             bell.style.display = 'inline-flex';
-            fetch('/api/notifications/counts/', { headers: Auth.headers() })
-                .then(r => r.json())
+            Auth.authFetch('/api/notifications/counts/', { headers: Auth.headers() })
+                .then(r => r.ok ? r.json() : null)
                 .then(data => {
-                    if (data.total > 0) {
+                    if (data && data.total > 0) {
                         badge.textContent = data.total > 99 ? '99+' : data.total;
                         badge.classList.remove('hidden');
                     }
