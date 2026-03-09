@@ -3,7 +3,7 @@ from rest_framework import serializers
 from .models import (
     Property, PropertyImage, PropertyFloorplan, PropertyFeature,
     PriceHistory, SavedProperty, Enquiry, PropertyView,
-    ViewingRequest, SavedSearch,
+    ViewingRequest, SavedSearch, Reply,
 )
 
 User = get_user_model()
@@ -149,9 +149,23 @@ class SavedPropertySerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
 
+class ReplySerializer(serializers.ModelSerializer):
+    author_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Reply
+        fields = ['id', 'enquiry', 'viewing_request', 'author', 'author_name', 'message', 'created_at']
+        read_only_fields = ['id', 'author', 'created_at']
+
+    def get_author_name(self, obj):
+        return obj.author.get_full_name() or 'User'
+
+
 class EnquirySerializer(serializers.ModelSerializer):
     sender_name = serializers.CharField(source='sender.get_full_name', read_only=True)
     property_title = serializers.CharField(source='property.title', read_only=True)
+    replies = ReplySerializer(many=True, read_only=True)
+    reply_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Enquiry
@@ -160,14 +174,24 @@ class EnquirySerializer(serializers.ModelSerializer):
             'sender', 'sender_name',
             'name', 'email', 'phone', 'message',
             'is_read', 'created_at',
+            'replies', 'reply_count',
         ]
         read_only_fields = ['id', 'sender', 'created_at']
+        extra_kwargs = {
+            'email': {'write_only': True},
+            'phone': {'write_only': True},
+        }
+
+    def get_reply_count(self, obj):
+        return obj.replies.count()
 
 
 class ViewingRequestSerializer(serializers.ModelSerializer):
     requester_name = serializers.CharField(source='requester.get_full_name', read_only=True)
     property_title = serializers.CharField(source='property.title', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    replies = ReplySerializer(many=True, read_only=True)
+    reply_count = serializers.SerializerMethodField()
 
     class Meta:
         model = ViewingRequest
@@ -179,8 +203,16 @@ class ViewingRequestSerializer(serializers.ModelSerializer):
             'message', 'name', 'email', 'phone',
             'status', 'status_display', 'seller_notes',
             'created_at', 'updated_at',
+            'replies', 'reply_count',
         ]
         read_only_fields = ['id', 'requester', 'status', 'seller_notes', 'created_at', 'updated_at']
+        extra_kwargs = {
+            'email': {'write_only': True},
+            'phone': {'write_only': True},
+        }
+
+    def get_reply_count(self, obj):
+        return obj.replies.count()
 
 
 class SavedSearchSerializer(serializers.ModelSerializer):

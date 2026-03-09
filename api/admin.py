@@ -5,7 +5,7 @@ from django.utils.html import format_html
 from .models import (
     Property, PropertyImage, PropertyFloorplan, PropertyFeature,
     PriceHistory, SavedProperty, Enquiry, PropertyView,
-    ViewingRequest, SavedSearch, PushNotificationDevice,
+    ViewingRequest, SavedSearch, PushNotificationDevice, Reply,
 )
 from .notifications import notify_listing_approved, notify_listing_rejected
 
@@ -150,12 +150,27 @@ class PropertyFloorplanAdmin(admin.ModelAdmin):
     readonly_fields = ['uploaded_at']
 
 
+class EnquiryReplyInline(admin.TabularInline):
+    model = Reply
+    fk_name = 'enquiry'
+    extra = 0
+    readonly_fields = ['author', 'message', 'created_at']
+
+
+class ViewingReplyInline(admin.TabularInline):
+    model = Reply
+    fk_name = 'viewing_request'
+    extra = 0
+    readonly_fields = ['author', 'message', 'created_at']
+
+
 @admin.register(Enquiry)
 class EnquiryAdmin(admin.ModelAdmin):
     list_display = ['property', 'name', 'email', 'is_read', 'created_at']
     list_filter = ['is_read', 'created_at']
     search_fields = ['name', 'email', 'property__title', 'message']
     readonly_fields = ['created_at']
+    inlines = [EnquiryReplyInline]
     actions = ['mark_read', 'mark_unread']
 
     @admin.action(description='Mark as read')
@@ -174,6 +189,15 @@ class ViewingRequestAdmin(admin.ModelAdmin):
     list_editable = ['status']
     search_fields = ['property__title', 'name', 'email']
     readonly_fields = ['created_at', 'updated_at']
+    inlines = [ViewingReplyInline]
+
+
+@admin.register(Reply)
+class ReplyAdmin(admin.ModelAdmin):
+    list_display = ['id', 'author', 'enquiry', 'viewing_request', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['author__email', 'message']
+    readonly_fields = ['created_at']
 
 
 @admin.register(SavedSearch)

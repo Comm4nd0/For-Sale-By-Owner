@@ -272,6 +272,38 @@ class ViewingRequest(models.Model):
         return f"Viewing for {self.property.title} by {self.name} on {self.preferred_date}"
 
 
+class Reply(models.Model):
+    """A reply message in an enquiry or viewing request conversation thread."""
+    enquiry = models.ForeignKey(
+        Enquiry, on_delete=models.CASCADE, null=True, blank=True, related_name='replies'
+    )
+    viewing_request = models.ForeignKey(
+        ViewingRequest, on_delete=models.CASCADE, null=True, blank=True, related_name='replies'
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='replies'
+    )
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        verbose_name_plural = 'Replies'
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(enquiry__isnull=False, viewing_request__isnull=True)
+                    | models.Q(enquiry__isnull=True, viewing_request__isnull=False)
+                ),
+                name='reply_exactly_one_parent',
+            ),
+        ]
+
+    def __str__(self):
+        parent = self.enquiry or self.viewing_request
+        return f"Reply by {self.author.email} on {parent}"
+
+
 class PropertyView(models.Model):
     """Tracks views of a property listing."""
     property = models.ForeignKey(

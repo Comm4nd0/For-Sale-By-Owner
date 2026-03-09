@@ -14,15 +14,16 @@ from rest_framework.throttling import UserRateThrottle
 from .models import (
     Property, PropertyImage, PropertyFloorplan, PropertyFeature,
     PriceHistory, SavedProperty, Enquiry, PropertyView,
-    ViewingRequest, SavedSearch, PushNotificationDevice,
+    ViewingRequest, SavedSearch, PushNotificationDevice, Reply,
 )
 from .serializers import (
     PropertySerializer, PropertyListSerializer, PropertyImageSerializer,
     PropertyFloorplanSerializer, PropertyFeatureSerializer,
     SavedPropertySerializer, EnquirySerializer, DashboardStatsSerializer,
     ViewingRequestSerializer, SavedSearchSerializer, UserProfileSerializer,
+    ReplySerializer,
 )
-from .notifications import notify_new_enquiry, notify_viewing_request
+from .notifications import notify_new_enquiry, notify_viewing_request, notify_reply
 
 
 class EnquiryRateThrottle(UserRateThrottle):
@@ -311,7 +312,7 @@ class EnquiryViewSet(viewsets.ModelViewSet):
         # Users can see enquiries they sent or received (as property owner)
         return Enquiry.objects.filter(
             Q(sender=user) | Q(property__owner=user)
-        ).select_related('property', 'sender')
+        ).select_related('property', 'sender').prefetch_related('replies__author')
 
     def perform_create(self, serializer):
         prop = serializer.validated_data['property']
@@ -332,13 +333,31 @@ class EnquiryViewSet(viewsets.ModelViewSet):
         """Get enquiries received for the user's properties."""
         qs = Enquiry.objects.filter(
             property__owner=request.user
-        ).select_related('property', 'sender').order_by('-created_at')
+        ).select_related('property', 'sender').prefetch_related('replies__author').order_by('-created_at')
         page = self.paginate_queryset(qs)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def reply(self, request, pk=None):
+        """Post a reply to an enquiry. Both sender and property owner can reply."""
+        enquiry = self.get_object()
+        user = request.user
+        if user != enquiry.sender and user != enquiry.property.owner:
+            raise PermissionDenied("You are not a participant in this conversation.")
+        message = request.data.get('message', '').strip()
+        if not message:
+            raise ValidationError("Message cannot be empty.")
+        reply_obj = Reply.objects.create(enquiry=enquiry, author=user, message=message)
+        # Auto-mark as read when owner replies
+        if user == enquiry.property.owner and not enquiry.is_read:
+            enquiry.is_read = True
+            enquiry.save(update_fields=['is_read'])
+        notify_reply(reply_obj)
+        return Response(ReplySerializer(reply_obj).data, status=status.HTTP_201_CREATED)
 
 
 class ViewingRequestViewSet(viewsets.ModelViewSet):
@@ -350,7 +369,7 @@ class ViewingRequestViewSet(viewsets.ModelViewSet):
         user = self.request.user
         return ViewingRequest.objects.filter(
             Q(requester=user) | Q(property__owner=user)
-        ).select_related('property', 'requester')
+        ).select_related('property', 'requester').prefetch_related('replies__author')
 
     def perform_create(self, serializer):
         prop = serializer.validated_data['property']
@@ -371,13 +390,27 @@ class ViewingRequestViewSet(viewsets.ModelViewSet):
         """Get viewing requests received for the user's properties."""
         qs = ViewingRequest.objects.filter(
             property__owner=request.user
-        ).select_related('property', 'requester').order_by('-created_at')
+        ).select_related('property', 'requester').prefetch_related('replies__author').order_by('-created_at')
         page = self.paginate_queryset(qs)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def reply(self, request, pk=None):
+        """Post a reply to a viewing request. Both requester and property owner can reply."""
+        viewing = self.get_object()
+        user = request.user
+        if user != viewing.requester and user != viewing.property.owner:
+            raise PermissionDenied("You are not a participant in this conversation.")
+        message = request.data.get('message', '').strip()
+        if not message:
+            raise ValidationError("Message cannot be empty.")
+        reply_obj = Reply.objects.create(viewing_request=viewing, author=user, message=message)
+        notify_reply(reply_obj)
+        return Response(ReplySerializer(reply_obj).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['patch'])
     def update_status(self, request, pk=None):
