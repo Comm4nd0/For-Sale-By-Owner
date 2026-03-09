@@ -65,7 +65,42 @@
     .reply-form textarea { width: 100%; min-height: 60px; resize: vertical; padding: 0.5rem; border: 1px solid #D4DDD9; border-radius: 6px; font-size: 0.9rem; font-family: inherit; margin-bottom: 0.5rem; }
     .reply-form .reply-form-actions { display: flex; gap: 0.5rem; }
 
-    @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 768px) {
+        .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+        .stat-card { padding: 0.85rem 0.5rem; }
+        .stat-card .value { font-size: 1.5rem; }
+        .stat-card .label { font-size: 0.75rem; }
+
+        .tab-nav { gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .tab-btn { font-size: 0.85rem; padding: 0.5rem 0.75rem; white-space: nowrap; }
+
+        .enquiry-header, .viewing-header { flex-direction: column; align-items: flex-start; gap: 0.25rem; }
+        .enquiry-item { padding: 0.85rem; }
+        .viewing-item { padding: 0.85rem; }
+        .viewing-details { font-size: 0.82rem; word-break: break-word; }
+
+        .enquiry-actions, .viewing-actions { flex-wrap: wrap; }
+        .enquiry-actions .btn, .viewing-actions .btn { flex: 1 1 auto; text-align: center; min-width: 0; }
+
+        .reply-form textarea { min-height: 50px; font-size: 0.85rem; }
+        .reply-form-actions { flex-wrap: wrap; }
+        .reply-form-actions .btn { flex: 1; text-align: center; }
+
+        .reply-thread { padding-left: 0.6rem; }
+        .reply-item { font-size: 0.85rem; }
+
+        .pagination { gap: 0.4rem; }
+        .pagination button { padding: 0.35rem 0.6rem; font-size: 0.8rem; }
+        .pagination span { font-size: 0.8rem; }
+
+        .page-title { font-size: 1.3rem; }
+    }
+
+    @media (max-width: 400px) {
+        .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        .stat-card .value { font-size: 1.3rem; }
+        .tab-btn { font-size: 0.8rem; padding: 0.45rem 0.6rem; }
+    }
 </style>
 {% endblock %}
 

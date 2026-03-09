@@ -257,9 +257,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Search properties listed directly by owners\u2009\u2014\u2009no agent fees',
+                      '100% free for buyers and sellers. Always.',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'No fees. No commission. No hidden charges. Ever.',
+                      style: TextStyle(
+                        fontSize: 13,
                         color: Colors.white.withAlpha(200),
                       ),
                       textAlign: TextAlign.center,
@@ -413,6 +423,72 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
 
+        // Free forever banner
+        SliverToBoxAdapter(
+          child: Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFD8F3DC), Color(0xFFB7E4C7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.forestDeep,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    '100% FREE',
+                    style: TextStyle(
+                      color: Color(0xFFD8F3DC),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Free for Buyers & Sellers. Forever.',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.forestDeep,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'No listing fees. No commission. No hidden charges.\nNot now, not ever.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.forestMid,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: const [
+                    _FreePoint('Free to list'),
+                    _FreePoint('Free to browse'),
+                    _FreePoint('No commission'),
+                    _FreePoint('No hidden fees'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+
         // Features section
         SliverToBoxAdapter(
           child: Padding(
@@ -434,18 +510,18 @@ class _HomeScreenState extends State<HomeScreen> {
             delegate: SliverChildListDelegate([
               _featureRow(
                 Icons.savings_outlined,
-                'Save Thousands',
-                'No estate agent fees. Keep more of your sale price.',
+                'Completely Free',
+                'No estate agent fees. No listing charges. No commission. Your sale, your money.',
               ),
               _featureRow(
                 Icons.vpn_key_outlined,
                 'Stay in Control',
-                'Manage your listing, photos, and viewings on your own terms.',
+                'Manage your listing, photos, and viewings on your own terms — without paying a penny.',
               ),
               _featureRow(
                 Icons.bolt_outlined,
                 'List in Minutes',
-                'Create your listing quickly with our simple process.',
+                'Create your free listing quickly with our simple process. No card required.',
               ),
             ]),
           ),
@@ -837,6 +913,30 @@ class _SaveButtonState extends State<_SaveButton> {
           size: 22,
         ),
       ),
+    );
+  }
+}
+
+class _FreePoint extends StatelessWidget {
+  final String text;
+  const _FreePoint(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.check_circle, size: 16, color: AppTheme.forestMid),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: AppTheme.forestDeep,
+          ),
+        ),
+      ],
     );
   }
 }
