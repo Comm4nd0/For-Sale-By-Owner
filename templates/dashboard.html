@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Seller Dashboard - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-title { color: #1A3C2E; margin-bottom: 1.5rem; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: #FFFFFF; border: 1px solid #D4DDD9; border-radius: 8px; padding: 1.25rem; text-align: center; }
+    .stat-card .value { font-size: 2rem; font-weight: 700; color: #1A3C2E; }
+    .stat-card .label { font-size: 0.85rem; color: #4A5E56; margin-top: 0.25rem; }
+    .stat-card.highlight { border-color: #2D6A4F; background: #D8F3DC; }
+
+    .dash-section { margin-bottom: 2rem; }
+    .dash-section h3 { color: #1A3C2E; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #D4DDD9; }
+
+    .enquiry-list { list-style: none; }
+    .enquiry-item { background: #FFFFFF; border: 1px solid #D4DDD9; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; }
+    .enquiry-item.unread { border-left: 3px solid #2D6A4F; }
+    .enquiry-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .enquiry-from { font-weight: 600; color: #1A3C2E; }
+    .enquiry-date { font-size: 0.8rem; color: #8FA89E; }
+    .enquiry-property { font-size: 0.85rem; color: #4A5E56; margin-bottom: 0.25rem; }
+    .enquiry-message { color: #1C2B25; font-size: 0.9rem; }
+    .enquiry-contact { font-size: 0.85rem; color: #4A5E56; margin-top: 0.5rem; }
+    .enquiry-actions { margin-top: 0.5rem; display: flex; gap: 0.5rem; }
+
+    .empty-state { text-align: center; padding: 3rem 1rem; color: #4A5E56; }
+    .empty-state p { margin-bottom: 1rem; }
+
+    @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 class="page-title">Seller Dashboard</h2>
+<div id="dashboard-content"><p>Loading...</p></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+
+    async function loadDashboard() {
+        try {
+            const [statsRes, enquiriesRes] = await Promise.all([
+                fetch('/api/dashboard/stats/', { headers: Auth.headers() }),
+                fetch('/api/enquiries/received/', { headers: Auth.headers() }),
+            ]);
+
+            const stats = await statsRes.json();
+            const enquiriesData = await enquiriesRes.json();
+            const enquiries = enquiriesData.results || enquiriesData;
+
+            document.getElementById('dashboard-content').innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="value">${stats.active_listings}</div><div class="label">Active Listings</div></div>
+                    <div class="stat-card"><div class="value">${stats.total_listings}</div><div class="label">Total Listings</div></div>
+                    <div class="stat-card"><div class="value">${stats.total_views}</div><div class="label">Total Views</div></div>
+                    <div class="stat-card ${stats.unread_enquiries > 0 ? 'highlight' : ''}"><div class="value">${stats.unread_enquiries}</div><div class="label">Unread Enquiries</div></div>
+                    <div class="stat-card"><div class="value">${stats.total_enquiries}</div><div class="label">Total Enquiries</div></div>
+                    <div class="stat-card"><div class="value">${stats.total_saves}</div><div class="label">Times Saved</div></div>
+                </div>
+
+                <div class="dash-section">
+                    <h3>Recent Enquiries</h3>
+                    <div id="enquiry-list"></div>
+                </div>
+            `;
+
+            const listEl = document.getElementById('enquiry-list');
+            if (enquiries.length === 0) {
+                listEl.innerHTML = '<div class="empty-state"><p>No enquiries yet. Enquiries from interested buyers will appear here.</p></div>';
+            } else {
+                listEl.innerHTML = enquiries.slice(0, 20).map(e => `
+                    <div class="enquiry-item ${e.is_read ? '' : 'unread'}">
+                        <div class="enquiry-header">
+                            <span class="enquiry-from">${e.name}</span>
+                            <span class="enquiry-date">${new Date(e.created_at).toLocaleString()}</span>
+                        </div>
+                        <div class="enquiry-property">Re: ${e.property_title}</div>
+                        <div class="enquiry-message">${e.message}</div>
+                        <div class="enquiry-contact">
+                            ${e.email} ${e.phone ? ' &bull; ' + e.phone : ''}
+                        </div>
+                        <div class="enquiry-actions">
+                            ${!e.is_read ? `<button class="btn btn-secondary" style="font-size:0.8rem; padding:0.3rem 0.8rem;" onclick="markRead(${e.id}, this)">Mark Read</button>` : '<span style="font-size:0.8rem; color:#8FA89E;">Read</span>'}
+                            <a href="mailto:${e.email}?subject=Re: ${encodeURIComponent(e.property_title)}" class="btn btn-primary" style="font-size:0.8rem; padding:0.3rem 0.8rem;">Reply</a>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        } catch (err) {
+            document.getElementById('dashboard-content').innerHTML = '<div class="alert alert-error">Failed to load dashboard.</div>';
+        }
+    }
+
+    async function markRead(id, btn) {
+        await fetch(`/api/enquiries/${id}/`, {
+            method: 'PATCH',
+            headers: Auth.headers(),
+            body: JSON.stringify({ is_read: true }),
+        });
+        btn.closest('.enquiry-item').classList.remove('unread');
+        btn.outerHTML = '<span style="font-size:0.8rem; color:#8FA89E;">Read</span>';
+    }
+
+    loadDashboard();
+</script>
+{% endblock %}

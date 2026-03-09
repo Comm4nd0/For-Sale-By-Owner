@@ -154,13 +154,14 @@
 
         container.className = 'property-grid';
         container.innerHTML = results.map(p => {
+            const url = p.slug ? `/properties/${p.slug}/` : `/properties/${p.id}/`;
             const imgHtml = p.primary_image
                 ? `<img src="${p.primary_image}" alt="${p.title}">`
                 : `<div class="placeholder">&#8962;</div>`;
-            return `<a href="/properties/${p.id}/" class="property-card">
+            return `<a href="${url}" class="property-card">
                 ${imgHtml}
                 <div class="property-card-body">
-                    <h3>${p.title}</h3>
+                    <h3>${p.title} ${p.owner_is_verified ? '<span style="color:#2D6A4F; font-size:0.75rem;">&#10003; Verified</span>' : ''}</h3>
                     <div class="property-price">&pound;${Number(p.price).toLocaleString()}</div>
                     <div class="property-details">${p.property_type_display}</div>
                     <div class="property-details">${p.address_line_1}, ${p.city} ${p.postcode}</div>
@@ -168,6 +169,7 @@
                         <span>${p.bedrooms} bed</span>
                         <span>${p.bathrooms} bath</span>
                         <span>${p.reception_rooms} reception</span>
+                        ${p.epc_rating ? `<span>EPC: ${p.epc_rating}</span>` : ''}
                     </div>
                 </div>
             </a>`;

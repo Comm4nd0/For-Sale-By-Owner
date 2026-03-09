@@ -18,7 +18,10 @@
     .image-upload:hover { border-color: #2D6A4F; }
     .image-upload input { display: none; }
     .existing-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
-    .existing-image { position: relative; border-radius: 6px; overflow: hidden; border: 2px solid transparent; }
+    .existing-image { position: relative; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: grab; }
+    .existing-image.dragging { opacity: 0.5; }
+    .existing-image.drag-over { border-color: #C9872A; }
+    .reorder-hint { font-size: 0.8rem; color: #8FA89E; margin-bottom: 0.5rem; }
     .existing-image.primary { border-color: #2D6A4F; }
     .existing-image img { width: 100%; height: 110px; object-fit: cover; }
     .existing-image .actions { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(26,60,46,0.7); display: flex; justify-content: center; gap: 0.25rem; padding: 4px; }
@@ -95,7 +98,15 @@
                 <div class="form-group"><label for="reception_rooms">Reception Rooms</label><input type="number" id="reception_rooms" value="${p.reception_rooms}" min="0"></div>
             </div>
             <div class="form-group" style="max-width:200px;"><label for="square_feet">Square Feet</label><input type="number" id="square_feet" value="${p.square_feet || ''}" min="0"></div>
+            <div class="form-group">
+                <label for="epc_rating">EPC Rating</label>
+                <select id="epc_rating">
+                    <option value="">Not specified</option>
+                    ${['A','B','C','D','E','F','G'].map(r => `<option value="${r}" ${p.epc_rating === r ? 'selected' : ''}>${r}</option>`).join('')}
+                </select>
+            </div>
             <h3 class="section-title">Photos</h3>
+            <p class="reorder-hint">Drag and drop images to reorder them.</p>
             <div class="existing-images" id="existing-images"></div>
             <div class="image-upload" onclick="document.getElementById('image-input').click()">
                 <input type="file" id="image-input" accept="image/*" multiple>
@@ -196,6 +207,7 @@
         };
         const sqft = document.getElementById('square_feet').value;
         if (sqft) body.square_feet = parseInt(sqft); else body.square_feet = null;
+        body.epc_rating = document.getElementById('epc_rating').value;
 
         try {
             const res = await fetch(`/api/properties/${propertyId}/`, {
@@ -243,6 +255,59 @@
         btn.disabled = false;
         btn.textContent = 'Save Changes';
     }
+
+    // Drag and drop reorder
+    let draggedId = null;
+    function setupDragDrop() {
+        document.querySelectorAll('.existing-image').forEach(el => {
+            el.draggable = true;
+            el.addEventListener('dragstart', e => {
+                draggedId = el.dataset.id;
+                el.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            el.addEventListener('dragend', () => {
+                el.classList.remove('dragging');
+                document.querySelectorAll('.existing-image').forEach(x => x.classList.remove('drag-over'));
+            });
+            el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+            el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+            el.addEventListener('drop', async e => {
+                e.preventDefault();
+                el.classList.remove('drag-over');
+                const targetId = el.dataset.id;
+                if (draggedId === targetId) return;
+                // Reorder in array
+                const fromIdx = existingImages.findIndex(i => i.id == draggedId);
+                const toIdx = existingImages.findIndex(i => i.id == targetId);
+                const [moved] = existingImages.splice(fromIdx, 1);
+                existingImages.splice(toIdx, 0, moved);
+                renderExistingImages();
+                setupDragDrop();
+                // Save new order
+                await fetch(`/api/properties/${propertyId}/images/reorder/`, {
+                    method: 'POST', headers: Auth.headers(),
+                    body: JSON.stringify({ order: existingImages.map(i => i.id) }),
+                });
+            });
+        });
+    }
+
+    const origRender = renderExistingImages;
+    renderExistingImages = function() {
+        const container = document.getElementById('existing-images');
+        container.innerHTML = existingImages.map(img => `
+            <div class="existing-image ${img.is_primary ? 'primary' : ''}" data-id="${img.id}">
+                ${img.is_primary ? '<span class="primary-badge">Primary</span>' : ''}
+                <img src="${img.image}" alt="${img.caption || ''}">
+                <div class="actions">
+                    ${!img.is_primary ? `<button type="button" onclick="setPrimary(${img.id})" title="Set as primary">&#9733;</button>` : ''}
+                    <button type="button" onclick="deleteImage(${img.id})" title="Delete">&times;</button>
+                </div>
+            </div>
+        `).join('');
+        setupDragDrop();
+    };
 
     loadProperty();
 </script>

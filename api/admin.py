@@ -1,7 +1,9 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import Property, PropertyImage
+from django.utils.html import format_html
+from .models import Property, PropertyImage, SavedProperty, Enquiry, PropertyView, PushNotificationDevice
+from .notifications import notify_listing_approved, notify_listing_rejected
 
 User = get_user_model()
 
@@ -9,11 +11,13 @@ User = get_user_model()
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     ordering = ['email']
-    list_display = ['email', 'first_name', 'last_name', 'is_staff']
+    list_display = ['email', 'first_name', 'last_name', 'is_verified_seller', 'is_staff', 'date_joined']
+    list_filter = ['is_verified_seller', 'is_staff', 'is_active']
     search_fields = ['email', 'first_name', 'last_name']
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
-        ('Personal info', {'fields': ('first_name', 'last_name')}),
+        ('Personal info', {'fields': ('first_name', 'last_name', 'phone')}),
+        ('Seller', {'fields': ('is_verified_seller',)}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
@@ -23,6 +27,15 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('email', 'first_name', 'last_name', 'password1', 'password2'),
         }),
     )
+    actions = ['verify_sellers', 'unverify_sellers']
+
+    @admin.action(description='Mark selected users as verified sellers')
+    def verify_sellers(self, request, queryset):
+        queryset.update(is_verified_seller=True)
+
+    @admin.action(description='Remove verified seller status')
+    def unverify_sellers(self, request, queryset):
+        queryset.update(is_verified_seller=False)
 
 
 class PropertyImageInline(admin.TabularInline):
@@ -33,7 +46,115 @@ class PropertyImageInline(admin.TabularInline):
 
 @admin.register(Property)
 class PropertyAdmin(admin.ModelAdmin):
-    list_display = ['title', 'property_type', 'status', 'price', 'city', 'postcode', 'owner', 'created_at']
-    list_filter = ['property_type', 'status', 'city']
-    search_fields = ['title', 'address_line_1', 'city', 'postcode', 'owner__email']
+    list_display = ['title', 'property_type', 'status', 'status_badge', 'epc_rating', 'price_display', 'city', 'postcode', 'owner', 'view_count', 'enquiry_count', 'created_at']
+    list_filter = ['status', 'property_type', 'epc_rating', 'city', 'created_at']
+    list_editable = ['status']
+    search_fields = ['title', 'address_line_1', 'city', 'postcode', 'owner__email', 'slug']
+    readonly_fields = ['slug', 'view_count', 'enquiry_count', 'save_count', 'created_at', 'updated_at']
     inlines = [PropertyImageInline]
+    actions = ['approve_listings', 'reject_listings', 'mark_active', 'mark_withdrawn']
+    fieldsets = (
+        (None, {'fields': ('owner', 'title', 'slug', 'status', 'price')}),
+        ('Property Details', {'fields': ('property_type', 'description', 'epc_rating', 'bedrooms', 'bathrooms', 'reception_rooms', 'square_feet')}),
+        ('Address', {'fields': ('address_line_1', 'address_line_2', 'city', 'county', 'postcode')}),
+        ('Statistics', {'fields': ('view_count', 'enquiry_count', 'save_count')}),
+        ('Dates', {'fields': ('created_at', 'updated_at')}),
+    )
+
+    def status_badge(self, obj):
+        colours = {
+            'draft': '#999',
+            'pending_review': '#E67E22',
+            'active': '#27AE60',
+            'under_offer': '#F39C12',
+            'sold_stc': '#F39C12',
+            'sold': '#2ECC71',
+            'withdrawn': '#E74C3C',
+            'rejected': '#C0392B',
+        }
+        colour = colours.get(obj.status, '#999')
+        return format_html(
+            '<span style="background:{}; color:white; padding:3px 8px; border-radius:3px; font-size:11px;">{}</span>',
+            colour, obj.get_status_display()
+        )
+    status_badge.short_description = 'Status'
+
+    def price_display(self, obj):
+        return f"\u00A3{obj.price:,.0f}"
+    price_display.short_description = 'Price'
+
+    def view_count(self, obj):
+        return obj.views.count()
+    view_count.short_description = 'Views'
+
+    def enquiry_count(self, obj):
+        return obj.enquiries.count()
+    enquiry_count.short_description = 'Enquiries'
+
+    def save_count(self, obj):
+        return obj.saved_by.count()
+    save_count.short_description = 'Saves'
+
+    @admin.action(description='Approve selected listings (set Active)')
+    def approve_listings(self, request, queryset):
+        for prop in queryset:
+            prop.status = 'active'
+            prop.save(update_fields=['status'])
+            notify_listing_approved(prop)
+
+    @admin.action(description='Reject selected listings')
+    def reject_listings(self, request, queryset):
+        for prop in queryset:
+            prop.status = 'rejected'
+            prop.save(update_fields=['status'])
+            notify_listing_rejected(prop)
+
+    @admin.action(description='Mark as Active')
+    def mark_active(self, request, queryset):
+        queryset.update(status='active')
+
+    @admin.action(description='Mark as Withdrawn')
+    def mark_withdrawn(self, request, queryset):
+        queryset.update(status='withdrawn')
+
+
+@admin.register(Enquiry)
+class EnquiryAdmin(admin.ModelAdmin):
+    list_display = ['property', 'name', 'email', 'is_read', 'created_at']
+    list_filter = ['is_read', 'created_at']
+    search_fields = ['name', 'email', 'property__title', 'message']
+    readonly_fields = ['created_at']
+    actions = ['mark_read', 'mark_unread']
+
+    @admin.action(description='Mark as read')
+    def mark_read(self, request, queryset):
+        queryset.update(is_read=True)
+
+    @admin.action(description='Mark as unread')
+    def mark_unread(self, request, queryset):
+        queryset.update(is_read=False)
+
+
+@admin.register(SavedProperty)
+class SavedPropertyAdmin(admin.ModelAdmin):
+    list_display = ['user', 'property', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['user__email', 'property__title']
+    readonly_fields = ['created_at']
+
+
+@admin.register(PropertyView)
+class PropertyViewAdmin(admin.ModelAdmin):
+    list_display = ['property', 'user', 'viewer_ip', 'viewed_at']
+    list_filter = ['viewed_at']
+    search_fields = ['property__title', 'user__email', 'viewer_ip']
+    readonly_fields = ['viewed_at']
+    date_hierarchy = 'viewed_at'
+
+
+@admin.register(PushNotificationDevice)
+class PushNotificationDeviceAdmin(admin.ModelAdmin):
+    list_display = ['user', 'platform', 'is_active', 'created_at']
+    list_filter = ['platform', 'is_active']
+    search_fields = ['user__email', 'token']
+    readonly_fields = ['created_at']

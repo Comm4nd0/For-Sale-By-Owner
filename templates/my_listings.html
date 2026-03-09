@@ -23,6 +23,8 @@
     .status-sold_stc { background: #FFF0D4; color: #C9872A; }
     .status-sold { background: #D8F3DC; color: #2D6A4F; }
     .status-withdrawn { background: #f8d7d4; color: #B03A2E; }
+    .status-pending_review { background: #FFF0D4; color: #C9872A; }
+    .status-rejected { background: #f8d7d4; color: #B03A2E; }
     .listing-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #D4DDD9; }
     .listing-actions a { font-size: 0.85rem; }
     .empty-state { text-align: center; padding: 4rem 2rem; color: #4A5E56; }
@@ -80,10 +82,12 @@
                             <span>${p.bedrooms} bed</span>
                             <span>${p.bathrooms} bath</span>
                             <span>${p.reception_rooms} recep</span>
+                            <span>${p.view_count || 0} views</span>
                         </div>
                         <span class="status-badge status-${p.status}">${(p.status_display || p.status).replace('_', ' ')}</span>
+                        ${p.status === 'pending_review' ? '<span class="status-badge" style="background:#FFF0D4; color:#C9872A; margin-left:0.5rem;">Awaiting Moderation</span>' : ''}
                         <div class="listing-actions">
-                            <a href="/properties/${p.id}/" class="btn btn-secondary">View</a>
+                            <a href="${p.slug ? '/properties/' + p.slug + '/' : '/properties/' + p.id + '/'}" class="btn btn-secondary">View</a>
                             <a href="/properties/${p.id}/edit/" class="btn btn-secondary">Edit</a>
                         </div>
                     </div>

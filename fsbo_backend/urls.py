@@ -40,6 +40,11 @@ urlpatterns = [
     path('properties/<int:id>/', CSRFTemplateView.as_view(template_name='property_detail.html'), name='property-detail'),
     path('properties/<int:id>/edit/', CSRFTemplateView.as_view(template_name='property_edit.html'), name='property-edit'),
     path('my-listings/', CSRFTemplateView.as_view(template_name='my_listings.html'), name='my-listings'),
+    path('dashboard/', CSRFTemplateView.as_view(template_name='dashboard.html'), name='dashboard'),
+    path('saved/', CSRFTemplateView.as_view(template_name='saved_properties.html'), name='saved-properties'),
+
+    # Slug-based property URL (must come after /properties/new/ and /properties/<int:id>/)
+    path('properties/<slug:slug>/', CSRFTemplateView.as_view(template_name='property_detail.html'), name='property-detail-slug'),
 
     # Legal pages
     path('terms/', CSRFTemplateView.as_view(template_name='terms.html'), name='terms'),

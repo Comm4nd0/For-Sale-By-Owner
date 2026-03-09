@@ -272,6 +272,21 @@
             </div>
 
             <div class="form-group">
+                <label for="epc_rating">EPC Rating</label>
+                <select id="epc_rating">
+                    <option value="">Not specified</option>
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
+                    <option value="E">E</option>
+                    <option value="F">F</option>
+                    <option value="G">G</option>
+                </select>
+                <p class="hint">Required by law for most property sales in England and Wales</p>
+            </div>
+
+            <div class="form-group">
                 <label for="description">Description</label>
                 <textarea id="description" placeholder="Describe what makes your property special. Mention key features, recent improvements, nearby amenities..."></textarea>
                 <p class="hint">A good description helps your property stand out</p>
@@ -435,6 +450,8 @@
         };
         const sqft = document.getElementById('square_feet').value;
         if (sqft) body.square_feet = parseInt(sqft);
+        const epc = document.getElementById('epc_rating').value;
+        if (epc) body.epc_rating = epc;
 
         try {
             const res = await fetch('/api/properties/', {

@@ -5,6 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}For Sale By Owner{% endblock %}</title>
+    {% block meta_tags %}
+    <meta property="og:site_name" content="For Sale By Owner">
+    <meta property="og:type" content="website">
+    {% endblock %}
     <link rel="icon" type="image/svg+xml" href="{% static 'img/favicon.svg' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon-32.png' %}">
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/apple-touch-icon.png' %}">
@@ -46,6 +50,12 @@
         .cookie-btn-reject { background: transparent; color: white; border: 1px solid rgba(255,255,255,0.4) !important; }
         .cookie-btn-reject:hover { border-color: white !important; }
     </style>
+    @media print {
+        header, footer, .cookie-banner, nav, .btn, .owner-actions, .enquiry-form-section, .mortgage-section { display: none !important; }
+        main { padding: 0; }
+        .container { max-width: 100%; }
+        .carousel-btn, .carousel-dots { display: none !important; }
+    }
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -165,11 +175,29 @@
             }
         };
 
+        // Recently viewed helper
+        const RecentlyViewed = {
+            KEY: 'recently_viewed',
+            MAX: 12,
+            add(property) {
+                let items = this.get();
+                items = items.filter(p => p.id !== property.id);
+                items.unshift({ id: property.id, title: property.title, price: property.price, primary_image: property.primary_image, slug: property.slug, city: property.city, bedrooms: property.bedrooms });
+                items = items.slice(0, this.MAX);
+                localStorage.setItem(this.KEY, JSON.stringify(items));
+            },
+            get() {
+                try { return JSON.parse(localStorage.getItem(this.KEY)) || []; } catch { return []; }
+            }
+        };
+
         // Render nav based on auth state
         (function() {
             const nav = document.getElementById('nav-auth');
             if (Auth.isLoggedIn()) {
                 nav.innerHTML = `
+                    <a href="/saved/">Saved</a>
+                    <a href="/dashboard/">Dashboard</a>
                     <a href="/my-listings/">My Listings</a>
                     <a href="/properties/new/">List Property</a>
                     <a href="#" onclick="Auth.logout(); return false;">Logout</a>
