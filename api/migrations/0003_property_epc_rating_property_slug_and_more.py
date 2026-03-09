@@ -3,6 +3,21 @@
 import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
+from django.utils.text import slugify
+
+
+def populate_slugs(apps, schema_editor):
+    """Generate slugs for existing properties."""
+    Property = apps.get_model('api', 'Property')
+    for prop in Property.objects.all():
+        base = slugify(f"{prop.title}-{prop.postcode}")
+        slug = base
+        n = 1
+        while Property.objects.filter(slug=slug).exclude(pk=prop.pk).exists():
+            slug = f"{base}-{n}"
+            n += 1
+        prop.slug = slug
+        prop.save(update_fields=['slug'])
 
 
 class Migration(migrations.Migration):
@@ -29,7 +44,16 @@ class Migration(migrations.Migration):
                 max_length=1,
             ),
         ),
+        # Step 1: Add slug field WITHOUT unique constraint
         migrations.AddField(
+            model_name="property",
+            name="slug",
+            field=models.SlugField(blank=True, max_length=220, default=''),
+        ),
+        # Step 2: Populate slugs for existing rows
+        migrations.RunPython(populate_slugs, migrations.RunPython.noop),
+        # Step 3: Now add the unique constraint
+        migrations.AlterField(
             model_name="property",
             name="slug",
             field=models.SlugField(blank=True, max_length=220, unique=True),
