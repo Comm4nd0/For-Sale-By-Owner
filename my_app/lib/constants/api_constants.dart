@@ -1,8 +1,15 @@
+import 'dart:io' show Platform;
+
 class ApiConstants {
   static const bool _useProduction = false;
 
-  static const String _localUrl = 'http://10.0.2.2:8000'; // Android emulator -> host
+  // Android emulator uses 10.0.2.2 to reach host; iOS simulator uses localhost
+  static const String _androidLocalUrl = 'http://10.0.2.2:8000';
+  static const String _iosLocalUrl = 'http://localhost:8000';
   static const String _prodUrl = 'http://178.104.29.66:8002';
+
+  static String get _localUrl =>
+      Platform.isIOS ? _iosLocalUrl : _androidLocalUrl;
 
   static String get baseUrl => _useProduction ? _prodUrl : _localUrl;
   static String get apiUrl => '$baseUrl/api';
