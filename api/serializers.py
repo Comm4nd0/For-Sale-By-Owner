@@ -161,7 +161,7 @@ class EnquirySerializer(serializers.ModelSerializer):
             'name', 'email', 'phone', 'message',
             'is_read', 'created_at',
         ]
-        read_only_fields = ['id', 'sender', 'is_read', 'created_at']
+        read_only_fields = ['id', 'sender', 'created_at']
 
 
 class ViewingRequestSerializer(serializers.ModelSerializer):

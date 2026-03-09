@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db.models import Q, Count
 from rest_framework import viewsets, permissions, status, generics
 from rest_framework.decorators import api_view, permission_classes, action
@@ -121,7 +123,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
     def similar(self, request, pk=None):
         """Return similar properties based on type, location, and price range."""
         prop = self.get_object()
-        price_range = prop.price * 0.3
+        price_range = prop.price * Decimal('0.3')
         similar = Property.objects.filter(
             status='active',
         ).filter(
