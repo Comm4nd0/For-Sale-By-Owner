@@ -349,7 +349,8 @@
                     <button type="button" class="btn-back" onclick="goToStep(2)">&larr; Back</button>
                 </div>
                 <div class="right">
-                    <button type="submit" class="btn btn-primary" id="submit-btn" style="padding: 0.7rem 2rem; font-size: 1rem;">Create Listing</button>
+                    <button type="button" class="btn btn-secondary" id="save-edit-btn" style="padding: 0.7rem 1.5rem; font-size: 1rem;" onclick="submitForm('edit')">Save &amp; Continue Editing</button>
+                    <button type="submit" class="btn btn-primary" id="submit-btn" style="padding: 0.7rem 2rem; font-size: 1rem;">Save &amp; Go to Listings</button>
                 </div>
             </div>
         </div>
@@ -507,13 +508,23 @@
         renderPreviews();
     }
 
+    // Track which save action was clicked
+    let saveAction = 'listings';
+
+    function submitForm(action) {
+        saveAction = action;
+        document.getElementById('property-form').requestSubmit();
+    }
+
     // Form submission
     document.getElementById('property-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('submit-btn');
+        const editBtn = document.getElementById('save-edit-btn');
         const errorEl = document.getElementById('error');
         errorEl.style.display = 'none';
         btn.disabled = true;
+        editBtn.disabled = true;
         btn.textContent = 'Creating...';
 
         const body = {
@@ -596,12 +607,17 @@
                 }
             }
 
-            window.location.href = `/properties/${property.id}/`;
+            if (saveAction === 'edit') {
+                window.location.href = `/properties/${property.id}/edit/`;
+            } else {
+                window.location.href = '/my-listings/';
+            }
         } catch (err) {
             errorEl.textContent = err.message || 'Failed to create property.';
             errorEl.style.display = 'block';
             btn.disabled = false;
-            btn.textContent = 'Create Listing';
+            editBtn.disabled = false;
+            btn.textContent = 'Save & Go to Listings';
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     });

@@ -163,7 +163,8 @@
                 </select>
             </div>
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary" id="submit-btn">Save Changes</button>
+                <button type="submit" class="btn btn-primary" id="submit-btn">Save &amp; Go to Listings</button>
+                <button type="button" class="btn btn-secondary" id="save-edit-btn" onclick="submitEdit('edit')">Save &amp; Continue Editing</button>
                 <a href="/properties/${propertyId}/" class="btn btn-secondary">Cancel</a>
             </div>
         </form>`;
@@ -272,14 +273,23 @@
         renderExistingImages();
     }
 
+    let editSaveAction = 'listings';
+
+    function submitEdit(action) {
+        editSaveAction = action;
+        document.getElementById('property-form').requestSubmit();
+    }
+
     async function onSubmit(e) {
         e.preventDefault();
         const btn = document.getElementById('submit-btn');
+        const editBtn = document.getElementById('save-edit-btn');
         const errorEl = document.getElementById('error');
         const successEl = document.getElementById('success');
         errorEl.style.display = 'none';
         successEl.style.display = 'none';
         btn.disabled = true;
+        editBtn.disabled = true;
         btn.textContent = 'Saving...';
 
         const body = {
@@ -355,22 +365,30 @@
                 document.getElementById('new-floorplan-preview').innerHTML = '';
             }
 
+            if (editSaveAction === 'listings') {
+                window.location.href = '/my-listings/';
+                return;
+            }
+
+            // Save & Continue Editing — stay on page, refresh data
             successEl.textContent = 'Property updated successfully.';
             successEl.style.display = 'block';
-            // Refresh images and floorplans
             const r2 = await fetch(`/api/properties/${propertyId}/`, { headers: Auth.headers() });
             const p2 = await r2.json();
             existingImages = p2.images || [];
             existingFloorplans = p2.floorplans || [];
             renderExistingImages();
             renderExistingFloorplans();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (err) {
             errorEl.textContent = err.message || 'Failed to update property.';
             errorEl.style.display = 'block';
         }
 
         btn.disabled = false;
-        btn.textContent = 'Save Changes';
+        editBtn.disabled = false;
+        btn.textContent = 'Save & Go to Listings';
+        editSaveAction = 'listings';
     }
 
     // Drag and drop reorder
