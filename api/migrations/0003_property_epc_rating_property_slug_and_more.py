@@ -52,11 +52,22 @@ class Migration(migrations.Migration):
         ),
         # Step 2: Populate slugs for existing rows
         migrations.RunPython(populate_slugs, migrations.RunPython.noop),
-        # Step 3: Now add the unique constraint
-        migrations.AlterField(
-            model_name="property",
-            name="slug",
-            field=models.SlugField(blank=True, max_length=220, unique=True),
+        # Step 3: Add unique constraint — use SeparateDatabaseAndState to
+        # avoid AlterField recreating the _like index that AddField already created
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql='ALTER TABLE "api_property" ADD CONSTRAINT "api_property_slug_unique" UNIQUE ("slug");',
+                    reverse_sql='ALTER TABLE "api_property" DROP CONSTRAINT IF EXISTS "api_property_slug_unique";',
+                ),
+            ],
+            state_operations=[
+                migrations.AlterField(
+                    model_name="property",
+                    name="slug",
+                    field=models.SlugField(blank=True, max_length=220, unique=True),
+                ),
+            ],
         ),
         migrations.AddField(
             model_name="user",
