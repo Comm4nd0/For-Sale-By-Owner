@@ -1,6 +1,9 @@
+import logging
 from decimal import Decimal
 
 from django.db.models import Q, Count
+
+logger = logging.getLogger(__name__)
 from rest_framework import viewsets, permissions, status, generics
 from rest_framework.decorators import api_view, permission_classes, action
 from django.shortcuts import get_object_or_404
@@ -170,6 +173,17 @@ class PropertyImageViewSet(viewsets.ModelViewSet):
 
     def _get_property(self):
         return get_object_or_404(Property, pk=self.kwargs['property_pk'])
+
+    def create(self, request, *args, **kwargs):
+        try:
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            import traceback
+            logger.error(f"Image upload failed: {e}\n{traceback.format_exc()}")
+            return Response(
+                {"detail": f"Upload error: {type(e).__name__}: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def perform_create(self, serializer):
         property_obj = self._get_property()
