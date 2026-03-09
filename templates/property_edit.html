@@ -321,8 +321,15 @@
                         method: 'POST', headers: Auth.headers(false), body: fd,
                     });
                     if (!imgRes.ok) {
-                        const errData = await imgRes.json().catch(() => ({}));
-                        uploadErrors.push(`Photo ${i + 1}: ${errData.detail || errData.image || 'upload failed'}`);
+                        let errMsg = `${imgRes.status}`;
+                        try {
+                            const errData = await imgRes.json();
+                            errMsg = errData.detail || errData.image || JSON.stringify(errData);
+                        } catch {
+                            const text = await imgRes.text().catch(() => '');
+                            errMsg = `HTTP ${imgRes.status}: ${text.substring(0, 200) || imgRes.statusText}`;
+                        }
+                        uploadErrors.push(`Photo ${i + 1}: ${errMsg}`);
                     }
                 }
                 newFiles = [];
