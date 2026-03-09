@@ -2,7 +2,11 @@ from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
-from .models import Property, PropertyImage, SavedProperty, Enquiry, PropertyView, PushNotificationDevice
+from .models import (
+    Property, PropertyImage, PropertyFloorplan, PropertyFeature,
+    PriceHistory, SavedProperty, Enquiry, PropertyView,
+    ViewingRequest, SavedSearch, PushNotificationDevice,
+)
 from .notifications import notify_listing_approved, notify_listing_rejected
 
 User = get_user_model()
@@ -44,6 +48,12 @@ class PropertyImageInline(admin.TabularInline):
     fields = ['image', 'order', 'is_primary', 'caption']
 
 
+class PropertyFloorplanInline(admin.TabularInline):
+    model = PropertyFloorplan
+    extra = 0
+    fields = ['file', 'title', 'order']
+
+
 @admin.register(Property)
 class PropertyAdmin(admin.ModelAdmin):
     list_display = ['title', 'property_type', 'status', 'status_badge', 'epc_rating', 'price_display', 'city', 'postcode', 'owner', 'view_count', 'enquiry_count', 'created_at']
@@ -51,11 +61,12 @@ class PropertyAdmin(admin.ModelAdmin):
     list_editable = ['status']
     search_fields = ['title', 'address_line_1', 'city', 'postcode', 'owner__email', 'slug']
     readonly_fields = ['slug', 'view_count', 'enquiry_count', 'save_count', 'created_at', 'updated_at']
-    inlines = [PropertyImageInline]
+    inlines = [PropertyImageInline, PropertyFloorplanInline]
+    filter_horizontal = ['features']
     actions = ['approve_listings', 'reject_listings', 'mark_active', 'mark_withdrawn']
     fieldsets = (
         (None, {'fields': ('owner', 'title', 'slug', 'status', 'price')}),
-        ('Property Details', {'fields': ('property_type', 'description', 'epc_rating', 'bedrooms', 'bathrooms', 'reception_rooms', 'square_feet')}),
+        ('Property Details', {'fields': ('property_type', 'description', 'epc_rating', 'bedrooms', 'bathrooms', 'reception_rooms', 'square_feet', 'features')}),
         ('Address', {'fields': ('address_line_1', 'address_line_2', 'city', 'county', 'postcode')}),
         ('Statistics', {'fields': ('view_count', 'enquiry_count', 'save_count')}),
         ('Dates', {'fields': ('created_at', 'updated_at')}),
@@ -118,6 +129,27 @@ class PropertyAdmin(admin.ModelAdmin):
         queryset.update(status='withdrawn')
 
 
+@admin.register(PropertyFeature)
+class PropertyFeatureAdmin(admin.ModelAdmin):
+    list_display = ['name', 'icon']
+    search_fields = ['name']
+
+
+@admin.register(PriceHistory)
+class PriceHistoryAdmin(admin.ModelAdmin):
+    list_display = ['property', 'price', 'changed_at']
+    list_filter = ['changed_at']
+    search_fields = ['property__title']
+    readonly_fields = ['changed_at']
+
+
+@admin.register(PropertyFloorplan)
+class PropertyFloorplanAdmin(admin.ModelAdmin):
+    list_display = ['property', 'title', 'order', 'uploaded_at']
+    search_fields = ['property__title', 'title']
+    readonly_fields = ['uploaded_at']
+
+
 @admin.register(Enquiry)
 class EnquiryAdmin(admin.ModelAdmin):
     list_display = ['property', 'name', 'email', 'is_read', 'created_at']
@@ -133,6 +165,23 @@ class EnquiryAdmin(admin.ModelAdmin):
     @admin.action(description='Mark as unread')
     def mark_unread(self, request, queryset):
         queryset.update(is_read=False)
+
+
+@admin.register(ViewingRequest)
+class ViewingRequestAdmin(admin.ModelAdmin):
+    list_display = ['property', 'name', 'preferred_date', 'preferred_time', 'status', 'created_at']
+    list_filter = ['status', 'preferred_date', 'created_at']
+    list_editable = ['status']
+    search_fields = ['property__title', 'name', 'email']
+    readonly_fields = ['created_at', 'updated_at']
+
+
+@admin.register(SavedSearch)
+class SavedSearchAdmin(admin.ModelAdmin):
+    list_display = ['user', 'name', 'location', 'property_type', 'email_alerts', 'created_at']
+    list_filter = ['email_alerts', 'property_type', 'created_at']
+    search_fields = ['user__email', 'name', 'location']
+    readonly_fields = ['created_at']
 
 
 @admin.register(SavedProperty)

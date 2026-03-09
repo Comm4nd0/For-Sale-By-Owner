@@ -36,6 +36,9 @@ urlpatterns = [
     path('search/', CSRFTemplateView.as_view(template_name='search_results.html'), name='search'),
     path('login/', CSRFTemplateView.as_view(template_name='login.html'), name='login'),
     path('register/', CSRFTemplateView.as_view(template_name='register.html'), name='register'),
+    path('profile/', CSRFTemplateView.as_view(template_name='profile.html'), name='profile'),
+    path('forgot-password/', CSRFTemplateView.as_view(template_name='forgot_password.html'), name='forgot-password'),
+    path('password-reset/<str:uid>/<str:token>/', CSRFTemplateView.as_view(template_name='password_reset_confirm.html'), name='password-reset-confirm'),
     path('properties/new/', CSRFTemplateView.as_view(template_name='property_create.html'), name='property-create'),
     path('properties/<int:id>/', CSRFTemplateView.as_view(template_name='property_detail.html'), name='property-detail'),
     path('properties/<int:id>/edit/', CSRFTemplateView.as_view(template_name='property_edit.html'), name='property-edit'),
@@ -54,3 +57,6 @@ urlpatterns = [
     # Always serve media files (user-uploaded images) regardless of DEBUG setting
     path('media/<path:path>', serve_media, name='serve-media'),
 ]
+
+handler404 = 'fsbo_backend.views.custom_404'
+handler500 = 'fsbo_backend.views.custom_500'

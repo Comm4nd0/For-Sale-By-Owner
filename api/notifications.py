@@ -63,3 +63,49 @@ def notify_listing_rejected(property_obj):
         send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [owner.email])
     except Exception as e:
         logger.error(f'Failed to send rejection notification: {e}')
+
+
+def notify_viewing_request(viewing):
+    """Email the property owner when a new viewing request is received."""
+    owner = viewing.property.owner
+    subject = f'New viewing request for {viewing.property.title}'
+    message = (
+        f'Hi {owner.first_name or owner.email},\n\n'
+        f'You have received a new viewing request for your property "{viewing.property.title}".\n\n'
+        f'From: {viewing.name} ({viewing.email})\n'
+        f'{f"Phone: {viewing.phone}" if viewing.phone else ""}\n'
+        f'Preferred date: {viewing.preferred_date.strftime("%A %d %B %Y")} at {viewing.preferred_time.strftime("%H:%M")}\n'
+    )
+    if viewing.alternative_date:
+        message += f'Alternative date: {viewing.alternative_date.strftime("%A %d %B %Y")} at {viewing.alternative_time.strftime("%H:%M")}\n'
+    if viewing.message:
+        message += f'\nMessage:\n{viewing.message}\n'
+    message += (
+        f'\nManage viewing requests: {settings.SITE_URL}/dashboard/\n\n'
+        f'— For Sale By Owner'
+    )
+    try:
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [owner.email])
+    except Exception as e:
+        logger.error(f'Failed to send viewing request notification: {e}')
+
+
+def notify_viewing_status_update(viewing):
+    """Email the requester when their viewing request status changes."""
+    subject = f'Viewing update for {viewing.property.title}'
+    status_text = viewing.get_status_display()
+    message = (
+        f'Hi {viewing.name},\n\n'
+        f'Your viewing request for "{viewing.property.title}" has been {status_text.lower()}.\n\n'
+        f'Date: {viewing.preferred_date.strftime("%A %d %B %Y")} at {viewing.preferred_time.strftime("%H:%M")}\n'
+    )
+    if viewing.seller_notes:
+        message += f'\nNote from seller:\n{viewing.seller_notes}\n'
+    message += (
+        f'\nView property: {settings.SITE_URL}/properties/{viewing.property.slug or viewing.property.id}/\n\n'
+        f'— For Sale By Owner'
+    )
+    try:
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [viewing.email])
+    except Exception as e:
+        logger.error(f'Failed to send viewing status notification: {e}')

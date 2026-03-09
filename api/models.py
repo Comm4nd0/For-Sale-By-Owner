@@ -41,6 +41,18 @@ class User(AbstractUser):
         return self.email
 
 
+class PropertyFeature(models.Model):
+    """Reusable property feature tag (e.g. 'Garden', 'Parking', 'Central Heating')."""
+    name = models.CharField(max_length=100, unique=True)
+    icon = models.CharField(max_length=50, blank=True, help_text='Optional icon name or emoji')
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class Property(models.Model):
     """A property listed for sale by owner."""
 
@@ -99,6 +111,7 @@ class Property(models.Model):
     reception_rooms = models.PositiveIntegerField(default=0)
     square_feet = models.PositiveIntegerField(null=True, blank=True)
     epc_rating = models.CharField(max_length=1, choices=EPC_RATINGS, blank=True)
+    features = models.ManyToManyField(PropertyFeature, blank=True, related_name='properties')
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -149,6 +162,39 @@ class PropertyImage(models.Model):
         super().save(*args, **kwargs)
 
 
+class PropertyFloorplan(models.Model):
+    """A floorplan document/image belonging to a property listing."""
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='floorplans'
+    )
+    file = models.FileField(upload_to='properties/floorplans/')
+    title = models.CharField(max_length=200, blank=True, default='Floorplan')
+    order = models.PositiveIntegerField(default=0)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', 'uploaded_at']
+
+    def __str__(self):
+        return f"Floorplan for {self.property.title}"
+
+
+class PriceHistory(models.Model):
+    """Tracks price changes for a property."""
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='price_history'
+    )
+    price = models.DecimalField(max_digits=12, decimal_places=2)
+    changed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-changed_at']
+        verbose_name_plural = 'Price histories'
+
+    def __str__(self):
+        return f"{self.property.title}: £{self.price} on {self.changed_at.date()}"
+
+
 class SavedProperty(models.Model):
     """A property saved/favourited by a user."""
     user = models.ForeignKey(
@@ -190,6 +236,42 @@ class Enquiry(models.Model):
         return f"Enquiry from {self.name} about {self.property.title}"
 
 
+class ViewingRequest(models.Model):
+    """A request to view a property in person."""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('confirmed', 'Confirmed'),
+        ('declined', 'Declined'),
+        ('cancelled', 'Cancelled'),
+        ('completed', 'Completed'),
+    ]
+
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='viewing_requests'
+    )
+    requester = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='viewing_requests'
+    )
+    preferred_date = models.DateField()
+    preferred_time = models.TimeField()
+    alternative_date = models.DateField(null=True, blank=True)
+    alternative_time = models.TimeField(null=True, blank=True)
+    message = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    seller_notes = models.TextField(blank=True)
+    name = models.CharField(max_length=200)
+    email = models.EmailField()
+    phone = models.CharField(max_length=20, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Viewing for {self.property.title} by {self.name} on {self.preferred_date}"
+
+
 class PropertyView(models.Model):
     """Tracks views of a property listing."""
     property = models.ForeignKey(
@@ -204,6 +286,38 @@ class PropertyView(models.Model):
 
     class Meta:
         ordering = ['-viewed_at']
+
+
+class SavedSearch(models.Model):
+    """A saved search with alert preferences."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='saved_searches'
+    )
+    name = models.CharField(max_length=200, blank=True)
+    # Search criteria stored as JSON-compatible fields
+    location = models.CharField(max_length=200, blank=True)
+    property_type = models.CharField(max_length=20, blank=True)
+    min_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    max_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    min_bedrooms = models.PositiveIntegerField(null=True, blank=True)
+    min_bathrooms = models.PositiveIntegerField(null=True, blank=True)
+    epc_rating = models.CharField(max_length=1, blank=True)
+    email_alerts = models.BooleanField(default=True)
+    last_notified = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        parts = []
+        if self.location:
+            parts.append(self.location)
+        if self.property_type:
+            parts.append(self.property_type)
+        if self.min_bedrooms:
+            parts.append(f"{self.min_bedrooms}+ bed")
+        return self.name or ', '.join(parts) or 'Saved Search'
 
 
 class PushNotificationDevice(models.Model):

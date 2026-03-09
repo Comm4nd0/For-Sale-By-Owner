@@ -99,6 +99,44 @@
     .recently-viewed { margin-top: 2rem; }
     .recently-viewed h3 { color: #1A3C2E; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #D4DDD9; }
 
+    /* Features tags */
+    .features-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .feature-tag { background: #D8F3DC; color: #1A3C2E; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.3rem; }
+
+    /* Floorplans */
+    .floorplan-gallery { display: grid; gap: 1rem; }
+    .floorplan-item { border: 1px solid #D4DDD9; border-radius: 8px; overflow: hidden; cursor: pointer; }
+    .floorplan-item img { width: 100%; height: auto; display: block; }
+    .floorplan-item .floorplan-title { padding: 0.5rem 0.75rem; font-size: 0.9rem; color: #4A5E56; background: #F6F9F7; }
+    .floorplan-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; align-items: center; justify-content: center; cursor: pointer; }
+    .floorplan-modal.active { display: flex; }
+    .floorplan-modal img { max-width: 90vw; max-height: 90vh; object-fit: contain; }
+
+    /* Price History */
+    .price-history-list { list-style: none; padding: 0; }
+    .price-history-list li { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+    .price-history-list li:last-child { border-bottom: none; }
+    .price-change-up { color: #B03A2E; }
+    .price-change-down { color: #2D6A4F; }
+
+    /* Stamp Duty Calculator */
+    .stamp-duty-section { background: #FFFFFF; border: 1px solid #D4DDD9; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .stamp-duty-section h3 { color: #1A3C2E; margin-bottom: 0.75rem; font-size: 1.1rem; }
+    .stamp-result { margin-top: 0.5rem; background: #D8F3DC; padding: 0.75rem; border-radius: 6px; }
+    .stamp-result .amount { font-size: 1.2rem; font-weight: 700; color: #1A3C2E; }
+    .stamp-result .label { font-size: 0.8rem; color: #4A5E56; }
+    .stamp-options { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .stamp-options label { font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem; cursor: pointer; }
+
+    /* Viewing Request Form */
+    .viewing-form-section { background: #FFFFFF; border: 1px solid #D4DDD9; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .viewing-form-section h3 { color: #1A3C2E; margin-bottom: 0.75rem; font-size: 1.1rem; }
+    .viewing-form-section .form-group { margin-bottom: 0.75rem; }
+    .viewing-form-section label { display: block; margin-bottom: 0.2rem; font-size: 0.85rem; font-weight: 500; color: #4A5E56; }
+    .viewing-form-section input, .viewing-form-section textarea { width: 100%; padding: 0.5rem; border: 1px solid #D4DDD9; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
+    .viewing-form-section textarea { min-height: 60px; resize: vertical; }
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
     .owner-actions { margin-top: 1rem; display: flex; gap: 0.75rem; }
     @media (max-width: 768px) { .detail-grid { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } .property-header { flex-direction: column; } }
 </style>
@@ -163,6 +201,100 @@
         await fetch(`/api/properties/${propertyId}/save/`, { method, headers: Auth.headers(false) });
         btn.classList.toggle('saved');
         btn.innerHTML = btn.classList.contains('saved') ? '&#9829; Saved' : '&#9825; Save';
+    }
+
+    function calculateStampDuty() {
+        if (!propertyData) return;
+        const price = Number(propertyData.price);
+        const isFirst = document.getElementById('stamp-first-time')?.checked;
+        const isAdditional = document.getElementById('stamp-additional')?.checked;
+
+        let duty = 0;
+        // England/NI rates (as of 2025)
+        if (isFirst && price <= 625000) {
+            // First-time buyer relief
+            if (price <= 425000) {
+                duty = 0;
+            } else {
+                duty = (price - 425000) * 0.05;
+            }
+        } else {
+            const bands = [
+                { limit: 250000, rate: 0 },
+                { limit: 925000, rate: 0.05 },
+                { limit: 1500000, rate: 0.10 },
+                { limit: Infinity, rate: 0.12 },
+            ];
+            let remaining = price;
+            let prev = 0;
+            for (const band of bands) {
+                const taxable = Math.min(remaining, band.limit - prev);
+                duty += taxable * band.rate;
+                remaining -= taxable;
+                prev = band.limit;
+                if (remaining <= 0) break;
+            }
+        }
+        if (isAdditional) {
+            duty += price * 0.05;
+        }
+
+        const el = document.getElementById('stamp-result');
+        if (el) {
+            const effectiveRate = price > 0 ? ((duty / price) * 100).toFixed(1) : 0;
+            el.innerHTML = `<div class="amount">&pound;${Math.round(duty).toLocaleString()}</div><div class="label">Stamp Duty Land Tax (${effectiveRate}% effective rate)</div>`;
+        }
+    }
+
+    function openFloorplan(src) {
+        const modal = document.getElementById('floorplan-modal');
+        modal.querySelector('img').src = src;
+        modal.classList.add('active');
+    }
+
+    async function submitViewing(e, propertyId) {
+        e.preventDefault();
+        const btn = e.target.querySelector('button[type="submit"]');
+        const msgEl = document.getElementById('viewing-msg');
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+        msgEl.style.display = 'none';
+
+        try {
+            const body = {
+                property: propertyId,
+                name: document.getElementById('view-name').value,
+                email: document.getElementById('view-email').value,
+                phone: document.getElementById('view-phone').value,
+                preferred_date: document.getElementById('view-date').value,
+                preferred_time: document.getElementById('view-time').value,
+                message: document.getElementById('view-message').value,
+            };
+            const altDate = document.getElementById('view-alt-date').value;
+            const altTime = document.getElementById('view-alt-time').value;
+            if (altDate) body.alternative_date = altDate;
+            if (altTime) body.alternative_time = altTime;
+
+            const res = await fetch('/api/viewings/', {
+                method: 'POST',
+                headers: Auth.headers(),
+                body: JSON.stringify(body),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.detail || Object.values(data).flat().join(', '));
+            }
+            msgEl.className = 'alert alert-success';
+            msgEl.textContent = 'Viewing request sent! The seller will respond soon.';
+            msgEl.style.display = 'block';
+            e.target.reset();
+        } catch (err) {
+            msgEl.className = 'alert alert-error';
+            msgEl.textContent = err.message || 'Failed to send viewing request.';
+            msgEl.style.display = 'block';
+        }
+        btn.disabled = false;
+        btn.textContent = 'Request Viewing';
     }
 
     async function submitEnquiry(e, propertyId) {
@@ -306,12 +438,47 @@
                 <div class="detail-grid">
                     <div>
                         ${p.description ? `<div class="detail-section"><h3>Description</h3><p>${p.description.replace(/\n/g, '<br>')}</p></div>` : ''}
+                        ${p.feature_list && p.feature_list.length ? `
+                        <div class="detail-section">
+                            <h3>Features</h3>
+                            <div class="features-list">
+                                ${p.feature_list.map(f => `<span class="feature-tag">${f.icon ? f.icon + ' ' : ''}${f.name}</span>`).join('')}
+                            </div>
+                        </div>` : ''}
                         <div class="detail-section">
                             <h3>Address</h3>
                             <p>${p.address_line_1}${p.address_line_2 ? ', ' + p.address_line_2 : ''}<br>
                             ${p.city}${p.county ? ', ' + p.county : ''}<br>${p.postcode}</p>
                         </div>
                         ${epcHtml}
+                        ${p.floorplans && p.floorplans.length ? `
+                        <div class="detail-section">
+                            <h3>Floorplans</h3>
+                            <div class="floorplan-gallery">
+                                ${p.floorplans.map(fp => `
+                                    <div class="floorplan-item" onclick="openFloorplan('${fp.file}')">
+                                        <img src="${fp.file}" alt="${fp.title}" loading="lazy">
+                                        <div class="floorplan-title">${fp.title}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>` : ''}
+                        ${p.price_history && p.price_history.length > 1 ? `
+                        <div class="detail-section">
+                            <h3>Price History</h3>
+                            <ul class="price-history-list">
+                                ${p.price_history.map((ph, i) => {
+                                    const prev = p.price_history[i + 1];
+                                    let change = '';
+                                    if (prev) {
+                                        const diff = Number(ph.price) - Number(prev.price);
+                                        if (diff > 0) change = `<span class="price-change-up">&uarr; +&pound;${Math.abs(diff).toLocaleString()}</span>`;
+                                        else if (diff < 0) change = `<span class="price-change-down">&darr; -&pound;${Math.abs(diff).toLocaleString()}</span>`;
+                                    }
+                                    return `<li><span>&pound;${Number(ph.price).toLocaleString()} ${change}</span><span style="color:#4A5E56;">${new Date(ph.changed_at).toLocaleDateString()}</span></li>`;
+                                }).join('')}
+                            </ul>
+                        </div>` : ''}
                         ${mapHtml}
                     </div>
                     <div>
@@ -325,16 +492,46 @@
                             <div class="detail-row"><span class="detail-label">Listed</span><span class="detail-value">${new Date(p.created_at).toLocaleDateString()}</span></div>
                         </div>
                         ${enquiryFormHtml}
+                        ${Auth.isLoggedIn() ? `
+                        <div class="viewing-form-section">
+                            <h3>Request a Viewing</h3>
+                            <div id="viewing-msg" class="alert" style="display:none;"></div>
+                            <form onsubmit="submitViewing(event, ${p.id})">
+                                <div class="form-group"><label>Your Name</label><input type="text" id="view-name" required></div>
+                                <div class="form-group"><label>Email</label><input type="email" id="view-email" required></div>
+                                <div class="form-group"><label>Phone (optional)</label><input type="tel" id="view-phone"></div>
+                                <div class="form-row-2">
+                                    <div class="form-group"><label>Preferred Date</label><input type="date" id="view-date" required></div>
+                                    <div class="form-group"><label>Preferred Time</label><input type="time" id="view-time" required></div>
+                                </div>
+                                <div class="form-row-2">
+                                    <div class="form-group"><label>Alternative Date</label><input type="date" id="view-alt-date"></div>
+                                    <div class="form-group"><label>Alternative Time</label><input type="time" id="view-alt-time"></div>
+                                </div>
+                                <div class="form-group"><label>Message (optional)</label><textarea id="view-message"></textarea></div>
+                                <button type="submit" class="btn btn-primary" style="width:100%;">Request Viewing</button>
+                            </form>
+                        </div>` : ''}
                         ${mortgageHtml}
+                        <div class="stamp-duty-section">
+                            <h3>Stamp Duty Calculator</h3>
+                            <div class="stamp-options">
+                                <label><input type="checkbox" id="stamp-first-time" onchange="calculateStampDuty()"> First-time buyer</label>
+                                <label><input type="checkbox" id="stamp-additional" onchange="calculateStampDuty()"> Additional property</label>
+                            </div>
+                            <div class="stamp-result" id="stamp-result"></div>
+                        </div>
                     </div>
                 </div>
+                <div id="floorplan-modal" class="floorplan-modal" onclick="this.classList.remove('active')"><img src="" alt="Floorplan"></div>
                 <div id="owner-actions"></div>
                 <div id="similar-properties" class="similar-section"></div>
                 <div id="recently-viewed" class="recently-viewed"></div>
             `;
 
-            // Auto-calc mortgage on load
+            // Auto-calc mortgage and stamp duty on load
             calculateMortgage();
+            calculateStampDuty();
 
             // Show edit button if owner
             if (Auth.isLoggedIn()) {
@@ -347,11 +544,16 @@
                                     <a href="/properties/${p.id}/edit/" class="btn btn-secondary">Edit Property</a>
                                 </div>`;
                         }
-                        // Pre-fill enquiry form
+                        // Pre-fill enquiry and viewing forms
+                        const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ');
                         const nameEl = document.getElementById('enq-name');
                         const emailEl = document.getElementById('enq-email');
-                        if (nameEl && !nameEl.value) nameEl.value = [user.first_name, user.last_name].filter(Boolean).join(' ');
+                        if (nameEl && !nameEl.value) nameEl.value = fullName;
                         if (emailEl && !emailEl.value) emailEl.value = user.email;
+                        const viewNameEl = document.getElementById('view-name');
+                        const viewEmailEl = document.getElementById('view-email');
+                        if (viewNameEl && !viewNameEl.value) viewNameEl.value = fullName;
+                        if (viewEmailEl && !viewEmailEl.value) viewEmailEl.value = user.email;
                     }).catch(() => {});
             }
 

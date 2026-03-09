@@ -4,12 +4,23 @@ from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
-from .models import Property, PropertyImage, SavedProperty, Enquiry, PropertyView, PushNotificationDevice
+from rest_framework.throttling import UserRateThrottle
+from .models import (
+    Property, PropertyImage, PropertyFloorplan, PropertyFeature,
+    PriceHistory, SavedProperty, Enquiry, PropertyView,
+    ViewingRequest, SavedSearch, PushNotificationDevice,
+)
 from .serializers import (
     PropertySerializer, PropertyListSerializer, PropertyImageSerializer,
+    PropertyFloorplanSerializer, PropertyFeatureSerializer,
     SavedPropertySerializer, EnquirySerializer, DashboardStatsSerializer,
+    ViewingRequestSerializer, SavedSearchSerializer, UserProfileSerializer,
 )
-from .notifications import notify_new_enquiry
+from .notifications import notify_new_enquiry, notify_viewing_request
+
+
+class EnquiryRateThrottle(UserRateThrottle):
+    rate = '10/hour'
 
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
@@ -84,7 +95,16 @@ class PropertyViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+        instance = serializer.save(owner=self.request.user)
+        # Record initial price in history
+        PriceHistory.objects.create(property=instance, price=instance.price)
+
+    def perform_update(self, serializer):
+        old_price = serializer.instance.price
+        instance = serializer.save()
+        # Track price change
+        if instance.price != old_price:
+            PriceHistory.objects.create(property=instance, price=instance.price)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -157,6 +177,43 @@ class PropertyImageViewSet(viewsets.ModelViewSet):
                 next_img.save(update_fields=['is_primary'])
 
 
+class PropertyFloorplanViewSet(viewsets.ModelViewSet):
+    serializer_class = PropertyFloorplanSerializer
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
+
+    def get_queryset(self):
+        return PropertyFloorplan.objects.filter(
+            property_id=self.kwargs['property_pk']
+        )
+
+    def _get_property(self):
+        return Property.objects.get(pk=self.kwargs['property_pk'])
+
+    def perform_create(self, serializer):
+        property_obj = self._get_property()
+        if property_obj.owner != self.request.user:
+            raise PermissionDenied("You can only add floorplans to your own properties.")
+        if property_obj.floorplans.count() >= 5:
+            raise ValidationError("Maximum 5 floorplans per property.")
+        serializer.save(property=property_obj)
+
+    def perform_update(self, serializer):
+        if serializer.instance.property.owner != self.request.user:
+            raise PermissionDenied()
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.property.owner != self.request.user:
+            raise PermissionDenied()
+        instance.file.delete(save=False)
+        instance.delete()
+
+
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def reorder_images(request, property_pk):
@@ -209,6 +266,11 @@ class EnquiryViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     http_method_names = ['get', 'post', 'patch']
 
+    def get_throttles(self):
+        if self.action == 'create':
+            return [EnquiryRateThrottle()]
+        return []
+
     def get_queryset(self):
         user = self.request.user
         # Users can see enquiries they sent or received (as property owner)
@@ -243,6 +305,80 @@ class EnquiryViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+class ViewingRequestViewSet(viewsets.ModelViewSet):
+    serializer_class = ViewingRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'patch']
+
+    def get_queryset(self):
+        user = self.request.user
+        return ViewingRequest.objects.filter(
+            Q(requester=user) | Q(property__owner=user)
+        ).select_related('property', 'requester')
+
+    def perform_create(self, serializer):
+        prop = serializer.validated_data['property']
+        if prop.owner == self.request.user:
+            raise ValidationError("You cannot request a viewing for your own property.")
+        viewing = serializer.save(requester=self.request.user)
+        notify_viewing_request(viewing)
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        # Only property owner can update status/seller_notes
+        if instance.property.owner != self.request.user:
+            raise PermissionDenied("Only the property owner can update viewing requests.")
+        serializer.save()
+
+    @action(detail=False, methods=['get'])
+    def received(self, request):
+        """Get viewing requests received for the user's properties."""
+        qs = ViewingRequest.objects.filter(
+            property__owner=request.user
+        ).select_related('property', 'requester').order_by('-created_at')
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['patch'])
+    def update_status(self, request, pk=None):
+        """Property owner can confirm/decline a viewing request."""
+        viewing = self.get_object()
+        if viewing.property.owner != request.user:
+            raise PermissionDenied()
+        new_status = request.data.get('status')
+        if new_status not in ['confirmed', 'declined', 'completed']:
+            raise ValidationError("Invalid status.")
+        viewing.status = new_status
+        if 'seller_notes' in request.data:
+            viewing.seller_notes = request.data['seller_notes']
+        viewing.save(update_fields=['status', 'seller_notes', 'updated_at'])
+        return Response(ViewingRequestSerializer(viewing).data)
+
+
+class SavedSearchViewSet(viewsets.ModelViewSet):
+    serializer_class = SavedSearchSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'patch', 'delete']
+
+    def get_queryset(self):
+        return SavedSearch.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class PropertyFeatureViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only list of available property features/tags."""
+    serializer_class = PropertyFeatureSerializer
+    queryset = PropertyFeature.objects.all()
+    permission_classes = [permissions.AllowAny]
+    pagination_class = None
+
+
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def dashboard_stats(request):
@@ -263,6 +399,19 @@ def dashboard_stats(request):
         'total_saves': total_saves,
     }
     return Response(data)
+
+
+@api_view(['GET', 'PATCH'])
+@permission_classes([permissions.IsAuthenticated])
+def user_profile(request):
+    """Get or update the current user's profile."""
+    if request.method == 'GET':
+        serializer = UserProfileSerializer(request.user)
+        return Response(serializer.data)
+    serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response(serializer.data)
 
 
 @api_view(['POST'])
