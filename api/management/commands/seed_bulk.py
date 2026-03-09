@@ -600,6 +600,22 @@ class Command(BaseCommand):
                 f'Downloaded {len(image_cache)} / {len(all_urls)} pool images.'
             ))
 
+        # Track used slugs to avoid duplicates
+        used_slugs = set(Property.objects.values_list('slug', flat=True))
+
+        def make_unique_slug(title, postcode):
+            """Generate a unique slug, mimicking the model's save() logic."""
+            base = slugify(f"{title}-{postcode}")
+            if not base:
+                base = 'property'
+            slug = base
+            n = 1
+            while slug in used_slugs:
+                slug = f"{base}-{n}"
+                n += 1
+            used_slugs.add(slug)
+            return slug
+
         # Generate properties
         created_count = 0
         image_count = 0
@@ -655,9 +671,13 @@ class Command(BaseCommand):
             # Description
             description = generate_description(prop_type, beds, city, area)
 
+            # Generate slug (bulk_create skips save(), so we must do it here)
+            slug = make_unique_slug(title, postcode)
+
             prop = Property(
                 owner=random.choice(seed_users),
                 title=title,
+                slug=slug,
                 description=description,
                 property_type=prop_type,
                 status=status,
