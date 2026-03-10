@@ -83,12 +83,7 @@
         btn.textContent = 'Searching...';
         results.innerHTML = '<div class="hp-loading">Searching Land Registry records...</div>';
 
-        var url = 'https://landregistry.data.gov.uk/data/ppi/transaction-record.json?' +
-            new URLSearchParams({
-                'propertyAddress.postcode': postcode.toUpperCase(),
-                '_pageSize': '50',
-                '_sort': '-transactionDate'
-            }).toString();
+        var url = '/api/house-prices/?postcode=' + encodeURIComponent(postcode);
 
         fetch(url)
             .then(function(r) {

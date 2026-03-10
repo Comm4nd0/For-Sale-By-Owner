@@ -75,6 +75,7 @@ urlpatterns = [
     path('subscriptions/create-checkout/', views.create_checkout, name='create-checkout'),
     path('subscriptions/create-portal/', views.create_portal, name='create-portal'),
     path('stripe/webhook/', views.stripe_webhook, name='stripe-webhook'),
+    path('house-prices/', views.house_price_lookup, name='house-price-lookup'),
     # Service provider photos (nested)
     path(
         'service-providers/<int:provider_pk>/photos/',

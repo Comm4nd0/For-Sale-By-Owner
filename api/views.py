@@ -1,4 +1,5 @@
 import logging
+import requests
 from decimal import Decimal
 
 from django.db.models import Q, Count
@@ -1075,3 +1076,30 @@ class ServiceProviderPhotoViewSet(viewsets.ModelViewSet):
             raise PermissionDenied()
         instance.image.delete(save=False)
         instance.delete()
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def house_price_lookup(request):
+    """Proxy Land Registry Price Paid Data API to avoid browser CORS/fetch issues."""
+    postcode = request.query_params.get('postcode', '').strip().upper()
+    if not postcode:
+        return Response({'error': 'Postcode is required'}, status=400)
+    try:
+        resp = requests.get(
+            'https://landregistry.data.gov.uk/data/ppi/transaction-record.json',
+            params={
+                'propertyAddress.postcode': postcode,
+                '_pageSize': '50',
+                '_sort': '-transactionDate',
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
+        return Response(resp.json())
+    except requests.RequestException as e:
+        logger.warning('Land Registry API error: %s', e)
+        return Response(
+            {'error': 'Could not connect to Land Registry. Please try again.'},
+            status=502,
+        )

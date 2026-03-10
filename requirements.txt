@@ -6,3 +6,4 @@ django-extensions
 python-dotenv
 Pillow
 stripe
+requests

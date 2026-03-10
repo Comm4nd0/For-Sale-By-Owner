@@ -7,3 +7,4 @@ Pillow
 gunicorn
 psycopg2-binary
 whitenoise
+requests
