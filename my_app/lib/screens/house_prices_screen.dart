@@ -39,15 +39,17 @@ class _HousePricesScreenState extends State<HousePricesScreen> {
     });
 
     try {
-      final encoded = Uri.encodeComponent(postcode.toUpperCase());
-      final uri = Uri.parse(
-        'https://landregistry.data.gov.uk/data/ppi/transaction-record.json'
-        '?propertyAddress.postcode=$encoded'
-        '&_pageSize=50'
-        '&_sort=-transactionDate',
+      final uri = Uri.https(
+        'landregistry.data.gov.uk',
+        '/data/ppi/transaction-record.json',
+        {
+          'propertyAddress.postcode': postcode.toUpperCase(),
+          '_pageSize': '50',
+          '_sort': '-transactionDate',
+        },
       );
 
-      final response = await http.get(uri).timeout(const Duration(seconds: 15));
+      final response = await http.get(uri).timeout(const Duration(seconds: 30));
 
       if (!mounted) return;
 
@@ -76,14 +78,14 @@ class _HousePricesScreenState extends State<HousePricesScreen> {
         });
       } else {
         setState(() {
-          _error = 'Failed to load data. Please check the postcode and try again.';
+          _error = 'Failed to load data (${response.statusCode}). Please check the postcode and try again.';
           _isLoading = false;
         });
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not connect to Land Registry. Please try again.';
+        _error = 'Could not connect to Land Registry. Please try again.\n($e)';
         _isLoading = false;
       });
     }
