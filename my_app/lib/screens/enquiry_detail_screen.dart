@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../constants/app_theme.dart';
+import '../widgets/branded_app_bar.dart';
 import '../models/enquiry.dart';
 import '../models/reply.dart';
 import '../services/api_service.dart';
@@ -74,12 +75,7 @@ class _EnquiryDetailScreenState extends State<EnquiryDetailScreen> {
     final currentUserId = authService.userId;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.enquiry.propertyTitle,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
+      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
       body: Column(
         children: [
           Expanded(

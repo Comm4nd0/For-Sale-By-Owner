@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../constants/api_constants.dart';
 import '../constants/app_theme.dart';
+import '../widgets/branded_app_bar.dart';
 import '../models/service_provider.dart';
 import '../models/service_provider_review.dart';
 import '../services/api_service.dart';
@@ -100,13 +101,13 @@ class _ServiceProviderDetailScreenState
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Service Provider')),
+        appBar: BrandedAppBar.build(context: context, showHomeButton: true),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
     if (_error != null || _provider == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Service Provider')),
+        appBar: BrandedAppBar.build(context: context, showHomeButton: true),
         body: Center(child: Text(_error ?? 'Not found')),
       );
     }
@@ -120,9 +121,17 @@ class _ServiceProviderDetailScreenState
           SliverAppBar(
             expandedHeight: 140,
             pinned: true,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.home_outlined),
+                tooltip: 'Home',
+                onPressed: () {
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                },
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
-              title: Text(p.businessName,
-                  style: const TextStyle(fontSize: 16)),
+              title: const AppBarLogo(),
               background: Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(

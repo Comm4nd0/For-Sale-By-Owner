@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/branded_app_bar.dart';
 
 class SearchFilterScreen extends StatefulWidget {
   final String? location;
@@ -96,9 +97,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Search Filters'),
-      ),
+      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

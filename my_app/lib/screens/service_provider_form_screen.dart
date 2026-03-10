@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../constants/app_theme.dart';
+import '../widgets/branded_app_bar.dart';
 import '../models/service_category.dart';
 import '../services/api_service.dart';
 
@@ -114,7 +115,7 @@ class _ServiceProviderFormScreenState extends State<ServiceProviderFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Register Your Service')),
+      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(

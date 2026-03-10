@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../constants/app_theme.dart';
+import '../widgets/branded_app_bar.dart';
 import '../models/saved_search.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -196,9 +197,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final authService = context.watch<AuthService>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-      ),
+      appBar: BrandedAppBar.build(context: context),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

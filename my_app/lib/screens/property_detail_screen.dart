@@ -16,6 +16,7 @@ import '../widgets/viewing_request_form.dart';
 import 'image_management_screen.dart';
 import 'edit_property_screen.dart';
 import '../widgets/service_providers_section.dart';
+import '../widgets/branded_app_bar.dart';
 
 class PropertyDetailScreen extends StatefulWidget {
   final int propertyId;
@@ -92,14 +93,14 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Scaffold(
-              appBar: AppBar(title: const Text('Property Details')),
+              appBar: BrandedAppBar.build(context: context, showHomeButton: true),
               body: const Center(child: CircularProgressIndicator()),
             );
           }
 
           if (snapshot.hasError) {
             return Scaffold(
-              appBar: AppBar(title: const Text('Property Details')),
+              appBar: BrandedAppBar.build(context: context, showHomeButton: true),
               body: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,

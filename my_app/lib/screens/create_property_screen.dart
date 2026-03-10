@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../constants/app_theme.dart';
+import '../widgets/branded_app_bar.dart';
 import '../models/property_feature.dart';
 import '../services/api_service.dart';
 import 'image_management_screen.dart';
@@ -158,9 +159,7 @@ class _CreatePropertyScreenState extends State<CreatePropertyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Property'),
-      ),
+      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
       body: Stepper(
         type: StepperType.vertical,
         currentStep: _currentStep,

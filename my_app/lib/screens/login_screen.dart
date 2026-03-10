@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../widgets/branded_app_bar.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -48,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final authService = context.watch<AuthService>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
+      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Form(

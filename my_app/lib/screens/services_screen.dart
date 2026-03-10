@@ -10,6 +10,7 @@ import 'service_provider_detail_screen.dart';
 import 'service_provider_form_screen.dart';
 import 'pricing_screen.dart';
 import '../widgets/tier_badge.dart';
+import '../widgets/branded_app_bar.dart';
 
 class ServicesScreen extends StatefulWidget {
   const ServicesScreen({super.key});
@@ -134,8 +135,9 @@ class _ServicesScreenState extends State<ServicesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Local Services'),
+      appBar: BrandedAppBar.build(
+        context: context,
+        showHomeButton: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.monetization_on_outlined),

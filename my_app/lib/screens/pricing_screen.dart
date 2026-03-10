@@ -6,6 +6,7 @@ import '../models/subscription_tier.dart';
 import '../models/subscription_addon.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../widgets/branded_app_bar.dart';
 
 class PricingScreen extends StatefulWidget {
   const PricingScreen({super.key});
@@ -92,7 +93,7 @@ class _PricingScreenState extends State<PricingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Pricing')),
+      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

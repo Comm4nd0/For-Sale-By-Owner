@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../constants/app_theme.dart';
+import '../widgets/branded_app_bar.dart';
+import '../widgets/skeleton_loading.dart';
 import '../models/dashboard_stats.dart';
 import '../models/enquiry.dart';
 import '../models/viewing_request.dart';
@@ -88,8 +90,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
+      appBar: BrandedAppBar.build(
+        context: context,
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
@@ -183,36 +185,39 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildStatCard(
       IconData icon, String label, int count, Color? highlight) {
-    return Container(
-      width: 130,
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.pebble),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 20, color: highlight ?? AppTheme.forestMid),
-          const SizedBox(height: 4),
-          Text(
-            '$count',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: highlight ?? AppTheme.charcoal,
+    return Semantics(
+      label: '$label: $count',
+      child: Container(
+        width: 130,
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppTheme.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.pebble),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 20, color: highlight ?? AppTheme.forestMid),
+            const SizedBox(height: 4),
+            Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: highlight ?? AppTheme.charcoal,
+              ),
             ),
-          ),
-          Text(
-            label,
-            style: TextStyle(fontSize: 11, color: AppTheme.slate),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+            Text(
+              label,
+              style: TextStyle(fontSize: 11, color: AppTheme.slate),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -224,24 +229,35 @@ class _DashboardScreenState extends State<DashboardScreen>
         future: _enquiriesFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const SkeletonList(count: 3);
           }
 
           if (snapshot.hasError) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline,
-                      size: 48, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  const Text('Failed to load enquiries'),
-                  const SizedBox(height: 8),
-                  ElevatedButton(
-                    onPressed: () => setState(() => _loadEnquiries()),
-                    child: const Text('Retry'),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(Icons.wifi_off, size: 32, color: Colors.red[300]),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Failed to load enquiries'),
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: () => setState(() => _loadEnquiries()),
+                      icon: const Icon(Icons.refresh, size: 18),
+                      label: const Text('Retry'),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -249,14 +265,34 @@ class _DashboardScreenState extends State<DashboardScreen>
           final enquiries = snapshot.data ?? [];
 
           if (enquiries.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.mail_outline, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text('No enquiries yet'),
-                ],
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: AppTheme.forestMist,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Icon(Icons.mail_outline, size: 36, color: AppTheme.forestMid),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'No Enquiries Yet',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'When buyers send you messages about your properties, they\'ll appear here.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppTheme.slate, height: 1.5),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -338,24 +374,35 @@ class _DashboardScreenState extends State<DashboardScreen>
         future: _viewingsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const SkeletonList(count: 3);
           }
 
           if (snapshot.hasError) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline,
-                      size: 48, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  const Text('Failed to load viewings'),
-                  const SizedBox(height: 8),
-                  ElevatedButton(
-                    onPressed: () => setState(() => _loadViewings()),
-                    child: const Text('Retry'),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(Icons.wifi_off, size: 32, color: Colors.red[300]),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Failed to load viewings'),
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: () => setState(() => _loadViewings()),
+                      icon: const Icon(Icons.refresh, size: 18),
+                      label: const Text('Retry'),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -363,14 +410,34 @@ class _DashboardScreenState extends State<DashboardScreen>
           final viewings = snapshot.data ?? [];
 
           if (viewings.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.calendar_today, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text('No viewing requests yet'),
-                ],
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: AppTheme.forestMist,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Icon(Icons.calendar_today, size: 36, color: AppTheme.forestMid),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'No Viewing Requests',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'When buyers request to view your properties, they\'ll appear here.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppTheme.slate, height: 1.5),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -446,16 +513,19 @@ class _DashboardScreenState extends State<DashboardScreen>
         color = Colors.grey;
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        status,
-        style: const TextStyle(
-            color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+    return Semantics(
+      label: 'Status: $status',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          status,
+          style: const TextStyle(
+              color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }

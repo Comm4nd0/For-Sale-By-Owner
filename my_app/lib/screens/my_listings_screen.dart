@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../constants/app_theme.dart';
+import '../widgets/branded_app_bar.dart';
+import '../widgets/skeleton_loading.dart';
 import '../constants/api_constants.dart';
 import '../models/property.dart';
 import '../services/api_service.dart';
@@ -165,8 +167,8 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Listings'),
+      appBar: BrandedAppBar.build(
+        context: context,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -184,41 +186,83 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const SkeletonList(count: 4);
     }
 
     if (_error != null) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.grey),
-            const SizedBox(height: 16),
-            Text(_error!, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: _loadListings,
-              child: const Text('Retry'),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Icon(Icons.wifi_off, size: 36, color: Colors.red[300]),
+              ),
+              const SizedBox(height: 20),
+              Text(_error!, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              const Text(
+                'Check your connection and try again.',
+                style: TextStyle(color: AppTheme.slate),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: _loadListings,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     if (_properties.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.home_outlined, size: 64, color: Colors.grey),
-            const SizedBox(height: 16),
-            const Text('No listings yet'),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _navigateToCreate,
-              child: const Text('Create Your First Listing'),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  color: AppTheme.goldSoft,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Icon(Icons.sell_outlined, size: 44, color: AppTheme.goldEmber),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Ready to Sell?',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.charcoal,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'List your property for free and reach buyers directly. No fees, no commission.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppTheme.slate, height: 1.5),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _navigateToCreate,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Create Your First Listing'),
+              ),
+            ],
+          ),
         ),
       );
     }

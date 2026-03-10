@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import '../constants/app_theme.dart';
+import '../widgets/branded_app_bar.dart';
 import '../models/property.dart';
 import '../models/property_image.dart';
 import '../services/api_service.dart';
@@ -124,9 +125,7 @@ class _ImageManagementScreenState extends State<ImageManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manage Images'),
-      ),
+      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
       floatingActionButton: FloatingActionButton(
         onPressed: _isUploading ? null : _pickAndUploadImage,
         child: _isUploading

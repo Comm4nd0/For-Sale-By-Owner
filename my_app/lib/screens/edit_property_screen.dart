@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../constants/app_theme.dart';
+import '../widgets/branded_app_bar.dart';
 import '../models/property.dart';
 import '../models/property_feature.dart';
 import '../services/api_service.dart';
@@ -176,9 +177,7 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Property'),
-      ),
+      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
       body: Stepper(
         type: StepperType.vertical,
         currentStep: _currentStep,

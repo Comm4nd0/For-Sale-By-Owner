@@ -3,12 +3,15 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../constants/api_constants.dart';
 import '../constants/app_theme.dart';
+import '../widgets/branded_app_bar.dart';
+import '../widgets/skeleton_loading.dart';
 import '../models/property.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import 'property_detail_screen.dart';
 import 'search_filter_screen.dart';
 import 'services_screen.dart';
+import 'house_prices_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -526,7 +529,28 @@ class _HomeScreenState extends State<HomeScreen> {
             ]),
           ),
         ),
-        // Find Local Services CTA
+        // CTAs row
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+            child: OutlinedButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const HousePricesScreen()),
+              ),
+              icon: const Icon(Icons.trending_up),
+              label: const Text('House Price Lookup'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                foregroundColor: AppTheme.goldEmber,
+                side: const BorderSide(color: AppTheme.goldEmber),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+        ),
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
@@ -597,16 +621,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildResultsView() {
     return Scaffold(
-      appBar: AppBar(
+      appBar: BrandedAppBar.build(
+        context: context,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             setState(() => _hasSearched = false);
           },
-        ),
-        title: Text(
-          _filters['location'] ?? 'Search Results',
-          style: const TextStyle(fontSize: 17),
         ),
         actions: [
           IconButton(
@@ -675,52 +696,104 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBody() {
     if (_initialLoad && _isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const SkeletonList(count: 3, useCards: true);
     }
 
     if (_properties.isEmpty && !_isLoading) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.home_outlined, size: 64, color: Colors.grey),
-            const SizedBox(height: 16),
-            Text(
-              _filters.isNotEmpty
-                  ? 'No properties match your filters'
-                  : 'No properties listed yet',
-            ),
-            if (_filters.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () {
-                  setState(() => _filters.clear());
-                  _loadProperties();
-                },
-                child: const Text('Clear Filters'),
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  color: AppTheme.forestMist,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Icon(Icons.search_off, size: 44, color: AppTheme.forestMid),
               ),
+              const SizedBox(height: 24),
+              Text(
+                _filters.isNotEmpty
+                    ? 'No Properties Match'
+                    : 'No Properties Listed Yet',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.charcoal,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _filters.isNotEmpty
+                    ? 'Try adjusting your filters or search in a different area.'
+                    : 'Be the first to list a property in this area.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppTheme.slate, height: 1.5),
+              ),
+              if (_filters.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() => _filters.clear());
+                    _loadProperties();
+                  },
+                  icon: const Icon(Icons.filter_list_off, size: 18),
+                  label: const Text('Clear Filters'),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       );
     }
 
     return RefreshIndicator(
       onRefresh: () async => _loadProperties(),
-      child: ListView.builder(
-        controller: _scrollController,
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: _properties.length + (_hasMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index >= _properties.length) {
-            return const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth >= 600;
+          if (isWide) {
+            return GridView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(8),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: constraints.maxWidth >= 900 ? 3 : 2,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 0.75,
+              ),
+              itemCount: _properties.length + (_hasMore ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index >= _properties.length) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return PropertyCard(
+                  property: _properties[index],
+                  onSaveToggled: () => _loadProperties(),
+                );
+              },
             );
           }
-          return PropertyCard(
-            property: _properties[index],
-            onSaveToggled: () => _loadProperties(),
+          return ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: _properties.length + (_hasMore ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index >= _properties.length) {
+                return const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              return PropertyCard(
+                property: _properties[index],
+                onSaveToggled: () => _loadProperties(),
+              );
+            },
           );
         },
       ),
@@ -741,20 +814,25 @@ class PropertyCard extends StatelessWidget {
         ? ApiConstants.fullUrl(property.primaryImageUrl!)
         : null;
 
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => PropertyDetailScreen(propertyId: property.id),
-        ),
-      ).then((_) => onSaveToggled?.call()),
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
+    return Semantics(
+      button: true,
+      label: '${property.title}, ${property.formattedPrice}, '
+          '${property.bedrooms} bedrooms, ${property.bathrooms} bathrooms, '
+          '${property.addressLine1}, ${property.city}',
+      child: GestureDetector(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PropertyDetailScreen(propertyId: property.id),
+          ),
+        ).then((_) => onSaveToggled?.call()),
+        child: Card(
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
                 if (imageUrl != null)
                   AspectRatio(
                     aspectRatio: 16 / 9,
@@ -855,6 +933,7 @@ class PropertyCard extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -890,27 +969,31 @@ class _SaveButtonState extends State<_SaveButton> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () async {
-        try {
-          final apiService = context.read<ApiService>();
-          await apiService.toggleSaveProperty(
-            widget.property.id,
-            save: !_isSaved,
-          );
-          if (mounted) setState(() => _isSaved = !_isSaved);
-        } catch (_) {}
-      },
-      child: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: Colors.black.withAlpha(100),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          _isSaved ? Icons.favorite : Icons.favorite_border,
-          color: _isSaved ? Colors.red : Colors.white,
-          size: 22,
+    return Semantics(
+      button: true,
+      label: _isSaved ? 'Remove from saved properties' : 'Save property',
+      child: GestureDetector(
+        onTap: () async {
+          try {
+            final apiService = context.read<ApiService>();
+            await apiService.toggleSaveProperty(
+              widget.property.id,
+              save: !_isSaved,
+            );
+            if (mounted) setState(() => _isSaved = !_isSaved);
+          } catch (_) {}
+        },
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: Colors.black.withAlpha(100),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            _isSaved ? Icons.favorite : Icons.favorite_border,
+            color: _isSaved ? Colors.red : Colors.white,
+            size: 22,
+          ),
         ),
       ),
     );

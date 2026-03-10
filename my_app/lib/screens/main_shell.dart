@@ -107,15 +107,18 @@ class _MainShellState extends State<MainShell> {
         unselectedItemColor: AppTheme.stone,
         items: [
           const BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Search',
+            icon: Icon(Icons.search_outlined),
+            activeIcon: Icon(Icons.search),
+            label: 'Home',
           ),
           const BottomNavigationBarItem(
             icon: Icon(Icons.favorite_border),
+            activeIcon: Icon(Icons.favorite),
             label: 'Saved',
           ),
           const BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
+            icon: Icon(Icons.sell_outlined),
+            activeIcon: Icon(Icons.sell),
             label: 'Listings',
           ),
           BottomNavigationBarItem(
@@ -125,10 +128,17 @@ class _MainShellState extends State<MainShell> {
                     child: const Icon(Icons.dashboard_outlined),
                   )
                 : const Icon(Icons.dashboard_outlined),
+            activeIcon: badgeCount > 0
+                ? Badge(
+                    label: Text('$badgeCount'),
+                    child: const Icon(Icons.dashboard),
+                  )
+                : const Icon(Icons.dashboard),
             label: 'Dashboard',
           ),
           const BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
             label: 'Profile',
           ),
         ],

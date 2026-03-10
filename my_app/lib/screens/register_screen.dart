@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../constants/app_theme.dart';
+import '../constants/user_agreement.dart';
 import '../services/auth_service.dart';
+import '../widgets/branded_app_bar.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -19,6 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _rePasswordController = TextEditingController();
   String? _error;
   bool _agreedToTerms = false;
+  bool _agreedToUserAgreement = false;
 
   @override
   void dispose() {
@@ -35,6 +39,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (!_agreedToTerms) {
       setState(() => _error = 'You must agree to the Terms & Conditions and Privacy Policy.');
+      return;
+    }
+
+    if (!_agreedToUserAgreement) {
+      setState(() => _error = 'You must agree to the User Agreement and Code of Conduct.');
       return;
     }
 
@@ -69,12 +78,82 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  void _showUserAgreement() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: AppTheme.forestDeep,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'User Agreement & Code of Conduct',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Last updated: ${UserAgreement.lastUpdated}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withAlpha(180),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Content
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  UserAgreement.fullText,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.6,
+                    color: AppTheme.charcoal,
+                  ),
+                ),
+              ),
+            ),
+            // Footer
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Register')),
+      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(
@@ -139,7 +218,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 obscureText: true,
                 validator: (v) => v == null || v.isEmpty ? 'Required' : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
+
+              // Terms & Conditions checkbox
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -148,7 +229,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     onChanged: (value) {
                       setState(() => _agreedToTerms = value ?? false);
                     },
-                    activeColor: const Color(0xFF2D6A4F),
+                    activeColor: AppTheme.forestMid,
                   ),
                   Expanded(
                     child: GestureDetector(
@@ -166,7 +247,61 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+
+              // User Agreement checkbox
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Checkbox(
+                    value: _agreedToUserAgreement,
+                    onChanged: (value) {
+                      setState(() => _agreedToUserAgreement = value ?? false);
+                    },
+                    activeColor: AppTheme.forestMid,
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Wrap(
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              setState(() => _agreedToUserAgreement = !_agreedToUserAgreement);
+                            },
+                            child: const Text(
+                              'I have read and agree to the ',
+                              style: TextStyle(fontSize: 14),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: _showUserAgreement,
+                            child: const Text(
+                              'User Agreement and Code of Conduct',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppTheme.forestMid,
+                                fontWeight: FontWeight.w600,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() => _agreedToUserAgreement = !_agreedToUserAgreement);
+                            },
+                            child: const Text(
+                              '.',
+                              style: TextStyle(fontSize: 14),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: authService.isLoading ? null : _register,
                 child: authService.isLoading
