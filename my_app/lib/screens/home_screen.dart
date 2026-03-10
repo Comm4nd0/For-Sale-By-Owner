@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -33,14 +34,34 @@ class _HomeScreenState extends State<HomeScreen> {
   String _selectedPropertyType = '';
   int? _selectedBedrooms;
 
+  // Rotating hero images
+  int _heroImageIndex = 0;
+  Timer? _heroTimer;
+  static const _heroImages = [
+    'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1200&q=70',
+    'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=70',
+    'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=70',
+    'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=70',
+    'https://images.unsplash.com/photo-1605146769289-440113cc3d00?w=1200&q=70',
+  ];
+
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _heroTimer = Timer.periodic(
+      const Duration(seconds: 6),
+      (_) {
+        if (mounted) {
+          setState(() => _heroImageIndex = (_heroImageIndex + 1) % _heroImages.length);
+        }
+      },
+    );
   }
 
   @override
   void dispose() {
+    _heroTimer?.cancel();
     _scrollController.dispose();
     _locationController.dispose();
     super.dispose();
@@ -192,19 +213,36 @@ class _HomeScreenState extends State<HomeScreen> {
       slivers: [
         // Hero section
         SliverToBoxAdapter(
-          child: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [AppTheme.forestDeep, Color(0xFF1A6570)],
-              ),
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
-                child: Column(
+          child: ClipRect(
+            child: Stack(
+              children: [
+                // Rotating background images
+                Positioned.fill(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 1500),
+                    child: CachedNetworkImage(
+                      key: ValueKey<int>(_heroImageIndex),
+                      imageUrl: _heroImages[_heroImageIndex],
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      placeholder: (_, __) => Container(color: AppTheme.forestDeep),
+                      errorWidget: (_, __, ___) => Container(color: AppTheme.forestDeep),
+                    ),
+                  ),
+                ),
+                // Dark overlay
+                Positioned.fill(
+                  child: Container(
+                    color: AppTheme.forestDeep.withValues(alpha: 0.75),
+                  ),
+                ),
+                // Content
+                SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
+                    child: Column(
                   children: [
                     // Logo area
                     Row(
@@ -422,6 +460,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
+            ),
+              ],
             ),
           ),
         ),
