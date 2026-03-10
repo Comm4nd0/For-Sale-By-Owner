@@ -51,6 +51,7 @@ urlpatterns = [
     path('services/register/', CSRFTemplateView.as_view(template_name='service_provider_register.html'), name='service-provider-register'),
     path('my-service/', CSRFTemplateView.as_view(template_name='my_service.html'), name='my-service'),
     path('pricing/', CSRFTemplateView.as_view(template_name='pricing.html'), name='pricing'),
+    path('house-prices/', CSRFTemplateView.as_view(template_name='house_prices.html'), name='house-prices'),
     path('services/<slug:slug>/', CSRFTemplateView.as_view(template_name='service_provider_detail.html'), name='service-provider-detail'),
 
     # Slug-based property URL (must come after /properties/new/ and /properties/<int:id>/)

@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}House Prices - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hp-hero { background: linear-gradient(135deg, #1A3C2E 0%, #2D6A4F 100%); color: white; padding: 2.5rem 0; margin: -2rem 0 2rem; }
+    .hp-hero h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+    .hp-hero p { opacity: 0.85; font-size: 1rem; }
+    .hp-search { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+    .hp-search input { flex: 1; padding: 0.7rem 1rem; border: none; border-radius: 6px; font-size: 1rem; font-family: inherit; max-width: 320px; }
+    .hp-search .btn { white-space: nowrap; }
+
+    .hp-summary { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; padding: 1rem 1.25rem; background: #FFFFFF; border-radius: 8px; border: 1px solid #D4DDD9; }
+    .hp-stat { text-align: center; flex: 1; min-width: 120px; }
+    .hp-stat-value { font-size: 1.4rem; font-weight: 700; color: #1A3C2E; }
+    .hp-stat-label { font-size: 0.8rem; color: #4A5E56; margin-top: 0.15rem; }
+
+    .hp-table { width: 100%; border-collapse: collapse; background: #FFFFFF; border-radius: 8px; overflow: hidden; border: 1px solid #D4DDD9; }
+    .hp-table th { background: #1A3C2E; color: white; padding: 0.75rem 1rem; text-align: left; font-size: 0.85rem; font-weight: 600; }
+    .hp-table td { padding: 0.65rem 1rem; border-bottom: 1px solid #EDF2EF; font-size: 0.9rem; color: #1C2B25; }
+    .hp-table tr:last-child td { border-bottom: none; }
+    .hp-table tr:hover td { background: #F6F9F7; }
+
+    .hp-cards { display: none; }
+    .hp-card { background: #FFFFFF; border-radius: 8px; border: 1px solid #D4DDD9; padding: 1rem 1.25rem; margin-bottom: 0.75rem; }
+    .hp-card-price { font-size: 1.15rem; font-weight: 700; color: #1A3C2E; }
+    .hp-card-address { font-size: 0.9rem; color: #4A5E56; margin-top: 0.25rem; }
+    .hp-card-meta { display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.8rem; color: #8FA89E; }
+
+    .hp-empty { text-align: center; padding: 3rem 1rem; color: #4A5E56; }
+    .hp-empty h3 { color: #1A3C2E; margin-bottom: 0.5rem; }
+    .hp-loading { text-align: center; padding: 3rem; color: #4A5E56; }
+    .hp-error { text-align: center; padding: 2rem; color: #B03A2E; }
+
+    @media (max-width: 768px) {
+        .hp-hero h1 { font-size: 1.4rem; }
+        .hp-search { flex-direction: column; }
+        .hp-search input { max-width: none; }
+        .hp-table-wrap { display: none; }
+        .hp-cards { display: block; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hp-hero">
+    <div class="container">
+        <h1>House Price Lookup</h1>
+        <p>Search sold property prices from the HM Land Registry Price Paid Data.</p>
+        <form class="hp-search" id="hp-form" onsubmit="return false;">
+            <input type="text" id="hp-postcode" placeholder="Enter a postcode, e.g. SW1A 1AA" aria-label="Postcode" autocomplete="postal-code" required>
+            <button class="btn btn-primary" id="hp-btn" type="submit">Search</button>
+        </form>
+    </div>
+</section>
+
+<div id="hp-results"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    var form = document.getElementById('hp-form');
+    var input = document.getElementById('hp-postcode');
+    var btn = document.getElementById('hp-btn');
+    var results = document.getElementById('hp-results');
+
+    form.addEventListener('submit', function() { doSearch(); });
+
+    // Pre-fill from URL params
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('postcode')) {
+        input.value = params.get('postcode');
+        doSearch();
+    }
+
+    function doSearch() {
+        var postcode = input.value.trim();
+        if (!postcode) return;
+
+        btn.disabled = true;
+        btn.textContent = 'Searching...';
+        results.innerHTML = '<div class="hp-loading">Searching Land Registry records...</div>';
+
+        var url = 'https://landregistry.data.gov.uk/data/ppi/transaction-record.json?' +
+            new URLSearchParams({
+                'propertyAddress.postcode': postcode.toUpperCase(),
+                '_pageSize': '50',
+                '_sort': '-transactionDate'
+            }).toString();
+
+        fetch(url)
+            .then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function(data) {
+                var items = data.result && data.result.items ? data.result.items : [];
+                renderResults(items, postcode.toUpperCase());
+            })
+            .catch(function(err) {
+                results.innerHTML = '<div class="hp-error">Could not connect to Land Registry. Please check the postcode and try again.</div>';
+            })
+            .finally(function() {
+                btn.disabled = false;
+                btn.textContent = 'Search';
+            });
+    }
+
+    function renderResults(items, postcode) {
+        if (!items.length) {
+            results.innerHTML = '<div class="hp-empty"><h3>No results found</h3><p>No sold property records found for ' + escHtml(postcode) + '. Try a different postcode.</p></div>';
+            return;
+        }
+
+        // Compute stats
+        var prices = items.map(function(t) { return t.pricePaid; });
+        var avg = Math.round(prices.reduce(function(a, b) { return a + b; }, 0) / prices.length);
+
+        var html = '<div class="hp-summary">' +
+            '<div class="hp-stat"><div class="hp-stat-value">' + items.length + '</div><div class="hp-stat-label">Properties Found</div></div>' +
+            '<div class="hp-stat"><div class="hp-stat-value">&pound;' + avg.toLocaleString() + '</div><div class="hp-stat-label">Average Price</div></div>' +
+            '<div class="hp-stat"><div class="hp-stat-value">' + escHtml(postcode) + '</div><div class="hp-stat-label">Postcode</div></div>' +
+            '</div>';
+
+        // Desktop table
+        html += '<div class="hp-table-wrap"><table class="hp-table"><thead><tr>' +
+            '<th>Address</th><th>Price</th><th>Date</th><th>Type</th>' +
+            '</tr></thead><tbody>';
+
+        items.forEach(function(t) {
+            var addr = formatAddress(t);
+            var date = t.transactionDate ? t.transactionDate.substring(0, 10) : '';
+            var type = formatType(t.propertyType);
+            html += '<tr><td>' + escHtml(addr) + '</td><td>&pound;' + Number(t.pricePaid).toLocaleString() + '</td><td>' + escHtml(date) + '</td><td>' + escHtml(type) + '</td></tr>';
+        });
+
+        html += '</tbody></table></div>';
+
+        // Mobile cards
+        html += '<div class="hp-cards">';
+        items.forEach(function(t) {
+            var addr = formatAddress(t);
+            var date = t.transactionDate ? t.transactionDate.substring(0, 10) : '';
+            var type = formatType(t.propertyType);
+            html += '<div class="hp-card">' +
+                '<div class="hp-card-price">&pound;' + Number(t.pricePaid).toLocaleString() + '</div>' +
+                '<div class="hp-card-address">' + escHtml(addr) + '</div>' +
+                '<div class="hp-card-meta"><span>' + escHtml(date) + '</span><span>' + escHtml(type) + '</span></div>' +
+                '</div>';
+        });
+        html += '</div>';
+
+        results.innerHTML = html;
+    }
+
+    function formatAddress(t) {
+        var addr = t.propertyAddress || {};
+        var parts = [addr.paon, addr.saon, addr.street, addr.town].filter(Boolean);
+        return parts.join(', ') || 'Address not available';
+    }
+
+    function formatType(uri) {
+        if (!uri) return '';
+        var map = {
+            'detached': 'Detached',
+            'semi-detached': 'Semi-Detached',
+            'terraced': 'Terraced',
+            'flat-maisonette': 'Flat / Maisonette',
+            'otherPropertyType': 'Other'
+        };
+        for (var key in map) {
+            if (uri.indexOf(key) !== -1) return map[key];
+        }
+        return '';
+    }
+})();
+</script>
+{% endblock %}

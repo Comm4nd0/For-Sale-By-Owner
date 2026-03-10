@@ -32,6 +32,18 @@
         .nav-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #B03A2E; color: white; font-size: 0.7rem; font-weight: 700; line-height: 1; margin-left: 0.35rem; vertical-align: middle; }
         .nav-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 999; }
         .nav-overlay.open { display: block; }
+        #nav-auth { display: contents; }
+        .nav-dropdown { position: relative; }
+        .nav-dropdown-toggle { background: none; border: none; color: rgba(255,255,255,0.85); font-size: 0.95rem; cursor: pointer; padding: 0; margin-left: 1.5rem; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; }
+        .nav-dropdown-toggle:hover { color: white; }
+        .nav-dropdown-toggle::after { content: ''; display: inline-block; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 4px solid currentColor; margin-top: 1px; transition: transform 0.2s; }
+        .nav-dropdown.open .nav-dropdown-toggle::after { transform: rotate(180deg); }
+        .nav-dropdown-menu { display: none; position: absolute; top: 100%; left: 0; background: #1A3C2E; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; min-width: 180px; padding: 0.4rem 0; box-shadow: 0 8px 24px rgba(0,0,0,0.3); z-index: 100; margin-top: 0.5rem; }
+        .nav-dropdown-menu::before { content: ''; position: absolute; top: -0.5rem; left: 0; right: 0; height: 0.5rem; }
+        .nav-dropdown-menu a { display: block; padding: 0.5rem 1rem; margin: 0 !important; color: rgba(255,255,255,0.85); white-space: nowrap; font-size: 0.9rem; }
+        .nav-dropdown-menu a:hover { background: rgba(255,255,255,0.08); color: white; }
+        .nav-dropdown:hover .nav-dropdown-menu { display: block; }
+        .nav-dropdown.open .nav-dropdown-menu { display: block; }
         @media (max-width: 768px) {
             header .logo svg { height: 44px; }
             .hamburger { display: flex; }
@@ -54,6 +66,13 @@
             nav .nav-links .nav-drawer-header .nav-brand svg { height: 36px; width: auto; }
             nav .nav-links a { margin: 0; padding: 0.85rem 1.25rem; font-size: 1rem; border-bottom: 1px solid rgba(255,255,255,0.06); display: block; }
             nav .nav-links a:hover { background: rgba(255,255,255,0.08); }
+            .nav-dropdown { position: static; }
+            .nav-dropdown-toggle { margin: 0; padding: 0.85rem 1.25rem; font-size: 1rem; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; width: 100%; justify-content: space-between; }
+            .nav-dropdown:hover .nav-dropdown-menu { display: none; }
+            .nav-dropdown.open .nav-dropdown-menu { display: block; }
+            .nav-dropdown-menu { position: static; border: none; border-radius: 0; box-shadow: none; margin: 0; padding: 0; background: rgba(0,0,0,0.15); }
+            .nav-dropdown-menu::before { display: none; }
+            .nav-dropdown-menu a { padding: 0.75rem 1.25rem 0.75rem 2.25rem; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.95rem; }
         }
         main { padding: 2rem 0; min-height: 60vh; }
         footer { background: #FFFFFF; padding: 2rem 0 1.5rem; text-align: center; color: #4A5E56; margin-top: 2rem; border-top: 1px solid #D4DDD9; }
@@ -142,8 +161,6 @@
                         <button class="nav-close" id="nav-close-btn" aria-label="Close menu">&times;</button>
                     </div>
                     <a href="/">Home</a>
-                    <a href="/services/">Services</a>
-                    <a href="/pricing/">Pricing</a>
                     <span id="nav-auth"></span>
                 </div>
             </nav>
@@ -272,21 +289,112 @@
             const nav = document.getElementById('nav-auth');
             if (Auth.isLoggedIn()) {
                 nav.innerHTML = `
-                    <a href="/saved/">Saved</a>
+                    <div class="nav-dropdown">
+                        <button class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true">Selling</button>
+                        <div class="nav-dropdown-menu" role="menu">
+                            <a href="/my-listings/" role="menuitem">My Listings</a>
+                            <a href="/properties/new/" role="menuitem">List Property</a>
+                            <a href="/pricing/" role="menuitem">Pricing</a>
+                        </div>
+                    </div>
+                    <div class="nav-dropdown">
+                        <button class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true">Services</button>
+                        <div class="nav-dropdown-menu" role="menu">
+                            <a href="/services/" role="menuitem">Find Services</a>
+                            <a href="/my-service/" role="menuitem">My Service</a>
+                        </div>
+                    </div>
+                    <a href="/house-prices/">House Prices</a>
                     <a href="/dashboard/" id="nav-dashboard-link">Dashboard</a>
-                    <a href="/my-listings/">My Listings</a>
-                    <a href="/properties/new/">List Property</a>
-                    <a href="/my-service/">My Service</a>
-                    <a href="/profile/">Profile</a>
-                    <a href="#" onclick="Auth.logout(); return false;">Logout</a>
+                    <div class="nav-dropdown">
+                        <button class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true">Account</button>
+                        <div class="nav-dropdown-menu" role="menu">
+                            <a href="/saved/" role="menuitem">Saved</a>
+                            <a href="/profile/" role="menuitem">Profile</a>
+                            <a href="#" onclick="Auth.logout(); return false;" role="menuitem">Logout</a>
+                        </div>
+                    </div>
                 `;
             } else {
                 nav.innerHTML = `
+                    <a href="/services/">Services</a>
+                    <a href="/house-prices/">House Prices</a>
+                    <a href="/pricing/">Pricing</a>
                     <a href="/login/">Login</a>
                     <a href="/register/">Register</a>
                 `;
             }
+            initNavDropdowns();
         })();
+
+        // Dropdown menu interactions (mobile accordion, keyboard nav, click-outside)
+        function initNavDropdowns() {
+            const dropdowns = document.querySelectorAll('.nav-dropdown');
+            if (!dropdowns.length) return;
+
+            dropdowns.forEach(function(dd) {
+                const toggle = dd.querySelector('.nav-dropdown-toggle');
+                const menu = dd.querySelector('.nav-dropdown-menu');
+
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const wasOpen = dd.classList.contains('open');
+                    // Close all first
+                    dropdowns.forEach(function(d) {
+                        d.classList.remove('open');
+                        d.querySelector('.nav-dropdown-toggle').setAttribute('aria-expanded', 'false');
+                    });
+                    if (!wasOpen) {
+                        dd.classList.add('open');
+                        toggle.setAttribute('aria-expanded', 'true');
+                    }
+                });
+
+                // Keyboard: ArrowDown/Enter opens, Escape closes
+                toggle.addEventListener('keydown', function(e) {
+                    if (e.key === 'ArrowDown' || (e.key === 'Enter' && !dd.classList.contains('open'))) {
+                        e.preventDefault();
+                        dd.classList.add('open');
+                        toggle.setAttribute('aria-expanded', 'true');
+                        var first = menu.querySelector('a');
+                        if (first) first.focus();
+                    }
+                    if (e.key === 'Escape') {
+                        dd.classList.remove('open');
+                        toggle.setAttribute('aria-expanded', 'false');
+                    }
+                });
+
+                // Arrow keys within menu
+                menu.addEventListener('keydown', function(e) {
+                    var items = menu.querySelectorAll('a');
+                    var idx = Array.prototype.indexOf.call(items, document.activeElement);
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        if (idx < items.length - 1) items[idx + 1].focus();
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        if (idx > 0) items[idx - 1].focus();
+                        else toggle.focus();
+                    } else if (e.key === 'Escape') {
+                        dd.classList.remove('open');
+                        toggle.setAttribute('aria-expanded', 'false');
+                        toggle.focus();
+                    }
+                });
+            });
+
+            // Click outside closes all
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.nav-dropdown')) {
+                    dropdowns.forEach(function(d) {
+                        d.classList.remove('open');
+                        d.querySelector('.nav-dropdown-toggle').setAttribute('aria-expanded', 'false');
+                    });
+                }
+            });
+        }
 
         // Dashboard notification badge — show unread/pending count
         (function() {
