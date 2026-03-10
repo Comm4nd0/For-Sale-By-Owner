@@ -14,21 +14,21 @@
 <style>
     .property-header { margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; }
     .property-header-left { flex: 1; }
-    .property-price { font-size: 2rem; font-weight: 700; color: #C9872A; }
-    .property-title { font-size: 1.5rem; color: #1A3C2E; margin-top: 0.25rem; }
-    .property-type { color: #4A5E56; margin-top: 0.25rem; }
+    .property-price { font-size: 2rem; font-weight: 700; color: #19747E; }
+    .property-title { font-size: 1.5rem; color: #115E66; margin-top: 0.25rem; }
+    .property-type { color: #4A5C62; margin-top: 0.25rem; }
     .property-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 
-    .save-btn { background: none; border: 2px solid #2D6A4F; color: #2D6A4F; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-family: inherit; display: flex; align-items: center; gap: 0.4rem; }
-    .save-btn:hover { background: #D8F3DC; }
-    .save-btn.saved { background: #2D6A4F; color: white; }
+    .save-btn { background: none; border: 2px solid #19747E; color: #19747E; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-family: inherit; display: flex; align-items: center; gap: 0.4rem; }
+    .save-btn:hover { background: #D1E8E2; }
+    .save-btn.saved { background: #19747E; color: white; }
 
-    .share-btn, .print-btn { background: #D4DDD9; border: none; color: #1A3C2E; padding: 0.5rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
-    .share-btn:hover, .print-btn:hover { background: #8FA89E; }
+    .share-btn, .print-btn { background: #E2E2E2; border: none; color: #115E66; padding: 0.5rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+    .share-btn:hover, .print-btn:hover { background: #8FA3A8; }
 
-    .verified-badge { display: inline-flex; align-items: center; gap: 0.3rem; background: #D8F3DC; color: #1A3C2E; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+    .verified-badge { display: inline-flex; align-items: center; gap: 0.3rem; background: #D1E8E2; color: #115E66; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
 
-    .carousel { position: relative; background: #D8F3DC; border-radius: 8px; overflow: hidden; margin-bottom: 1.5rem; }
+    .carousel { position: relative; background: #D1E8E2; border-radius: 8px; overflow: hidden; margin-bottom: 1.5rem; }
     .carousel img { width: 100%; height: 400px; object-fit: cover; display: none; cursor: pointer; }
     .carousel img.active { display: block; }
     .carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(26,60,46,0.6); color: white; border: none; padding: 0.75rem 1rem; cursor: pointer; font-size: 1.2rem; border-radius: 4px; }
@@ -36,21 +36,21 @@
     .carousel-prev { left: 10px; }
     .carousel-next { right: 10px; }
     .carousel-dots { text-align: center; padding: 0.75rem; }
-    .carousel-dots span { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #D4DDD9; margin: 0 4px; cursor: pointer; }
-    .carousel-dots span.active { background: #1A3C2E; }
-    .no-image { height: 300px; display: flex; align-items: center; justify-content: center; color: #8FA89E; font-size: 1.2rem; }
+    .carousel-dots span { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #E2E2E2; margin: 0 4px; cursor: pointer; }
+    .carousel-dots span.active { background: #115E66; }
+    .no-image { height: 300px; display: flex; align-items: center; justify-content: center; color: #8FA3A8; font-size: 1.2rem; }
 
     .detail-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
     .detail-section { margin-bottom: 1.5rem; }
-    .detail-section h3 { color: #1A3C2E; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid #D4DDD9; }
+    .detail-section h3 { color: #115E66; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid #E2E2E2; }
     .detail-row { display: flex; justify-content: space-between; padding: 0.4rem 0; }
-    .detail-label { color: #4A5E56; }
+    .detail-label { color: #4A5C62; }
     .detail-value { font-weight: 500; }
 
     .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
-    .stat-box { text-align: center; padding: 1rem; background: #FFFFFF; border-radius: 8px; border: 1px solid #D4DDD9; }
-    .stat-value { font-size: 1.5rem; font-weight: 700; color: #1A3C2E; }
-    .stat-label { font-size: 0.85rem; color: #4A5E56; }
+    .stat-box { text-align: center; padding: 1rem; background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E2E2; }
+    .stat-value { font-size: 1.5rem; font-weight: 700; color: #115E66; }
+    .stat-label { font-size: 0.85rem; color: #4A5C62; }
 
     /* EPC Rating Bar */
     .epc-bar { display: flex; gap: 2px; margin-top: 0.5rem; }
@@ -61,64 +61,64 @@
     .epc-F { background: #ef8023; } .epc-G { background: #e9153b; }
 
     /* Enquiry Form */
-    .enquiry-form-section { background: #FFFFFF; border: 1px solid #D4DDD9; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
-    .enquiry-form-section h3 { color: #1A3C2E; margin-bottom: 0.75rem; font-size: 1.1rem; }
+    .enquiry-form-section { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .enquiry-form-section h3 { color: #115E66; margin-bottom: 0.75rem; font-size: 1.1rem; }
     .enquiry-form-section .form-group { margin-bottom: 0.75rem; }
-    .enquiry-form-section label { display: block; margin-bottom: 0.2rem; font-size: 0.85rem; font-weight: 500; color: #4A5E56; }
-    .enquiry-form-section input, .enquiry-form-section textarea { width: 100%; padding: 0.5rem; border: 1px solid #D4DDD9; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
+    .enquiry-form-section label { display: block; margin-bottom: 0.2rem; font-size: 0.85rem; font-weight: 500; color: #4A5C62; }
+    .enquiry-form-section input, .enquiry-form-section textarea { width: 100%; padding: 0.5rem; border: 1px solid #E2E2E2; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
     .enquiry-form-section textarea { min-height: 80px; resize: vertical; }
 
     /* Mortgage Calculator */
-    .mortgage-section { background: #FFFFFF; border: 1px solid #D4DDD9; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
-    .mortgage-section h3 { color: #1A3C2E; margin-bottom: 0.75rem; font-size: 1.1rem; }
+    .mortgage-section { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .mortgage-section h3 { color: #115E66; margin-bottom: 0.75rem; font-size: 1.1rem; }
     .mortgage-section .form-group { margin-bottom: 0.5rem; }
-    .mortgage-section label { display: block; margin-bottom: 0.2rem; font-size: 0.85rem; font-weight: 500; color: #4A5E56; }
-    .mortgage-section input { width: 100%; padding: 0.5rem; border: 1px solid #D4DDD9; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
-    .mortgage-result { margin-top: 0.75rem; background: #D8F3DC; padding: 0.75rem; border-radius: 6px; text-align: center; }
-    .mortgage-result .amount { font-size: 1.4rem; font-weight: 700; color: #1A3C2E; }
-    .mortgage-result .label { font-size: 0.8rem; color: #4A5E56; }
+    .mortgage-section label { display: block; margin-bottom: 0.2rem; font-size: 0.85rem; font-weight: 500; color: #4A5C62; }
+    .mortgage-section input { width: 100%; padding: 0.5rem; border: 1px solid #E2E2E2; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
+    .mortgage-result { margin-top: 0.75rem; background: #D1E8E2; padding: 0.75rem; border-radius: 6px; text-align: center; }
+    .mortgage-result .amount { font-size: 1.4rem; font-weight: 700; color: #115E66; }
+    .mortgage-result .label { font-size: 0.8rem; color: #4A5C62; }
 
     /* Map placeholder */
-    .map-container { border-radius: 8px; overflow: hidden; margin-bottom: 1.5rem; background: #D8F3DC; min-height: 250px; }
+    .map-container { border-radius: 8px; overflow: hidden; margin-bottom: 1.5rem; background: #D1E8E2; min-height: 250px; }
     .map-container iframe { width: 100%; height: 250px; border: none; }
 
     /* Local Services */
     .local-services-section { margin-top: 2rem; }
-    .local-services-section h3 { color: #1A3C2E; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #D4DDD9; }
+    .local-services-section h3 { color: #115E66; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #E2E2E2; }
     .services-scroll { display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem; }
-    .service-mini-card { border: 1px solid #D4DDD9; border-radius: 8px; background: #FFFFFF; min-width: 220px; max-width: 260px; text-decoration: none; color: inherit; flex-shrink: 0; display: block; transition: box-shadow 0.2s; }
+    .service-mini-card { border: 1px solid #E2E2E2; border-radius: 8px; background: #FFFFFF; min-width: 220px; max-width: 260px; text-decoration: none; color: inherit; flex-shrink: 0; display: block; transition: box-shadow 0.2s; }
     .service-mini-card:hover { box-shadow: 0 4px 12px rgba(26,60,46,0.12); }
     .service-mini-body { padding: 0.75rem; }
-    .service-mini-name { font-weight: 600; color: #1A3C2E; font-size: 0.9rem; margin-bottom: 0.2rem; }
-    .service-mini-cat { font-size: 0.75rem; color: #4A5E56; }
-    .service-mini-rating { font-size: 0.8rem; color: #C9872A; margin-top: 0.25rem; }
+    .service-mini-name { font-weight: 600; color: #115E66; font-size: 0.9rem; margin-bottom: 0.2rem; }
+    .service-mini-cat { font-size: 0.75rem; color: #4A5C62; }
+    .service-mini-rating { font-size: 0.8rem; color: #19747E; margin-top: 0.25rem; }
 
     /* Similar Properties */
     .similar-section { margin-top: 2rem; }
-    .similar-section h3 { color: #1A3C2E; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #D4DDD9; }
+    .similar-section h3 { color: #115E66; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #E2E2E2; }
     .similar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
-    .similar-card { border: 1px solid #D4DDD9; border-radius: 8px; overflow: hidden; text-decoration: none; color: inherit; display: block; background: #FFFFFF; }
+    .similar-card { border: 1px solid #E2E2E2; border-radius: 8px; overflow: hidden; text-decoration: none; color: inherit; display: block; background: #FFFFFF; }
     .similar-card:hover { box-shadow: 0 4px 12px rgba(26,60,46,0.12); }
     .similar-card img { width: 100%; height: 150px; object-fit: cover; }
-    .similar-card .placeholder { width: 100%; height: 150px; background: #D8F3DC; display: flex; align-items: center; justify-content: center; color: #8FA89E; font-size: 2rem; }
+    .similar-card .placeholder { width: 100%; height: 150px; background: #D1E8E2; display: flex; align-items: center; justify-content: center; color: #8FA3A8; font-size: 2rem; }
     .similar-card-body { padding: 0.75rem; }
-    .similar-card-body h4 { font-size: 0.95rem; color: #1A3C2E; margin-bottom: 0.2rem; }
-    .similar-card-body .price { font-weight: 700; color: #C9872A; }
-    .similar-card-body .meta { font-size: 0.8rem; color: #4A5E56; }
+    .similar-card-body h4 { font-size: 0.95rem; color: #115E66; margin-bottom: 0.2rem; }
+    .similar-card-body .price { font-weight: 700; color: #19747E; }
+    .similar-card-body .meta { font-size: 0.8rem; color: #4A5C62; }
 
     /* Recently Viewed */
     .recently-viewed { margin-top: 2rem; }
-    .recently-viewed h3 { color: #1A3C2E; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #D4DDD9; }
+    .recently-viewed h3 { color: #115E66; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #E2E2E2; }
 
     /* Features tags */
     .features-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .feature-tag { background: #D8F3DC; color: #1A3C2E; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.3rem; }
+    .feature-tag { background: #D1E8E2; color: #115E66; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.3rem; }
 
     /* Floorplans */
     .floorplan-gallery { display: grid; gap: 1rem; }
-    .floorplan-item { border: 1px solid #D4DDD9; border-radius: 8px; overflow: hidden; cursor: pointer; }
+    .floorplan-item { border: 1px solid #E2E2E2; border-radius: 8px; overflow: hidden; cursor: pointer; }
     .floorplan-item img { width: 100%; height: auto; display: block; }
-    .floorplan-item .floorplan-title { padding: 0.5rem 0.75rem; font-size: 0.9rem; color: #4A5E56; background: #F6F9F7; }
+    .floorplan-item .floorplan-title { padding: 0.5rem 0.75rem; font-size: 0.9rem; color: #4A5C62; background: #F5F8F9; }
     .floorplan-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; align-items: center; justify-content: center; cursor: pointer; }
     .floorplan-modal.active { display: flex; }
     .floorplan-modal img { max-width: 90vw; max-height: 90vh; object-fit: contain; }
@@ -145,23 +145,23 @@
     .price-history-list li { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #eee; font-size: 0.9rem; }
     .price-history-list li:last-child { border-bottom: none; }
     .price-change-up { color: #B03A2E; }
-    .price-change-down { color: #2D6A4F; }
+    .price-change-down { color: #19747E; }
 
     /* Stamp Duty Calculator */
-    .stamp-duty-section { background: #FFFFFF; border: 1px solid #D4DDD9; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
-    .stamp-duty-section h3 { color: #1A3C2E; margin-bottom: 0.75rem; font-size: 1.1rem; }
-    .stamp-result { margin-top: 0.5rem; background: #D8F3DC; padding: 0.75rem; border-radius: 6px; }
-    .stamp-result .amount { font-size: 1.2rem; font-weight: 700; color: #1A3C2E; }
-    .stamp-result .label { font-size: 0.8rem; color: #4A5E56; }
+    .stamp-duty-section { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .stamp-duty-section h3 { color: #115E66; margin-bottom: 0.75rem; font-size: 1.1rem; }
+    .stamp-result { margin-top: 0.5rem; background: #D1E8E2; padding: 0.75rem; border-radius: 6px; }
+    .stamp-result .amount { font-size: 1.2rem; font-weight: 700; color: #115E66; }
+    .stamp-result .label { font-size: 0.8rem; color: #4A5C62; }
     .stamp-options { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
     .stamp-options label { font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem; cursor: pointer; }
 
     /* Viewing Request Form */
-    .viewing-form-section { background: #FFFFFF; border: 1px solid #D4DDD9; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
-    .viewing-form-section h3 { color: #1A3C2E; margin-bottom: 0.75rem; font-size: 1.1rem; }
+    .viewing-form-section { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .viewing-form-section h3 { color: #115E66; margin-bottom: 0.75rem; font-size: 1.1rem; }
     .viewing-form-section .form-group { margin-bottom: 0.75rem; }
-    .viewing-form-section label { display: block; margin-bottom: 0.2rem; font-size: 0.85rem; font-weight: 500; color: #4A5E56; }
-    .viewing-form-section input, .viewing-form-section textarea { width: 100%; padding: 0.5rem; border: 1px solid #D4DDD9; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
+    .viewing-form-section label { display: block; margin-bottom: 0.2rem; font-size: 0.85rem; font-weight: 500; color: #4A5C62; }
+    .viewing-form-section input, .viewing-form-section textarea { width: 100%; padding: 0.5rem; border: 1px solid #E2E2E2; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
     .viewing-form-section textarea { min-height: 60px; resize: vertical; }
     .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
 
@@ -464,7 +464,7 @@
                 </div>` : `
                 <div class="enquiry-form-section">
                     <h3>Contact Seller</h3>
-                    <p style="color:#4A5E56;"><a href="/login/?next=${encodeURIComponent(window.location.pathname)}">Log in</a> or <a href="/register/">register</a> to contact the seller.</p>
+                    <p style="color:#4A5C62;"><a href="/login/?next=${encodeURIComponent(window.location.pathname)}">Log in</a> or <a href="/register/">register</a> to contact the seller.</p>
                 </div>`;
 
             const mortgageHtml = `
@@ -549,7 +549,7 @@
                                         if (diff > 0) change = `<span class="price-change-up">&uarr; +&pound;${Math.abs(diff).toLocaleString()}</span>`;
                                         else if (diff < 0) change = `<span class="price-change-down">&darr; -&pound;${Math.abs(diff).toLocaleString()}</span>`;
                                     }
-                                    return `<li><span>&pound;${Number(ph.price).toLocaleString()} ${change}</span><span style="color:#4A5E56;">${new Date(ph.changed_at).toLocaleDateString()}</span></li>`;
+                                    return `<li><span>&pound;${Number(ph.price).toLocaleString()} ${change}</span><span style="color:#4A5C62;">${new Date(ph.changed_at).toLocaleDateString()}</span></li>`;
                                 }).join('')}
                             </ul>
                         </div>` : ''}
@@ -658,7 +658,7 @@
                                 ${rating ? `<div class="service-mini-rating">${rating}</div>` : ''}
                             </div></a>`;
                         }).join('')}</div>
-                        <a href="/services/" style="display:inline-block;margin-top:0.75rem;color:#2D6A4F;font-size:0.9rem;">Browse all services &rarr;</a>`;
+                        <a href="/services/" style="display:inline-block;margin-top:0.75rem;color:#19747E;font-size:0.9rem;">Browse all services &rarr;</a>`;
                 }).catch(() => {});
 
             // Load similar properties

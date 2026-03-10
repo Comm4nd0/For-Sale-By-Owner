@@ -280,7 +280,7 @@ class ServiceProviderAdmin(admin.ModelAdmin):
         tier = obj.current_tier
         if not tier:
             return '-'
-        colours = {'free': '#999', 'growth': '#27AE60', 'pro': '#C9872A'}
+        colours = {'free': '#999', 'growth': '#27AE60', 'pro': '#19747E'}
         colour = colours.get(tier.slug, '#999')
         return format_html(
             '<span style="background:{}; color:white; padding:3px 8px; border-radius:3px; font-size:11px;">{}</span>',

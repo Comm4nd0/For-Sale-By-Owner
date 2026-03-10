@@ -4,43 +4,43 @@
 
 {% block extra_css %}
 <style>
-    .page-title { color: #1A3C2E; margin-bottom: 1.5rem; }
+    .page-title { color: #115E66; margin-bottom: 1.5rem; }
     .property-form { max-width: 700px; }
     .form-group { margin-bottom: 1.25rem; }
-    .form-group label { display: block; margin-bottom: 0.3rem; font-weight: 500; color: #4A5E56; }
-    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.6rem; border: 1px solid #D4DDD9; border-radius: 6px; font-size: 1rem; font-family: inherit; }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #2D6A4F; box-shadow: 0 0 0 2px rgba(45,106,79,0.15); }
+    .form-group label { display: block; margin-bottom: 0.3rem; font-weight: 500; color: #4A5C62; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.6rem; border: 1px solid #E2E2E2; border-radius: 6px; font-size: 1rem; font-family: inherit; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #19747E; box-shadow: 0 0 0 2px rgba(45,106,79,0.15); }
     .form-group textarea { min-height: 120px; resize: vertical; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
     .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
-    .section-title { font-size: 1.1rem; color: #1A3C2E; margin: 1.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #D4DDD9; }
-    .image-upload { border: 2px dashed #D4DDD9; border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; transition: border-color 0.2s; }
-    .image-upload:hover { border-color: #2D6A4F; }
+    .section-title { font-size: 1.1rem; color: #115E66; margin: 1.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #E2E2E2; }
+    .image-upload { border: 2px dashed #E2E2E2; border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+    .image-upload:hover { border-color: #19747E; }
     .image-upload input { display: none; }
     .existing-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
     .existing-image { position: relative; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: grab; }
     .existing-image.dragging { opacity: 0.5; }
-    .existing-image.drag-over { border-color: #C9872A; }
-    .reorder-hint { font-size: 0.8rem; color: #8FA89E; margin-bottom: 0.5rem; }
-    .existing-image.primary { border-color: #2D6A4F; }
+    .existing-image.drag-over { border-color: #19747E; }
+    .reorder-hint { font-size: 0.8rem; color: #8FA3A8; margin-bottom: 0.5rem; }
+    .existing-image.primary { border-color: #19747E; }
     .existing-image img { width: 100%; height: 110px; object-fit: cover; }
     .existing-image .actions { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(26,60,46,0.7); display: flex; justify-content: center; gap: 0.25rem; padding: 4px; }
     .existing-image .actions button { background: none; border: none; color: white; cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 3px; }
     .existing-image .actions button:hover { background: rgba(255,255,255,0.2); }
-    .primary-badge { position: absolute; top: 4px; left: 4px; background: #2D6A4F; color: white; font-size: 11px; padding: 2px 6px; border-radius: 3px; font-weight: 600; }
+    .primary-badge { position: absolute; top: 4px; left: 4px; background: #19747E; color: white; font-size: 11px; padding: 2px 6px; border-radius: 3px; font-weight: 600; }
     .new-preview { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
     .new-preview-item { position: relative; border-radius: 6px; overflow: hidden; }
     .new-preview-item img { width: 100%; height: 100px; object-fit: cover; }
     .new-preview-item .remove { position: absolute; top: 4px; right: 4px; background: rgba(26,60,46,0.7); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 14px; line-height: 22px; text-align: center; }
     .form-actions { margin-top: 2rem; display: flex; gap: 0.75rem; }
     .features-checkboxes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .features-checkboxes label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.75rem; background: #F6F9F7; border: 1px solid #D4DDD9; border-radius: 20px; cursor: pointer; font-size: 0.85rem; transition: all 0.15s; }
-    .features-checkboxes label:has(input:checked) { background: #D8F3DC; border-color: #2D6A4F; color: #1A3C2E; }
+    .features-checkboxes label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.75rem; background: #F5F8F9; border: 1px solid #E2E2E2; border-radius: 20px; cursor: pointer; font-size: 0.85rem; transition: all 0.15s; }
+    .features-checkboxes label:has(input:checked) { background: #D1E8E2; border-color: #19747E; color: #115E66; }
     .features-checkboxes input { display: none; }
     .existing-floorplans { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
-    .existing-floorplan { position: relative; border: 1px solid #D4DDD9; border-radius: 6px; overflow: hidden; }
+    .existing-floorplan { position: relative; border: 1px solid #E2E2E2; border-radius: 6px; overflow: hidden; }
     .existing-floorplan img { width: 100%; height: 120px; object-fit: cover; }
-    .existing-floorplan .fp-title { padding: 0.3rem 0.5rem; font-size: 0.8rem; color: #4A5E56; background: #F6F9F7; }
+    .existing-floorplan .fp-title { padding: 0.3rem 0.5rem; font-size: 0.8rem; color: #4A5C62; background: #F5F8F9; }
     .existing-floorplan .remove { position: absolute; top: 4px; right: 4px; background: rgba(176,58,46,0.8); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 14px; line-height: 22px; text-align: center; }
 </style>
 {% endblock %}
@@ -136,7 +136,7 @@
             </div>
             <div class="form-group">
                 <label>Features</label>
-                <div id="features-list" class="features-checkboxes"><span style="color:#8FA89E;">Loading...</span></div>
+                <div id="features-list" class="features-checkboxes"><span style="color:#8FA3A8;">Loading...</span></div>
             </div>
             <h3 class="section-title">Photos</h3>
             <p class="reorder-hint">Drag and drop images to reorder them.</p>
@@ -215,7 +215,7 @@
         const container = document.getElementById('new-floorplan-preview');
         container.innerHTML = newFloorplanFiles.map((f, i) => `
             <div class="new-preview-item">
-                ${f.type.startsWith('image/') ? `<img src="${URL.createObjectURL(f)}" alt="Floorplan">` : `<div style="width:100%;height:100px;background:#D8F3DC;display:flex;align-items:center;justify-content:center;font-size:0.8rem;">${f.name}</div>`}
+                ${f.type.startsWith('image/') ? `<img src="${URL.createObjectURL(f)}" alt="Floorplan">` : `<div style="width:100%;height:100px;background:#D1E8E2;display:flex;align-items:center;justify-content:center;font-size:0.8rem;">${f.name}</div>`}
                 <button type="button" class="remove" onclick="removeNewFloorplan(${i})">&times;</button>
             </div>
         `).join('');

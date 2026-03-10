@@ -1,27 +1,27 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Primary - Forest palette
-  static const Color forestDeep = Color(0xFF1A3C2E);
-  static const Color forestMid = Color(0xFF2D6A4F);
-  static const Color forestLight = Color(0xFF40916C);
-  static const Color forestMist = Color(0xFFD8F3DC);
+  // Primary - Cyan palette
+  static const Color forestDeep = Color(0xFF115E66);   // Dark cyan deep
+  static const Color forestMid = Color(0xFF19747E);    // Dark Cyan #19747E
+  static const Color forestLight = Color(0xFF2A9DA8);  // Lighter cyan
+  static const Color forestMist = Color(0xFFD1E8E2);   // Soft Mint Green #D1E8E2
 
-  // Accent - Gold palette
-  static const Color goldEmber = Color(0xFFC9872A);
-  static const Color goldWarm = Color(0xFFE5A04A);
-  static const Color goldSoft = Color(0xFFFFF0D4);
+  // Accent - Cyan palette
+  static const Color goldEmber = Color(0xFF19747E);    // Dark Cyan accent
+  static const Color goldWarm = Color(0xFF2A9DA8);     // Lighter cyan accent
+  static const Color goldSoft = Color(0xFFA9D6E5);     // Light Blue #A9D6E5
 
   // Neutrals
-  static const Color charcoal = Color(0xFF1C2B25);
-  static const Color slate = Color(0xFF4A5E56);
-  static const Color stone = Color(0xFF8FA89E);
-  static const Color pebble = Color(0xFFD4DDD9);
-  static const Color cream = Color(0xFFF6F9F7);
+  static const Color charcoal = Color(0xFF1A2C33);
+  static const Color slate = Color(0xFF4A5C62);
+  static const Color stone = Color(0xFF8FA3A8);
+  static const Color pebble = Color(0xFFE2E2E2);      // Platinum #E2E2E2
+  static const Color cream = Color(0xFFF5F8F9);
   static const Color white = Color(0xFFFFFFFF);
 
   // Semantic
-  static const Color success = Color(0xFF2D6A4F);
+  static const Color success = Color(0xFF19747E);
   static const Color warning = Color(0xFFC9872A);
   static const Color error = Color(0xFFB03A2E);
   static const Color info = Color(0xFF1B6CA8);

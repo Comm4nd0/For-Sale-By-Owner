@@ -8,65 +8,65 @@
    ======================================== */
 html[data-theme="light"], :root {
     /* Primary palette */
-    --primary: #2D6A4F;          /* Forest Mid — links, module headers */
-    --secondary: #1A3C2E;        /* Forest Deep — header, buttons */
-    --accent: #C9872A;           /* Gold Ember — accent highlights */
+    --primary: #19747E;          /* Dark Cyan — links, module headers */
+    --secondary: #115E66;        /* Dark Cyan Deep — header, buttons */
+    --accent: #19747E;           /* Dark Cyan — accent highlights */
     --primary-fg: #fff;
 
     /* Text */
-    --body-fg: #1C2B25;          /* Charcoal */
-    --body-bg: #F6F9F7;          /* Cream */
-    --body-quiet-color: #4A5E56; /* Slate */
-    --body-medium-color: #1C2B25;/* Charcoal */
+    --body-fg: #1A2C33;          /* Charcoal */
+    --body-bg: #F5F8F9;          /* Cream */
+    --body-quiet-color: #4A5C62; /* Slate */
+    --body-medium-color: #1A2C33;/* Charcoal */
 
     /* Header */
-    --header-color: #D8F3DC;     /* Forest Mist */
-    --header-branding-color: #C9872A; /* Gold Ember */
-    --header-bg: #1A3C2E;        /* Forest Deep */
+    --header-color: #D1E8E2;     /* Soft Mint Green */
+    --header-branding-color: #A9D6E5; /* Light Blue */
+    --header-bg: #115E66;        /* Dark Cyan Deep */
     --header-link-color: #fff;
 
     /* Breadcrumbs */
-    --breadcrumbs-fg: #D8F3DC;   /* Forest Mist */
+    --breadcrumbs-fg: #D1E8E2;   /* Soft Mint Green */
     --breadcrumbs-link-fg: #fff;
-    --breadcrumbs-bg: #2D6A4F;   /* Forest Mid */
+    --breadcrumbs-bg: #19747E;   /* Dark Cyan */
 
     /* Links */
-    --link-fg: #2D6A4F;          /* Forest Mid */
-    --link-hover-color: #1A3C2E; /* Forest Deep */
-    --link-selected-fg: #40916C; /* Forest Light */
+    --link-fg: #19747E;          /* Dark Cyan */
+    --link-hover-color: #115E66; /* Dark Cyan Deep */
+    --link-selected-fg: #2A9DA8; /* Lighter Cyan */
 
     /* Borders & hairlines */
-    --hairline-color: #D4DDD9;   /* Pebble */
-    --border-color: #D4DDD9;     /* Pebble */
+    --hairline-color: #E2E2E2;   /* Platinum */
+    --border-color: #E2E2E2;     /* Platinum */
 
     /* Errors */
     --error-fg: #B03A2E;
 
     /* Messages */
-    --message-success-bg: #D8F3DC; /* Forest Mist */
-    --message-warning-bg: #FFF0D4; /* Gold Soft */
+    --message-success-bg: #D1E8E2; /* Soft Mint Green */
+    --message-warning-bg: #A9D6E5; /* Light Blue */
     --message-error-bg: #f8d7d4;
 
     /* Backgrounds */
-    --darkened-bg: #eef3f0;
-    --selected-bg: #D4DDD9;      /* Pebble */
-    --selected-row: #FFF0D4;     /* Gold Soft */
+    --darkened-bg: #e8f0f1;
+    --selected-bg: #E2E2E2;      /* Platinum */
+    --selected-row: #A9D6E5;     /* Light Blue */
 
     /* Buttons */
     --button-fg: #fff;
-    --button-bg: #2D6A4F;        /* Forest Mid */
-    --button-hover-bg: #1A3C2E;  /* Forest Deep */
-    --default-button-bg: #1A3C2E;/* Forest Deep */
-    --default-button-hover-bg: #2D6A4F; /* Forest Mid */
-    --close-button-bg: #4A5E56;  /* Slate */
-    --close-button-hover-bg: #1C2B25; /* Charcoal */
+    --button-bg: #19747E;        /* Dark Cyan */
+    --button-hover-bg: #115E66;  /* Dark Cyan Deep */
+    --default-button-bg: #115E66;/* Dark Cyan Deep */
+    --default-button-hover-bg: #19747E; /* Dark Cyan */
+    --close-button-bg: #4A5C62;  /* Slate */
+    --close-button-hover-bg: #1A2C33; /* Charcoal */
     --delete-button-bg: #B03A2E; /* Error */
     --delete-button-hover-bg: #922f25;
 
     /* Object tools */
-    --object-tools-fg: #D8F3DC;
-    --object-tools-bg: #4A5E56;
-    --object-tools-hover-bg: #1A3C2E;
+    --object-tools-fg: #D1E8E2;
+    --object-tools-bg: #4A5C62;
+    --object-tools-hover-bg: #115E66;
 }
 
 
@@ -75,108 +75,108 @@ html[data-theme="light"], :root {
    ======================================== */
 @media (prefers-color-scheme: dark) {
     html:not([data-theme="light"]) {
-        --primary: #40916C;          /* Forest Light */
-        --secondary: #2D6A4F;        /* Forest Mid */
-        --accent: #E5A04A;           /* Gold Warm */
+        --primary: #2A9DA8;          /* Lighter Cyan */
+        --secondary: #19747E;        /* Dark Cyan */
+        --accent: #A9D6E5;           /* Light Blue */
         --primary-fg: #fff;
 
-        --body-fg: #D4DDD9;          /* Pebble */
-        --body-bg: #0d1a14;          /* Dark forest-tinted black */
-        --body-quiet-color: #8FA89E; /* Stone */
-        --body-medium-color: #D4DDD9;
+        --body-fg: #E2E2E2;          /* Platinum */
+        --body-bg: #0d171a;          /* Dark cyan-tinted black */
+        --body-quiet-color: #8FA3A8; /* Stone */
+        --body-medium-color: #E2E2E2;
 
-        --header-color: #D8F3DC;
-        --header-branding-color: #E5A04A;
-        --header-bg: #0a1510;
-        --header-link-color: #D8F3DC;
+        --header-color: #D1E8E2;
+        --header-branding-color: #A9D6E5;
+        --header-bg: #0a1315;
+        --header-link-color: #D1E8E2;
 
-        --breadcrumbs-fg: #8FA89E;
-        --breadcrumbs-link-fg: #D8F3DC;
-        --breadcrumbs-bg: #132a1f;
+        --breadcrumbs-fg: #8FA3A8;
+        --breadcrumbs-link-fg: #D1E8E2;
+        --breadcrumbs-bg: #122a2e;
 
-        --link-fg: #40916C;
-        --link-hover-color: #D8F3DC;
-        --link-selected-fg: #E5A04A;
+        --link-fg: #2A9DA8;
+        --link-hover-color: #D1E8E2;
+        --link-selected-fg: #A9D6E5;
 
-        --hairline-color: #1e3328;
-        --border-color: #1e3328;
+        --hairline-color: #1e2e32;
+        --border-color: #1e2e32;
 
         --error-fg: #e87c70;
 
-        --message-success-bg: #132a1f;
-        --message-warning-bg: #2a2010;
+        --message-success-bg: #122a2e;
+        --message-warning-bg: #1a2a30;
         --message-error-bg: #2a1210;
 
-        --darkened-bg: #111f18;
-        --selected-bg: #1e3328;
-        --selected-row: #2a2010;
+        --darkened-bg: #111d20;
+        --selected-bg: #1e2e32;
+        --selected-row: #1a2a30;
 
         --button-fg: #fff;
-        --button-bg: #2D6A4F;
-        --button-hover-bg: #40916C;
-        --default-button-bg: #2D6A4F;
-        --default-button-hover-bg: #40916C;
-        --close-button-bg: #4A5E56;
-        --close-button-hover-bg: #8FA89E;
+        --button-bg: #19747E;
+        --button-hover-bg: #2A9DA8;
+        --default-button-bg: #19747E;
+        --default-button-hover-bg: #2A9DA8;
+        --close-button-bg: #4A5C62;
+        --close-button-hover-bg: #8FA3A8;
         --delete-button-bg: #B03A2E;
         --delete-button-hover-bg: #d44a3c;
 
-        --object-tools-fg: #D8F3DC;
-        --object-tools-bg: #1e3328;
-        --object-tools-hover-bg: #2D6A4F;
+        --object-tools-fg: #D1E8E2;
+        --object-tools-bg: #1e2e32;
+        --object-tools-hover-bg: #19747E;
     }
 }
 
 html[data-theme="dark"] {
-    --primary: #40916C;
-    --secondary: #2D6A4F;
-    --accent: #E5A04A;
+    --primary: #2A9DA8;
+    --secondary: #19747E;
+    --accent: #A9D6E5;
     --primary-fg: #fff;
 
-    --body-fg: #D4DDD9;
-    --body-bg: #0d1a14;
-    --body-quiet-color: #8FA89E;
-    --body-medium-color: #D4DDD9;
+    --body-fg: #E2E2E2;
+    --body-bg: #0d171a;
+    --body-quiet-color: #8FA3A8;
+    --body-medium-color: #E2E2E2;
 
-    --header-color: #D8F3DC;
-    --header-branding-color: #E5A04A;
-    --header-bg: #0a1510;
-    --header-link-color: #D8F3DC;
+    --header-color: #D1E8E2;
+    --header-branding-color: #A9D6E5;
+    --header-bg: #0a1315;
+    --header-link-color: #D1E8E2;
 
-    --breadcrumbs-fg: #8FA89E;
-    --breadcrumbs-link-fg: #D8F3DC;
-    --breadcrumbs-bg: #132a1f;
+    --breadcrumbs-fg: #8FA3A8;
+    --breadcrumbs-link-fg: #D1E8E2;
+    --breadcrumbs-bg: #122a2e;
 
-    --link-fg: #40916C;
-    --link-hover-color: #D8F3DC;
-    --link-selected-fg: #E5A04A;
+    --link-fg: #2A9DA8;
+    --link-hover-color: #D1E8E2;
+    --link-selected-fg: #A9D6E5;
 
-    --hairline-color: #1e3328;
-    --border-color: #1e3328;
+    --hairline-color: #1e2e32;
+    --border-color: #1e2e32;
 
     --error-fg: #e87c70;
 
-    --message-success-bg: #132a1f;
-    --message-warning-bg: #2a2010;
+    --message-success-bg: #122a2e;
+    --message-warning-bg: #1a2a30;
     --message-error-bg: #2a1210;
 
-    --darkened-bg: #111f18;
-    --selected-bg: #1e3328;
-    --selected-row: #2a2010;
+    --darkened-bg: #111d20;
+    --selected-bg: #1e2e32;
+    --selected-row: #1a2a30;
 
     --button-fg: #fff;
-    --button-bg: #2D6A4F;
-    --button-hover-bg: #40916C;
-    --default-button-bg: #2D6A4F;
-    --default-button-hover-bg: #40916C;
-    --close-button-bg: #4A5E56;
-    --close-button-hover-bg: #8FA89E;
+    --button-bg: #19747E;
+    --button-hover-bg: #2A9DA8;
+    --default-button-bg: #19747E;
+    --default-button-hover-bg: #2A9DA8;
+    --close-button-bg: #4A5C62;
+    --close-button-hover-bg: #8FA3A8;
     --delete-button-bg: #B03A2E;
     --delete-button-hover-bg: #d44a3c;
 
-    --object-tools-fg: #D8F3DC;
-    --object-tools-bg: #1e3328;
-    --object-tools-hover-bg: #2D6A4F;
+    --object-tools-fg: #D1E8E2;
+    --object-tools-bg: #1e2e32;
+    --object-tools-hover-bg: #19747E;
 }
 
 
@@ -186,7 +186,7 @@ html[data-theme="dark"] {
 
 /* Header accent border */
 #header {
-    border-bottom: 3px solid rgba(201, 135, 42, 0.4);
+    border-bottom: 3px solid rgba(25, 116, 126, 0.4);
 }
 
 /* Logo in header */
@@ -214,7 +214,7 @@ html[data-theme="dark"] {
     height: auto;
 }
 
-/* Module headers — gold accent left border */
+/* Module headers — cyan accent left border */
 .module h2, .module caption, .inline-group h2 {
     border-left: 4px solid var(--accent);
 }

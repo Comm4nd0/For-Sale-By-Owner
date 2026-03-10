@@ -4,7 +4,7 @@
 
 {% block extra_css %}
 <style>
-    .pricing-hero { background: linear-gradient(135deg, #1A3C2E 0%, #2D6A4F 100%); color: white; padding: 3rem 0; margin: -2rem 0 2rem; }
+    .pricing-hero { background: linear-gradient(135deg, #115E66 0%, #19747E 100%); color: white; padding: 3rem 0; margin: -2rem 0 2rem; }
     .pricing-hero h1 { font-size: 2rem; margin-bottom: 0.5rem; text-align: center; }
     .pricing-hero p { opacity: 0.85; font-size: 1.05rem; text-align: center; max-width: 500px; margin: 0 auto; }
 
@@ -17,47 +17,47 @@
     .toggle-slider { position: absolute; inset: 0; background: rgba(255,255,255,0.3); border-radius: 28px; transition: 0.3s; }
     .toggle-slider::before { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; background: white; border-radius: 50%; transition: 0.3s; }
     .toggle-switch input:checked + .toggle-slider::before { transform: translateX(24px); }
-    .save-badge { background: #C9872A; color: white; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-left: 0.35rem; }
+    .save-badge { background: #19747E; color: white; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-left: 0.35rem; }
 
     .tiers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2.5rem; }
-    .tier-card { background: #FFFFFF; border: 2px solid #D4DDD9; border-radius: 12px; padding: 2rem 1.5rem; position: relative; display: flex; flex-direction: column; }
-    .tier-card.highlighted { border-color: #C9872A; box-shadow: 0 4px 20px rgba(201,135,42,0.15); }
-    .tier-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #C9872A; color: white; padding: 0.25rem 1rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
-    .tier-name { font-size: 1.4rem; font-weight: 700; color: #1A3C2E; margin-bottom: 0.25rem; }
-    .tier-tagline { color: #4A5E56; font-size: 0.9rem; margin-bottom: 1rem; min-height: 2.5rem; }
+    .tier-card { background: #FFFFFF; border: 2px solid #E2E2E2; border-radius: 12px; padding: 2rem 1.5rem; position: relative; display: flex; flex-direction: column; }
+    .tier-card.highlighted { border-color: #19747E; box-shadow: 0 4px 20px rgba(201,135,42,0.15); }
+    .tier-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #19747E; color: white; padding: 0.25rem 1rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+    .tier-name { font-size: 1.4rem; font-weight: 700; color: #115E66; margin-bottom: 0.25rem; }
+    .tier-tagline { color: #4A5C62; font-size: 0.9rem; margin-bottom: 1rem; min-height: 2.5rem; }
     .tier-price { margin-bottom: 1.25rem; }
-    .tier-price .amount { font-size: 2.2rem; font-weight: 700; color: #1A3C2E; }
-    .tier-price .period { color: #8FA89E; font-size: 0.9rem; }
-    .tier-price .annual-note { color: #4A5E56; font-size: 0.8rem; margin-top: 0.2rem; }
+    .tier-price .amount { font-size: 2.2rem; font-weight: 700; color: #115E66; }
+    .tier-price .period { color: #8FA3A8; font-size: 0.9rem; }
+    .tier-price .annual-note { color: #4A5C62; font-size: 0.8rem; margin-top: 0.2rem; }
 
-    .tier-limits { margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid #D4DDD9; }
-    .tier-limits .limit-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: #1C2B25; padding: 0.3rem 0; }
-    .limit-value { font-weight: 600; color: #2D6A4F; }
+    .tier-limits { margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid #E2E2E2; }
+    .tier-limits .limit-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: #1A2C33; padding: 0.3rem 0; }
+    .limit-value { font-weight: 600; color: #19747E; }
 
     .tier-features { flex: 1; margin-bottom: 1.5rem; }
     .feature-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; padding: 0.25rem 0; }
-    .feature-check { color: #2D6A4F; font-weight: 700; font-size: 1rem; }
-    .feature-cross { color: #D4DDD9; font-size: 1rem; }
-    .feature-item.disabled { color: #8FA89E; }
+    .feature-check { color: #19747E; font-weight: 700; font-size: 1rem; }
+    .feature-cross { color: #E2E2E2; font-size: 1rem; }
+    .feature-item.disabled { color: #8FA3A8; }
 
     .tier-cta { margin-top: auto; }
     .tier-cta .btn { display: block; text-align: center; padding: 0.75rem; font-size: 1rem; font-weight: 600; }
-    .btn-gold { background: #C9872A; color: white; }
+    .btn-gold { background: #19747E; color: white; }
     .btn-gold:hover { background: #B07624; }
 
     .addons-section { background: #FFFFFF; border-radius: 12px; padding: 2rem; margin-bottom: 2rem; }
-    .addons-section h2 { color: #1A3C2E; font-size: 1.3rem; margin-bottom: 0.5rem; }
-    .addons-section .subtitle { color: #4A5E56; margin-bottom: 1.5rem; font-size: 0.95rem; }
+    .addons-section h2 { color: #115E66; font-size: 1.3rem; margin-bottom: 0.5rem; }
+    .addons-section .subtitle { color: #4A5C62; margin-bottom: 1.5rem; font-size: 0.95rem; }
     .addons-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
-    .addon-card { border: 1px solid #D4DDD9; border-radius: 8px; padding: 1.25rem; }
-    .addon-name { font-weight: 600; color: #1A3C2E; font-size: 1rem; margin-bottom: 0.25rem; }
-    .addon-desc { color: #4A5E56; font-size: 0.85rem; margin-bottom: 0.5rem; }
-    .addon-price { font-weight: 600; color: #2D6A4F; font-size: 0.95rem; }
-    .addon-tiers { font-size: 0.8rem; color: #8FA89E; margin-top: 0.35rem; }
+    .addon-card { border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.25rem; }
+    .addon-name { font-weight: 600; color: #115E66; font-size: 1rem; margin-bottom: 0.25rem; }
+    .addon-desc { color: #4A5C62; font-size: 0.85rem; margin-bottom: 0.5rem; }
+    .addon-price { font-weight: 600; color: #19747E; font-size: 0.95rem; }
+    .addon-tiers { font-size: 0.8rem; color: #8FA3A8; margin-top: 0.35rem; }
 
-    .free-banner { background: #D8F3DC; border-radius: 12px; padding: 2rem; text-align: center; margin-bottom: 2rem; }
-    .free-banner h3 { color: #1A3C2E; margin-bottom: 0.5rem; }
-    .free-banner p { color: #4A5E56; }
+    .free-banner { background: #D1E8E2; border-radius: 12px; padding: 2rem; text-align: center; margin-bottom: 2rem; }
+    .free-banner h3 { color: #115E66; margin-bottom: 0.5rem; }
+    .free-banner p { color: #4A5C62; }
 
     .cancelled-banner { background: #f8d7d4; border: 1px solid #e8a9a4; border-radius: 8px; padding: 1rem 1.5rem; text-align: center; margin-bottom: 1.5rem; color: #B03A2E; }
 
@@ -256,7 +256,7 @@
         })
         .catch(() => {
             document.getElementById('tiers-container').innerHTML =
-                '<p style="text-align:center; color:#4A5E56;">Failed to load pricing. Please refresh the page.</p>';
+                '<p style="text-align:center; color:#4A5C62;">Failed to load pricing. Please refresh the page.</p>';
         });
 
     // Show cancelled message if redirected from Stripe

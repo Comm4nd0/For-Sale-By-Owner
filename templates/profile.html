@@ -6,13 +6,13 @@
     .profile-card h1 { font-size: 1.5rem; margin-bottom: 1.5rem; }
     .form-group { margin-bottom: 1.25rem; }
     .form-group label { display: block; margin-bottom: 0.35rem; font-weight: 500; font-size: 0.9rem; }
-    .form-group input { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #D4DDD9; border-radius: 6px; font-size: 0.95rem; font-family: inherit; }
-    .form-group input:focus { outline: none; border-color: #2D6A4F; box-shadow: 0 0 0 2px rgba(45,106,79,0.15); }
-    .form-group input[readonly] { background: #F6F9F7; color: #4A5E56; }
+    .form-group input { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #E2E2E2; border-radius: 6px; font-size: 0.95rem; font-family: inherit; }
+    .form-group input:focus { outline: none; border-color: #19747E; box-shadow: 0 0 0 2px rgba(45,106,79,0.15); }
+    .form-group input[readonly] { background: #F5F8F9; color: #4A5C62; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
     .btn-block { width: 100%; text-align: center; padding: 0.75rem; font-size: 1rem; }
-    .section-divider { border: none; border-top: 1px solid #D4DDD9; margin: 2rem 0; }
-    .section-title { font-size: 1.1rem; margin-bottom: 1rem; color: #1C2B25; }
+    .section-divider { border: none; border-top: 1px solid #E2E2E2; margin: 2rem 0; }
+    .section-title { font-size: 1.1rem; margin-bottom: 1rem; color: #1A2C33; }
     .password-section { margin-top: 1rem; }
 </style>
 {% endblock %}
@@ -71,7 +71,7 @@
 
     <div>
         <h2 class="section-title">Saved Searches</h2>
-        <div id="saved-searches-list"><p style="color:#4A5E56;">Loading...</p></div>
+        <div id="saved-searches-list"><p style="color:#4A5C62;">Loading...</p></div>
     </div>
 </div>
 {% endblock %}
@@ -178,17 +178,17 @@ async function loadSavedSearches() {
         const data = await res.json();
         const items = data.results || data;
         if (!items.length) {
-            container.innerHTML = '<p style="color:#4A5E56;">No saved searches yet. Search for properties and save your criteria.</p>';
+            container.innerHTML = '<p style="color:#4A5C62;">No saved searches yet. Search for properties and save your criteria.</p>';
             return;
         }
         container.innerHTML = items.map(s => `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #D4DDD9;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #E2E2E2;">
                 <div>
                     <strong>${escHtml(s.name || 'Saved Search')}</strong>
-                    <span style="color:#4A5E56; font-size:0.85rem; margin-left:0.5rem;">
+                    <span style="color:#4A5C62; font-size:0.85rem; margin-left:0.5rem;">
                         ${[s.location, s.property_type, s.min_bedrooms ? s.min_bedrooms + '+ bed' : ''].filter(Boolean).map(escHtml).join(', ')}
                     </span>
-                    ${s.email_alerts ? '<span style="background:#D8F3DC; color:#1A3C2E; font-size:0.75rem; padding:2px 6px; border-radius:3px; margin-left:0.5rem;">Alerts On</span>' : ''}
+                    ${s.email_alerts ? '<span style="background:#D1E8E2; color:#115E66; font-size:0.75rem; padding:2px 6px; border-radius:3px; margin-left:0.5rem;">Alerts On</span>' : ''}
                 </div>
                 <button class="btn btn-danger" style="padding:0.3rem 0.7rem; font-size:0.8rem;" onclick="deleteSavedSearch(${s.id})">Delete</button>
             </div>

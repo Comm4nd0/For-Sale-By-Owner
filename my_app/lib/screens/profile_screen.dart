@@ -4,8 +4,7 @@ import '../constants/app_theme.dart';
 import '../widgets/branded_app_bar.dart';
 import '../models/saved_search.dart';
 import '../services/api_service.dart';
-import '../services/auth_service.dart';
-import 'services_screen.dart';
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -194,8 +193,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authService = context.watch<AuthService>();
-
     return Scaffold(
       appBar: BrandedAppBar.build(context: context),
       body: SingleChildScrollView(
@@ -221,29 +218,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildSavedSearchesSection(),
             const SizedBox(height: 24),
 
-            // Services link
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.handyman_outlined, color: AppTheme.forestMid),
-                title: const Text('Local Services'),
-                subtitle: const Text('Find or register a local service'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ServicesScreen()),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Section 4: Logout
-            ElevatedButton(
-              onPressed: () => authService.logout(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.error,
-              ),
-              child: const Text('Logout'),
-            ),
             const SizedBox(height: 32),
           ],
         ),

@@ -20,11 +20,11 @@ class TierBadge extends StatelessWidget {
     Color textColor;
 
     if (tierSlug == 'pro') {
-      bgColor = const Color(0xFFC9872A);
+      bgColor = const Color(0xFF19747E);
       textColor = Colors.white;
     } else {
-      bgColor = const Color(0xFFD8F3DC);
-      textColor = const Color(0xFF1A3C2E);
+      bgColor = const Color(0xFFD1E8E2);
+      textColor = const Color(0xFF115E66);
     }
 
     return Container(

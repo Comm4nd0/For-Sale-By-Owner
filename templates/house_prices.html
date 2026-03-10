@@ -4,38 +4,38 @@
 
 {% block extra_css %}
 <style>
-    .hp-hero { background: linear-gradient(135deg, #1A3C2E 0%, #2D6A4F 100%); color: white; padding: 2.5rem 0; margin: -2rem 0 2rem; }
+    .hp-hero { background: linear-gradient(135deg, #115E66 0%, #19747E 100%); color: white; padding: 2.5rem 0; margin: -2rem 0 2rem; }
     .hp-hero h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
     .hp-hero p { opacity: 0.85; font-size: 1rem; }
     .hp-search { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
     .hp-search input { flex: 1; padding: 0.7rem 1rem; border: none; border-radius: 6px; font-size: 1rem; font-family: inherit; max-width: 320px; }
     .hp-search .btn { white-space: nowrap; }
 
-    .hp-summary { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; padding: 1rem 1.25rem; background: #FFFFFF; border-radius: 8px; border: 1px solid #D4DDD9; }
+    .hp-summary { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; padding: 1rem 1.25rem; background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E2E2; }
     .hp-stat { text-align: center; flex: 1; min-width: 120px; }
-    .hp-stat-value { font-size: 1.4rem; font-weight: 700; color: #1A3C2E; }
-    .hp-stat-label { font-size: 0.8rem; color: #4A5E56; margin-top: 0.15rem; }
+    .hp-stat-value { font-size: 1.4rem; font-weight: 700; color: #115E66; }
+    .hp-stat-label { font-size: 0.8rem; color: #4A5C62; margin-top: 0.15rem; }
 
-    .hp-table { width: 100%; border-collapse: collapse; background: #FFFFFF; border-radius: 8px; overflow: hidden; border: 1px solid #D4DDD9; }
-    .hp-table th { background: #1A3C2E; color: white; padding: 0.75rem 1rem; text-align: left; font-size: 0.85rem; font-weight: 600; }
-    .hp-table td { padding: 0.65rem 1rem; border-bottom: 1px solid #EDF2EF; font-size: 0.9rem; color: #1C2B25; vertical-align: middle; }
+    .hp-table { width: 100%; border-collapse: collapse; background: #FFFFFF; border-radius: 8px; overflow: hidden; border: 1px solid #E2E2E2; }
+    .hp-table th { background: #115E66; color: white; padding: 0.75rem 1rem; text-align: left; font-size: 0.85rem; font-weight: 600; }
+    .hp-table td { padding: 0.65rem 1rem; border-bottom: 1px solid #EDF2EF; font-size: 0.9rem; color: #1A2C33; vertical-align: middle; }
     .hp-table tr:last-child td { border-bottom: none; }
-    .hp-table tr:hover td { background: #F6F9F7; }
+    .hp-table tr:hover td { background: #F5F8F9; }
 
     .hp-type { display: inline-flex; align-items: center; gap: 0.4rem; }
     .hp-type svg { flex-shrink: 0; }
 
     .hp-cards { display: none; }
-    .hp-card { background: #FFFFFF; border-radius: 8px; border: 1px solid #D4DDD9; padding: 1rem 1.25rem; margin-bottom: 0.75rem; display: flex; gap: 1rem; align-items: flex-start; }
-    .hp-card-icon { flex-shrink: 0; width: 48px; height: 48px; background: #F6F9F7; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .hp-card { background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E2E2; padding: 1rem 1.25rem; margin-bottom: 0.75rem; display: flex; gap: 1rem; align-items: flex-start; }
+    .hp-card-icon { flex-shrink: 0; width: 48px; height: 48px; background: #F5F8F9; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
     .hp-card-body { flex: 1; min-width: 0; }
-    .hp-card-price { font-size: 1.15rem; font-weight: 700; color: #1A3C2E; }
-    .hp-card-address { font-size: 0.9rem; color: #4A5E56; margin-top: 0.25rem; }
-    .hp-card-meta { display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.8rem; color: #8FA89E; }
+    .hp-card-price { font-size: 1.15rem; font-weight: 700; color: #115E66; }
+    .hp-card-address { font-size: 0.9rem; color: #4A5C62; margin-top: 0.25rem; }
+    .hp-card-meta { display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.8rem; color: #8FA3A8; }
 
-    .hp-empty { text-align: center; padding: 3rem 1rem; color: #4A5E56; }
-    .hp-empty h3 { color: #1A3C2E; margin-bottom: 0.5rem; }
-    .hp-loading { text-align: center; padding: 3rem; color: #4A5E56; }
+    .hp-empty { text-align: center; padding: 3rem 1rem; color: #4A5C62; }
+    .hp-empty h3 { color: #115E66; margin-bottom: 0.5rem; }
+    .hp-loading { text-align: center; padding: 3rem; color: #4A5C62; }
     .hp-error { text-align: center; padding: 2rem; color: #B03A2E; }
 
     @media (max-width: 768px) {
@@ -197,7 +197,7 @@
     // Inline SVG icons for each property type
     function typeIcon(key, size) {
         var s = size || 20;
-        var c = '#2D6A4F';
+        var c = '#19747E';
         var icons = {
             'detached': '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
                 '<path d="M3 21V10L12 3L21 10V21H15V14H9V21H3Z" fill="'+c+'" opacity="0.15"/>' +

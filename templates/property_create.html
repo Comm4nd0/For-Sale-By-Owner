@@ -4,7 +4,7 @@
 
 {% block extra_css %}
 <style>
-    .page-title { color: #1A3C2E; margin-bottom: 1.5rem; }
+    .page-title { color: #115E66; margin-bottom: 1.5rem; }
     .property-form { max-width: 700px; }
 
     /* Progress indicator */
@@ -20,7 +20,7 @@
         left: 60px;
         right: 60px;
         height: 2px;
-        background: #D4DDD9;
+        background: #E2E2E2;
         z-index: 0;
     }
     .progress-step {
@@ -35,8 +35,8 @@
         width: 36px;
         height: 36px;
         border-radius: 50%;
-        background: #D4DDD9;
-        color: #4A5E56;
+        background: #E2E2E2;
+        color: #4A5C62;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -45,56 +45,56 @@
         margin-bottom: 0.4rem;
         transition: all 0.2s;
     }
-    .progress-step.active .step-number { background: #2D6A4F; color: white; }
-    .progress-step.completed .step-number { background: #1A3C2E; color: white; }
-    .step-label { font-size: 0.8rem; color: #8FA89E; display: block; }
-    .progress-step.active .step-label { color: #2D6A4F; font-weight: 500; }
-    .progress-step.completed .step-label { color: #1A3C2E; }
+    .progress-step.active .step-number { background: #19747E; color: white; }
+    .progress-step.completed .step-number { background: #115E66; color: white; }
+    .step-label { font-size: 0.8rem; color: #8FA3A8; display: block; }
+    .progress-step.active .step-label { color: #19747E; font-weight: 500; }
+    .progress-step.completed .step-label { color: #115E66; }
 
     /* Form styles */
     .form-group { margin-bottom: 1.25rem; }
-    .form-group label { display: block; margin-bottom: 0.3rem; font-weight: 500; color: #4A5E56; }
+    .form-group label { display: block; margin-bottom: 0.3rem; font-weight: 500; color: #4A5C62; }
     .form-group input, .form-group select, .form-group textarea {
         width: 100%;
         padding: 0.6rem;
-        border: 1px solid #D4DDD9;
+        border: 1px solid #E2E2E2;
         border-radius: 6px;
         font-size: 1rem;
         font-family: inherit;
     }
     .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
         outline: none;
-        border-color: #2D6A4F;
+        border-color: #19747E;
         box-shadow: 0 0 0 2px rgba(45,106,79,0.15);
     }
     .form-group textarea { min-height: 150px; resize: vertical; }
-    .form-group .hint { font-size: 0.8rem; color: #8FA89E; margin-top: 0.25rem; }
+    .form-group .hint { font-size: 0.8rem; color: #8FA3A8; margin-top: 0.25rem; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
     .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
     .form-row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; }
-    .section-title { font-size: 1.1rem; color: #1A3C2E; margin: 0.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #D4DDD9; }
+    .section-title { font-size: 1.1rem; color: #115E66; margin: 0.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #E2E2E2; }
 
     /* Steps visibility */
     .step { display: none; }
     .step.active { display: block; }
 
     /* Step intro text */
-    .step-intro { color: #4A5E56; margin-bottom: 1.5rem; font-size: 0.95rem; }
+    .step-intro { color: #4A5C62; margin-bottom: 1.5rem; font-size: 0.95rem; }
 
     /* Image upload */
     .image-upload {
-        border: 2px dashed #D4DDD9;
+        border: 2px dashed #E2E2E2;
         border-radius: 8px;
         padding: 2.5rem;
         text-align: center;
         cursor: pointer;
         transition: border-color 0.2s, background 0.2s;
     }
-    .image-upload:hover { border-color: #2D6A4F; background: #F6F9F7; }
+    .image-upload:hover { border-color: #19747E; background: #F5F8F9; }
     .image-upload input { display: none; }
     .image-upload-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
-    .image-upload p { color: #4A5E56; margin-bottom: 0.25rem; }
-    .image-upload .hint { font-size: 0.8rem; color: #8FA89E; }
+    .image-upload p { color: #4A5C62; margin-bottom: 0.25rem; }
+    .image-upload .hint { font-size: 0.8rem; color: #8FA3A8; }
     .image-preview {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -126,12 +126,12 @@
         justify-content: space-between;
         gap: 0.75rem;
         padding-top: 1.5rem;
-        border-top: 1px solid #D4DDD9;
+        border-top: 1px solid #E2E2E2;
     }
     .step-actions .left { display: flex; gap: 0.75rem; }
     .step-actions .right { display: flex; gap: 0.75rem; }
     .btn-next {
-        background: #2D6A4F;
+        background: #19747E;
         color: white;
         padding: 0.7rem 2rem;
         border: none;
@@ -141,10 +141,10 @@
         cursor: pointer;
         font-family: inherit;
     }
-    .btn-next:hover { background: #40916C; }
+    .btn-next:hover { background: #2A9DA8; }
     .btn-back {
-        background: #D4DDD9;
-        color: #1A3C2E;
+        background: #E2E2E2;
+        color: #115E66;
         padding: 0.7rem 1.5rem;
         border: none;
         border-radius: 6px;
@@ -152,10 +152,10 @@
         cursor: pointer;
         font-family: inherit;
     }
-    .btn-back:hover { background: #8FA89E; }
+    .btn-back:hover { background: #8FA3A8; }
 
-    .features-checkboxes label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.75rem; background: #F6F9F7; border: 1px solid #D4DDD9; border-radius: 20px; cursor: pointer; font-size: 0.85rem; transition: all 0.15s; }
-    .features-checkboxes label:has(input:checked) { background: #D8F3DC; border-color: #2D6A4F; color: #1A3C2E; }
+    .features-checkboxes label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.75rem; background: #F5F8F9; border: 1px solid #E2E2E2; border-radius: 20px; cursor: pointer; font-size: 0.85rem; transition: all 0.15s; }
+    .features-checkboxes label:has(input:checked) { background: #D1E8E2; border-color: #19747E; color: #115E66; }
     .features-checkboxes input { display: none; }
 
     @media (max-width: 768px) {
@@ -167,7 +167,7 @@
 
 {% block content %}
 <h2 class="page-title">List Your Property &mdash; 100% Free</h2>
-<p style="color:#4A5E56; margin-top:-0.5rem; margin-bottom:1.5rem;">No fees, no commission, no hidden charges. Free forever.</p>
+<p style="color:#4A5C62; margin-top:-0.5rem; margin-bottom:1.5rem;">No fees, no commission, no hidden charges. Free forever.</p>
 <div id="error" class="alert alert-error" style="display:none;"></div>
 
 <div class="property-form">
@@ -294,7 +294,7 @@
             <div class="form-group">
                 <label>Features</label>
                 <div id="features-list" class="features-checkboxes" style="display:flex; flex-wrap:wrap; gap:0.5rem;">
-                    <span style="color:#8FA89E; font-size:0.9rem;">Loading features...</span>
+                    <span style="color:#8FA3A8; font-size:0.9rem;">Loading features...</span>
                 </div>
                 <p class="hint">Select all features that apply to your property</p>
             </div>
@@ -373,7 +373,7 @@
         .then(features => {
             const list = Array.isArray(features) ? features : (features.results || []);
             const container = document.getElementById('features-list');
-            if (!list.length) { container.innerHTML = '<span style="color:#8FA89E; font-size:0.85rem;">No features available yet</span>'; return; }
+            if (!list.length) { container.innerHTML = '<span style="color:#8FA3A8; font-size:0.85rem;">No features available yet</span>'; return; }
             container.innerHTML = list.map(f =>
                 `<label><input type="checkbox" name="features" value="${f.id}"> ${f.icon ? f.icon + ' ' : ''}${f.name}</label>`
             ).join('');
@@ -408,7 +408,7 @@
         const container = document.getElementById('floorplan-preview');
         container.innerHTML = selectedFloorplans.map((f, i) => `
             <div class="image-preview-item">
-                ${f.type.startsWith('image/') ? `<img src="${URL.createObjectURL(f)}" alt="Floorplan">` : `<div style="width:100%;height:100px;background:#D8F3DC;display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:#4A5E56;">${f.name}</div>`}
+                ${f.type.startsWith('image/') ? `<img src="${URL.createObjectURL(f)}" alt="Floorplan">` : `<div style="width:100%;height:100px;background:#D1E8E2;display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:#4A5C62;">${f.name}</div>`}
                 <button type="button" class="remove" onclick="removeFloorplan(${i})">&times;</button>
             </div>
         `).join('');
@@ -422,7 +422,7 @@
         const container = document.getElementById('floorplan-preview');
         container.innerHTML = selectedFloorplans.map((f, i) => `
             <div class="image-preview-item">
-                ${f.type.startsWith('image/') ? `<img src="${URL.createObjectURL(f)}" alt="Floorplan">` : `<div style="width:100%;height:100px;background:#D8F3DC;display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:#4A5E56;">${escHtml(f.name)}</div>`}
+                ${f.type.startsWith('image/') ? `<img src="${URL.createObjectURL(f)}" alt="Floorplan">` : `<div style="width:100%;height:100px;background:#D1E8E2;display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:#4A5C62;">${escHtml(f.name)}</div>`}
                 <button type="button" class="remove" onclick="removeFloorplan(${i})">&times;</button>
             </div>
         `).join('');
@@ -440,7 +440,7 @@
                     field.style.borderColor = '#B03A2E';
                     valid = false;
                 } else {
-                    field.style.borderColor = '#D4DDD9';
+                    field.style.borderColor = '#E2E2E2';
                 }
             });
             if (!valid) {

@@ -131,7 +131,7 @@ class _HousePricesScreenState extends State<HousePricesScreen> {
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppTheme.forestDeep, Color(0xFF245A3F)],
+                colors: [AppTheme.forestDeep, Color(0xFF1A6570)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),

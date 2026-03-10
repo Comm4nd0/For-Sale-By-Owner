@@ -27,7 +27,7 @@ class SubscriptionCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1A3C2E), Color(0xFF2D6A4F)],
+          colors: [Color(0xFF115E66), Color(0xFF19747E)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -120,7 +120,7 @@ class SubscriptionCard extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: onUpgrade,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2D6A4F),
+                      backgroundColor: const Color(0xFF19747E),
                       foregroundColor: Colors.white,
                     ),
                     child: const Text('Upgrade Plan'),
@@ -163,11 +163,11 @@ class SubscriptionCard extends StatelessWidget {
     Color textColor;
 
     if (slug == 'pro') {
-      bgColor = const Color(0xFFC9872A);
+      bgColor = const Color(0xFF19747E);
       textColor = Colors.white;
     } else if (slug == 'growth') {
-      bgColor = const Color(0xFFD8F3DC);
-      textColor = const Color(0xFF1A3C2E);
+      bgColor = const Color(0xFFD1E8E2);
+      textColor = const Color(0xFF115E66);
     } else {
       bgColor = Colors.white.withValues(alpha: 0.2);
       textColor = Colors.white;
@@ -219,7 +219,7 @@ class SubscriptionCard extends StatelessWidget {
             minHeight: 6,
             backgroundColor: Colors.white.withValues(alpha: 0.2),
             valueColor:
-                const AlwaysStoppedAnimation<Color>(Color(0xFFD8F3DC)),
+                const AlwaysStoppedAnimation<Color>(Color(0xFFD1E8E2)),
           ),
         ),
         const SizedBox(height: 2),

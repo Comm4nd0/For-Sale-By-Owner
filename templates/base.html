@@ -14,9 +14,9 @@
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/apple-touch-icon.png' %}">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1C2B25; background: #F6F9F7; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1A2C33; background: #F5F8F9; }
         .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
-        header { background: #1A3C2E; color: white; padding: 1rem 0; }
+        header { background: #115E66; color: white; padding: 1rem 0; }
         header .container { display: flex; justify-content: space-between; align-items: center; }
         header .logo a { display: flex; align-items: center; text-decoration: none; }
         header .logo svg { height: 56px; width: auto; }
@@ -39,7 +39,7 @@
         .nav-dropdown-toggle:hover { color: white; }
         .nav-dropdown-toggle::after { content: ''; display: inline-block; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 4px solid currentColor; margin-top: 1px; transition: transform 0.2s; }
         .nav-dropdown.open .nav-dropdown-toggle::after { transform: rotate(180deg); }
-        .nav-dropdown-menu { display: none; position: absolute; top: 100%; left: 0; background: #1A3C2E; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; min-width: 180px; padding: 0.4rem 0; box-shadow: 0 8px 24px rgba(0,0,0,0.3); z-index: 100; margin-top: 0.5rem; }
+        .nav-dropdown-menu { display: none; position: absolute; top: 100%; left: 0; background: #115E66; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; min-width: 180px; padding: 0.4rem 0; box-shadow: 0 8px 24px rgba(0,0,0,0.3); z-index: 100; margin-top: 0.5rem; }
         .nav-dropdown-menu::before { content: ''; position: absolute; top: -0.5rem; left: 0; right: 0; height: 0.5rem; }
         .nav-dropdown-menu a { display: block; padding: 0.5rem 1rem; margin: 0 !important; color: rgba(255,255,255,0.85); white-space: nowrap; font-size: 0.9rem; }
         .nav-dropdown-menu a:hover { background: rgba(255,255,255,0.08); color: white; }
@@ -51,7 +51,7 @@
             .hamburger { display: flex; }
             nav .nav-links {
                 position: fixed; top: 0; left: 0; bottom: 0; width: 270px;
-                background: #1A3C2E; flex-direction: column; z-index: 1000;
+                background: #115E66; flex-direction: column; z-index: 1000;
                 transform: translateX(-100%); transition: transform 0.3s ease;
                 padding: 0; overflow-y: auto; display: flex;
             }
@@ -77,33 +77,33 @@
             .nav-dropdown-menu a { padding: 0.75rem 1.25rem 0.75rem 2.25rem; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.95rem; }
         }
         main { padding: 2rem 0; min-height: 60vh; }
-        footer { background: #FFFFFF; padding: 2rem 0 1.5rem; text-align: center; color: #4A5E56; margin-top: 2rem; border-top: 1px solid #D4DDD9; }
+        footer { background: #FFFFFF; padding: 2rem 0 1.5rem; text-align: center; color: #4A5C62; margin-top: 2rem; border-top: 1px solid #E2E2E2; }
         footer .footer-logo svg { height: 36px; width: auto; margin-bottom: 0.75rem; }
         footer p { font-size: 0.85rem; }
         .btn { display: inline-block; padding: 0.6rem 1.2rem; border-radius: 6px; text-decoration: none; font-size: 0.95rem; cursor: pointer; border: none; font-family: inherit; }
-        .btn-primary { background: #2D6A4F; color: white; }
-        .btn-primary:hover { background: #40916C; }
-        .btn-secondary { background: #D4DDD9; color: #1A3C2E; }
-        .btn-secondary:hover { background: #8FA89E; color: #1C2B25; }
+        .btn-primary { background: #19747E; color: white; }
+        .btn-primary:hover { background: #2A9DA8; }
+        .btn-secondary { background: #E2E2E2; color: #115E66; }
+        .btn-secondary:hover { background: #8FA3A8; color: #1A2C33; }
         .btn-danger { background: #B03A2E; color: white; }
         .btn-danger:hover { background: #922f25; }
         .alert { padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; }
         .alert-error { background: #f8d7d4; color: #B03A2E; border: 1px solid #e8a9a4; }
-        .alert-success { background: #D8F3DC; color: #1A3C2E; border: 1px solid #a8d8b0; }
+        .alert-success { background: #D1E8E2; color: #115E66; border: 1px solid #a8d8b0; }
         footer .footer-links { margin-bottom: 0.75rem; }
-        footer .footer-links a { color: #4A5E56; text-decoration: none; font-size: 0.85rem; margin: 0 0.75rem; }
-        footer .footer-links a:hover { color: #2D6A4F; text-decoration: underline; }
-        .cookie-banner { position: fixed; bottom: 0; left: 0; right: 0; background: #1A3C2E; color: white; padding: 1rem 1.5rem; z-index: 9999; display: none; box-shadow: 0 -2px 10px rgba(0,0,0,0.2); }
+        footer .footer-links a { color: #4A5C62; text-decoration: none; font-size: 0.85rem; margin: 0 0.75rem; }
+        footer .footer-links a:hover { color: #19747E; text-decoration: underline; }
+        .cookie-banner { position: fixed; bottom: 0; left: 0; right: 0; background: #115E66; color: white; padding: 1rem 1.5rem; z-index: 9999; display: none; box-shadow: 0 -2px 10px rgba(0,0,0,0.2); }
         .cookie-banner .cookie-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap; }
         .cookie-banner p { font-size: 0.9rem; line-height: 1.5; margin: 0; flex: 1; min-width: 250px; }
-        .cookie-banner a { color: #D8F3DC; text-decoration: underline; }
+        .cookie-banner a { color: #D1E8E2; text-decoration: underline; }
         .cookie-banner .cookie-buttons { display: flex; gap: 0.75rem; flex-shrink: 0; }
         .cookie-banner .cookie-btn { padding: 0.5rem 1.2rem; border-radius: 6px; border: none; cursor: pointer; font-size: 0.9rem; font-family: inherit; }
-        .cookie-btn-accept { background: #2D6A4F; color: white; }
-        .cookie-btn-accept:hover { background: #40916C; }
+        .cookie-btn-accept { background: #19747E; color: white; }
+        .cookie-btn-accept:hover { background: #2A9DA8; }
         .cookie-btn-reject { background: transparent; color: white; border: 1px solid rgba(255,255,255,0.4) !important; }
         .cookie-btn-reject:hover { border-color: white !important; }
-        .skip-link { position: absolute; top: -40px; left: 0; background: #2D6A4F; color: white; padding: 8px 16px; z-index: 10000; font-size: 0.9rem; text-decoration: none; border-radius: 0 0 4px 0; }
+        .skip-link { position: absolute; top: -40px; left: 0; background: #19747E; color: white; padding: 8px 16px; z-index: 10000; font-size: 0.9rem; text-decoration: none; border-radius: 0 0 4px 0; }
         .skip-link:focus { top: 0; }
         @media print {
             header, footer, .cookie-banner, nav, .btn, .owner-actions, .enquiry-form-section, .mortgage-section, .nav-overlay, .hamburger { display: none !important; }
@@ -128,21 +128,21 @@
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 100" width="460" height="88">
                         <defs>
                             <linearGradient id="rg2" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" style="stop-color:#E5A04A"/>
-                                <stop offset="100%" style="stop-color:#C9872A"/>
+                                <stop offset="0%" style="stop-color:#2A9DA8"/>
+                                <stop offset="100%" style="stop-color:#19747E"/>
                             </linearGradient>
                         </defs>
                         <rect x="18" y="52" width="54" height="38" rx="3" fill="#FFFFFF" opacity="0.15"/>
                         <polygon points="45,14 80,52 10,52" fill="url(#rg2)"/>
-                        <rect x="35" y="68" width="20" height="22" rx="2.5" fill="#D8F3DC" opacity="0.9"/>
-                        <circle cx="51" cy="80" r="2" fill="#C9872A"/>
+                        <rect x="35" y="68" width="20" height="22" rx="2.5" fill="#D1E8E2" opacity="0.9"/>
+                        <circle cx="51" cy="80" r="2" fill="#19747E"/>
                         <rect x="22" y="58" width="10" height="9" rx="1.5" fill="#FFFFFF" opacity="0.4"/>
                         <rect x="58" y="58" width="10" height="9" rx="1.5" fill="#FFFFFF" opacity="0.4"/>
-                        <rect x="62" y="24" width="8" height="18" rx="1.5" fill="#1A3C2E"/>
+                        <rect x="62" y="24" width="8" height="18" rx="1.5" fill="#115E66"/>
                         <text x="105" y="52" font-family="Georgia, 'Times New Roman', serif" font-size="30" font-weight="700" fill="#FFFFFF" letter-spacing="-0.5">For Sale</text>
                         <line x1="105" y1="60" x2="398" y2="60" stroke="#FFFFFF" stroke-width="1" opacity="0.25"/>
-                        <text x="107" y="80" font-family="Georgia, 'Times New Roman', serif" font-size="18" font-weight="400" fill="#D8F3DC" letter-spacing="3">BY OWNER</text>
-                        <text x="400" y="76" font-family="Arial, sans-serif" font-size="9.5" fill="#D8F3DC" letter-spacing="1.5" text-anchor="end" opacity="0.6">SELL DIRECT. KEEP MORE.</text>
+                        <text x="107" y="80" font-family="Georgia, 'Times New Roman', serif" font-size="18" font-weight="400" fill="#D1E8E2" letter-spacing="3">BY OWNER</text>
+                        <text x="400" y="76" font-family="Arial, sans-serif" font-size="9.5" fill="#D1E8E2" letter-spacing="1.5" text-anchor="end" opacity="0.6">SELL DIRECT. KEEP MORE.</text>
                     </svg>
                 </a>
             </div>
@@ -153,11 +153,11 @@
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="5 10 80 85" width="40" height="40">
                                 <rect x="18" y="52" width="54" height="38" rx="3" fill="#FFFFFF" opacity="0.15"/>
                                 <polygon points="45,14 80,52 10,52" fill="url(#rg2)"/>
-                                <rect x="35" y="68" width="20" height="22" rx="2.5" fill="#D8F3DC" opacity="0.9"/>
-                                <circle cx="51" cy="80" r="2" fill="#C9872A"/>
+                                <rect x="35" y="68" width="20" height="22" rx="2.5" fill="#D1E8E2" opacity="0.9"/>
+                                <circle cx="51" cy="80" r="2" fill="#19747E"/>
                                 <rect x="22" y="58" width="10" height="9" rx="1.5" fill="#FFFFFF" opacity="0.4"/>
                                 <rect x="58" y="58" width="10" height="9" rx="1.5" fill="#FFFFFF" opacity="0.4"/>
-                                <rect x="62" y="24" width="8" height="18" rx="1.5" fill="#1A3C2E"/>
+                                <rect x="62" y="24" width="8" height="18" rx="1.5" fill="#115E66"/>
                             </svg>
                         </a>
                         <button class="nav-close" id="nav-close-btn" aria-label="Close menu">&times;</button>
@@ -180,27 +180,27 @@
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 100" width="460" height="88">
                     <defs>
                         <linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#2D6A4F"/>
-                            <stop offset="100%" style="stop-color:#1A3C2E"/>
+                            <stop offset="0%" style="stop-color:#19747E"/>
+                            <stop offset="100%" style="stop-color:#115E66"/>
                         </linearGradient>
                         <linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#E5A04A"/>
-                            <stop offset="100%" style="stop-color:#C9872A"/>
+                            <stop offset="0%" style="stop-color:#2A9DA8"/>
+                            <stop offset="100%" style="stop-color:#19747E"/>
                         </linearGradient>
                     </defs>
                     <g>
                         <rect x="18" y="52" width="54" height="38" rx="3" fill="url(#hg)"/>
                         <polygon points="45,14 80,52 10,52" fill="url(#rg)"/>
-                        <rect x="35" y="68" width="20" height="22" rx="2.5" fill="#D8F3DC" opacity="0.9"/>
-                        <circle cx="51" cy="80" r="2" fill="#C9872A"/>
-                        <rect x="22" y="58" width="10" height="9" rx="1.5" fill="#D8F3DC" opacity="0.75"/>
-                        <rect x="58" y="58" width="10" height="9" rx="1.5" fill="#D8F3DC" opacity="0.75"/>
-                        <rect x="62" y="24" width="8" height="18" rx="1.5" fill="#1A3C2E"/>
+                        <rect x="35" y="68" width="20" height="22" rx="2.5" fill="#D1E8E2" opacity="0.9"/>
+                        <circle cx="51" cy="80" r="2" fill="#19747E"/>
+                        <rect x="22" y="58" width="10" height="9" rx="1.5" fill="#D1E8E2" opacity="0.75"/>
+                        <rect x="58" y="58" width="10" height="9" rx="1.5" fill="#D1E8E2" opacity="0.75"/>
+                        <rect x="62" y="24" width="8" height="18" rx="1.5" fill="#115E66"/>
                     </g>
-                    <text x="105" y="52" font-family="Georgia, 'Times New Roman', serif" font-size="30" font-weight="700" fill="#1A3C2E" letter-spacing="-0.5">For Sale</text>
-                    <line x1="105" y1="60" x2="398" y2="60" stroke="#D4DDD9" stroke-width="1"/>
-                    <text x="107" y="80" font-family="Georgia, 'Times New Roman', serif" font-size="18" font-weight="400" fill="#4A5E56" letter-spacing="3">BY OWNER</text>
-                    <text x="400" y="76" font-family="Arial, sans-serif" font-size="9.5" fill="#8FA89E" letter-spacing="1.5" text-anchor="end">SELL DIRECT. KEEP MORE.</text>
+                    <text x="105" y="52" font-family="Georgia, 'Times New Roman', serif" font-size="30" font-weight="700" fill="#115E66" letter-spacing="-0.5">For Sale</text>
+                    <line x1="105" y1="60" x2="398" y2="60" stroke="#E2E2E2" stroke-width="1"/>
+                    <text x="107" y="80" font-family="Georgia, 'Times New Roman', serif" font-size="18" font-weight="400" fill="#4A5C62" letter-spacing="3">BY OWNER</text>
+                    <text x="400" y="76" font-family="Arial, sans-serif" font-size="9.5" fill="#8FA3A8" letter-spacing="1.5" text-anchor="end">SELL DIRECT. KEEP MORE.</text>
                 </svg>
             </div>
             <div class="footer-links">

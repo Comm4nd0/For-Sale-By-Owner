@@ -129,7 +129,7 @@ class _PricingScreenState extends State<PricingScreen> {
             width: double.infinity,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF1A3C2E), Color(0xFF2D6A4F)],
+                colors: [Color(0xFF115E66), Color(0xFF19747E)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -191,7 +191,7 @@ class _PricingScreenState extends State<PricingScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFC9872A),
+                        color: const Color(0xFF19747E),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Text(
@@ -229,13 +229,13 @@ class _PricingScreenState extends State<PricingScreen> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A3C2E),
+                      color: Color(0xFF115E66),
                     ),
                   ),
                   const SizedBox(height: 4),
                   const Text(
                     'Boost your listing with optional extras',
-                    style: TextStyle(color: Color(0xFF4A5E56), fontSize: 14),
+                    style: TextStyle(color: Color(0xFF4A5C62), fontSize: 14),
                   ),
                   const SizedBox(height: 12),
                   ..._addons.map((addon) => _buildAddonCard(addon)),
@@ -248,7 +248,7 @@ class _PricingScreenState extends State<PricingScreen> {
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFFD8F3DC),
+              color: const Color(0xFFD1E8E2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -258,13 +258,13 @@ class _PricingScreenState extends State<PricingScreen> {
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A3C2E),
+                    color: Color(0xFF115E66),
                   ),
                 ),
                 const SizedBox(height: 6),
                 const Text(
                   'For Sale By Owner is 100% free for property buyers and sellers. No fees. No commission. Ever.',
-                  style: TextStyle(color: Color(0xFF4A5E56), fontSize: 14),
+                  style: TextStyle(color: Color(0xFF4A5C62), fontSize: 14),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -287,15 +287,15 @@ class _PricingScreenState extends State<PricingScreen> {
         color: Colors.white,
         border: Border.all(
           color: isHighlighted
-              ? const Color(0xFFC9872A)
-              : const Color(0xFFD4DDD9),
+              ? const Color(0xFF19747E)
+              : const Color(0xFFE2E2E2),
           width: isHighlighted ? 2 : 1,
         ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: isHighlighted
             ? [
                 BoxShadow(
-                  color: const Color(0xFFC9872A).withValues(alpha: 0.15),
+                  color: const Color(0xFF19747E).withValues(alpha: 0.15),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 )
@@ -309,7 +309,7 @@ class _PricingScreenState extends State<PricingScreen> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 6),
               decoration: const BoxDecoration(
-                color: Color(0xFFC9872A),
+                color: Color(0xFF19747E),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(11),
                   topRight: Radius.circular(11),
@@ -335,7 +335,7 @@ class _PricingScreenState extends State<PricingScreen> {
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A3C2E),
+                    color: Color(0xFF115E66),
                   ),
                 ),
                 if (tier.tagline.isNotEmpty)
@@ -344,7 +344,7 @@ class _PricingScreenState extends State<PricingScreen> {
                     child: Text(
                       tier.tagline,
                       style: const TextStyle(
-                        color: Color(0xFF4A5E56),
+                        color: Color(0xFF4A5C62),
                         fontSize: 13,
                       ),
                     ),
@@ -360,13 +360,13 @@ class _PricingScreenState extends State<PricingScreen> {
                         style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A3C2E),
+                          color: Color(0xFF115E66),
                         ),
                       ),
                       TextSpan(
                         text: ' forever',
                         style: TextStyle(
-                          color: Color(0xFF8FA89E),
+                          color: Color(0xFF8FA3A8),
                           fontSize: 14,
                         ),
                       ),
@@ -382,13 +382,13 @@ class _PricingScreenState extends State<PricingScreen> {
                         style: const TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A3C2E),
+                          color: Color(0xFF115E66),
                         ),
                       ),
                       const TextSpan(
                         text: '/month',
                         style: TextStyle(
-                          color: Color(0xFF8FA89E),
+                          color: Color(0xFF8FA3A8),
                           fontSize: 14,
                         ),
                       ),
@@ -398,7 +398,7 @@ class _PricingScreenState extends State<PricingScreen> {
                     Text(
                       'Billed \u00A3${tier.annualPrice.toStringAsFixed(0)}/year',
                       style: const TextStyle(
-                        color: Color(0xFF4A5E56),
+                        color: Color(0xFF4A5C62),
                         fontSize: 12,
                       ),
                     ),
@@ -428,8 +428,8 @@ class _PricingScreenState extends State<PricingScreen> {
                           has ? Icons.check : Icons.remove,
                           size: 18,
                           color: has
-                              ? const Color(0xFF2D6A4F)
-                              : const Color(0xFFD4DDD9),
+                              ? const Color(0xFF19747E)
+                              : const Color(0xFFE2E2E2),
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -437,8 +437,8 @@ class _PricingScreenState extends State<PricingScreen> {
                           style: TextStyle(
                             fontSize: 13,
                             color: has
-                                ? const Color(0xFF1C2B25)
-                                : const Color(0xFF8FA89E),
+                                ? const Color(0xFF1A2C33)
+                                : const Color(0xFF8FA3A8),
                           ),
                         ),
                       ],
@@ -461,8 +461,8 @@ class _PricingScreenState extends State<PricingScreen> {
                           onPressed: () => _subscribe(tier),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: isHighlighted
-                                ? const Color(0xFFC9872A)
-                                : const Color(0xFF2D6A4F),
+                                ? const Color(0xFF19747E)
+                                : const Color(0xFF19747E),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
@@ -487,14 +487,14 @@ class _PricingScreenState extends State<PricingScreen> {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
-          const Icon(Icons.circle, size: 6, color: Color(0xFF2D6A4F)),
+          const Icon(Icons.circle, size: 6, color: Color(0xFF19747E)),
           const SizedBox(width: 8),
           Text(
             text,
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF2D6A4F),
+              color: Color(0xFF19747E),
             ),
           ),
         ],
@@ -513,7 +513,7 @@ class _PricingScreenState extends State<PricingScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: const Color(0xFFD4DDD9)),
+        border: Border.all(color: const Color(0xFFE2E2E2)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -523,7 +523,7 @@ class _PricingScreenState extends State<PricingScreen> {
             addon.name,
             style: const TextStyle(
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1A3C2E),
+              color: Color(0xFF115E66),
               fontSize: 15,
             ),
           ),
@@ -533,7 +533,7 @@ class _PricingScreenState extends State<PricingScreen> {
               child: Text(
                 addon.description,
                 style: const TextStyle(
-                  color: Color(0xFF4A5E56),
+                  color: Color(0xFF4A5C62),
                   fontSize: 13,
                 ),
               ),
@@ -543,7 +543,7 @@ class _PricingScreenState extends State<PricingScreen> {
             '\u00A3${addon.monthlyPrice.toStringAsFixed(0)}/month',
             style: const TextStyle(
               fontWeight: FontWeight.w600,
-              color: Color(0xFF2D6A4F),
+              color: Color(0xFF19747E),
               fontSize: 14,
             ),
           ),
@@ -551,7 +551,7 @@ class _PricingScreenState extends State<PricingScreen> {
           Text(
             'Available on: ${addon.compatibleTierSlugs.map((s) => s[0].toUpperCase() + s.substring(1)).join(', ')}',
             style: const TextStyle(
-              color: Color(0xFF8FA89E),
+              color: Color(0xFF8FA3A8),
               fontSize: 12,
             ),
           ),

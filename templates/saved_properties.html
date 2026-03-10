@@ -4,20 +4,20 @@
 
 {% block extra_css %}
 <style>
-    .page-title { color: #1A3C2E; margin-bottom: 1.5rem; }
+    .page-title { color: #115E66; margin-bottom: 1.5rem; }
     .property-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.25rem; }
-    .property-card { border: 1px solid #D4DDD9; border-radius: 8px; overflow: hidden; transition: box-shadow 0.2s; background: #FFFFFF; display: block; text-decoration: none; color: inherit; position: relative; }
+    .property-card { border: 1px solid #E2E2E2; border-radius: 8px; overflow: hidden; transition: box-shadow 0.2s; background: #FFFFFF; display: block; text-decoration: none; color: inherit; position: relative; }
     .property-card:hover { box-shadow: 0 4px 12px rgba(26,60,46,0.12); }
     .property-card img { width: 100%; height: 200px; object-fit: cover; display: block; }
-    .property-card .placeholder { width: 100%; height: 200px; background: #D8F3DC; display: flex; align-items: center; justify-content: center; color: #8FA89E; font-size: 2.5rem; }
+    .property-card .placeholder { width: 100%; height: 200px; background: #D1E8E2; display: flex; align-items: center; justify-content: center; color: #8FA3A8; font-size: 2.5rem; }
     .property-card-body { padding: 1.25rem; }
-    .property-card h3 { margin-bottom: 0.25rem; color: #1A3C2E; }
-    .property-price { font-size: 1.4rem; font-weight: 700; color: #C9872A; margin-bottom: 0.5rem; }
-    .property-details { color: #4A5E56; font-size: 0.9rem; }
-    .property-meta { display: flex; gap: 1rem; margin-top: 0.75rem; color: #4A5E56; font-size: 0.85rem; }
+    .property-card h3 { margin-bottom: 0.25rem; color: #115E66; }
+    .property-price { font-size: 1.4rem; font-weight: 700; color: #19747E; margin-bottom: 0.5rem; }
+    .property-details { color: #4A5C62; font-size: 0.9rem; }
+    .property-meta { display: flex; gap: 1rem; margin-top: 0.75rem; color: #4A5C62; font-size: 0.85rem; }
     .unsave-btn { position: absolute; top: 10px; right: 10px; background: rgba(26,60,46,0.7); color: white; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 18px; line-height: 32px; text-align: center; }
     .unsave-btn:hover { background: #B03A2E; }
-    .empty-state { text-align: center; padding: 4rem 2rem; color: #4A5E56; }
+    .empty-state { text-align: center; padding: 4rem 2rem; color: #4A5C62; }
     .empty-state p { margin-bottom: 1rem; font-size: 1.1rem; }
     @media (max-width: 768px) { .property-grid { grid-template-columns: 1fr; } }
 </style>

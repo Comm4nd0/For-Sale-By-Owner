@@ -56,7 +56,7 @@ class _ShimmerBlockState extends State<ShimmerBlock>
               end: Alignment(_animation.value, 0),
               colors: const [
                 AppTheme.pebble,
-                Color(0xFFE8EDE9),
+                Color(0xFFECEFF0),
                 AppTheme.pebble,
               ],
             ),

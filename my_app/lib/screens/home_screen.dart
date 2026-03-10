@@ -197,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [AppTheme.forestDeep, Color(0xFF245A3F)],
+                colors: [AppTheme.forestDeep, Color(0xFF1A6570)],
               ),
             ),
             child: SafeArea(
@@ -432,7 +432,7 @@ class _HomeScreenState extends State<HomeScreen> {
             width: double.infinity,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFFD8F3DC), Color(0xFFB7E4C7)],
+                colors: [Color(0xFFD1E8E2), Color(0xFFA9D6E5)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -449,7 +449,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: const Text(
                     '100% FREE',
                     style: TextStyle(
-                      color: Color(0xFFD8F3DC),
+                      color: Color(0xFFD1E8E2),
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
                     ),

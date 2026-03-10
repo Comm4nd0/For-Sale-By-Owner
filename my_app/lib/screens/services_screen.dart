@@ -137,7 +137,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
     return Scaffold(
       appBar: BrandedAppBar.build(
         context: context,
-        showHomeButton: true,
+        showHomeButton: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.monetization_on_outlined),

@@ -6,10 +6,9 @@ import '../models/notification_counts.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import 'home_screen.dart';
-import 'saved_properties_screen.dart';
-import 'my_listings_screen.dart';
 import 'dashboard_screen.dart';
-import 'profile_screen.dart';
+import 'services_screen.dart';
+import 'account_screen.dart';
 import 'login_screen.dart';
 
 class MainShell extends StatefulWidget {
@@ -26,10 +25,9 @@ class _MainShellState extends State<MainShell> {
 
   final List<Widget> _tabs = const [
     HomeScreen(),
-    SavedPropertiesScreen(),
-    MyListingsScreen(),
     DashboardScreen(),
-    ProfileScreen(),
+    ServicesScreen(),
+    AccountScreen(),
   ];
 
   @override
@@ -68,7 +66,7 @@ class _MainShellState extends State<MainShell> {
   }
 
   void _onTabTapped(int index) {
-    if (index >= 1 && index <= 4) {
+    if (index == 1 || index == 3) {
       final authService = context.read<AuthService>();
       if (!authService.isAuthenticated) {
         Navigator.push(
@@ -111,16 +109,6 @@ class _MainShellState extends State<MainShell> {
             activeIcon: Icon(Icons.search),
             label: 'Home',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.favorite_border),
-            activeIcon: Icon(Icons.favorite),
-            label: 'Saved',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.sell_outlined),
-            activeIcon: Icon(Icons.sell),
-            label: 'Listings',
-          ),
           BottomNavigationBarItem(
             icon: badgeCount > 0
                 ? Badge(
@@ -137,9 +125,14 @@ class _MainShellState extends State<MainShell> {
             label: 'Dashboard',
           ),
           const BottomNavigationBarItem(
+            icon: Icon(Icons.handyman_outlined),
+            activeIcon: Icon(Icons.handyman),
+            label: 'Services',
+          ),
+          const BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             activeIcon: Icon(Icons.person),
-            label: 'Profile',
+            label: 'Account',
           ),
         ],
       ),

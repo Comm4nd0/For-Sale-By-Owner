@@ -5,32 +5,32 @@
 {% block extra_css %}
 <style>
     .register-header { margin-bottom: 2rem; }
-    .register-header h1 { font-size: 1.6rem; color: #1A3C2E; margin-bottom: 0.25rem; }
-    .register-header p { color: #4A5E56; }
+    .register-header h1 { font-size: 1.6rem; color: #115E66; margin-bottom: 0.25rem; }
+    .register-header p { color: #4A5C62; }
 
-    .form-card { background: #FFFFFF; border: 1px solid #D4DDD9; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
-    .form-card h3 { color: #1A3C2E; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #D4DDD9; font-size: 1.1rem; }
+    .form-card { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .form-card h3 { color: #115E66; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #E2E2E2; font-size: 1.1rem; }
     .form-group { margin-bottom: 1rem; }
-    .form-group label { display: block; margin-bottom: 0.3rem; font-size: 0.85rem; font-weight: 500; color: #4A5E56; }
-    .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 0.6rem; border: 1px solid #D4DDD9; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
+    .form-group label { display: block; margin-bottom: 0.3rem; font-size: 0.85rem; font-weight: 500; color: #4A5C62; }
+    .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 0.6rem; border: 1px solid #E2E2E2; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
     .form-group textarea { min-height: 100px; resize: vertical; }
-    .form-group small { display: block; margin-top: 0.25rem; font-size: 0.8rem; color: #8FA89E; }
+    .form-group small { display: block; margin-top: 0.25rem; font-size: 0.8rem; color: #8FA3A8; }
     .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 
     .category-checkboxes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .category-checkboxes label {
         display: inline-flex; align-items: center; gap: 0.35rem;
         padding: 0.4rem 0.75rem; border-radius: 20px; font-size: 0.85rem;
-        border: 1px solid #D4DDD9; background: #FFFFFF; color: #1A3C2E;
+        border: 1px solid #E2E2E2; background: #FFFFFF; color: #115E66;
         cursor: pointer; transition: all 0.15s;
     }
     .category-checkboxes input[type="checkbox"] { display: none; }
     .category-checkboxes input[type="checkbox"]:checked + label {
-        background: #2D6A4F; color: white; border-color: #2D6A4F;
+        background: #19747E; color: white; border-color: #19747E;
     }
 
     .logo-preview { margin-top: 0.5rem; }
-    .logo-preview img { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; border: 1px solid #D4DDD9; }
+    .logo-preview img { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; border: 1px solid #E2E2E2; }
 
     @media (max-width: 768px) {
         .form-row-2 { grid-template-columns: 1fr; }
@@ -60,7 +60,7 @@
         <div class="form-group">
             <label>Categories *</label>
             <div id="category-checkboxes" class="category-checkboxes">
-                <p style="color:#8FA89E;">Loading categories...</p>
+                <p style="color:#8FA3A8;">Loading categories...</p>
             </div>
         </div>
         <div class="form-group">
@@ -98,7 +98,7 @@
 
     <div class="form-card">
         <h3>Coverage Area</h3>
-        <p style="font-size:0.9rem; color:#4A5E56; margin-bottom:1rem;">Specify the areas you cover so customers can find you when searching by location.</p>
+        <p style="font-size:0.9rem; color:#4A5C62; margin-bottom:1rem;">Specify the areas you cover so customers can find you when searching by location.</p>
         <div class="form-group">
             <label>Counties</label>
             <input type="text" id="coverage_counties" placeholder="e.g. Gloucestershire, Oxfordshire, Wiltshire">
