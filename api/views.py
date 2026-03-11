@@ -1,8 +1,12 @@
 import logging
+import math
 import requests
+from collections import defaultdict
+from datetime import timedelta
 from decimal import Decimal
 
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Sum, Avg, F
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 from rest_framework import viewsets, permissions, status, generics
@@ -14,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
+from django.core.cache import cache
 
 from .models import (
     Property, PropertyImage, PropertyFloorplan, PropertyFeature,
@@ -22,6 +27,9 @@ from .models import (
     ServiceCategory, ServiceProvider, ServiceProviderReview,
     SubscriptionTier, SubscriptionAddOn, ServiceProviderSubscription,
     ServiceProviderPhoto,
+    ChatRoom, ChatMessage,
+    ViewingSlot, ViewingSlotBooking,
+    Offer, PropertyDocument, PropertyFlag, Referral,
 )
 from .serializers import (
     PropertySerializer, PropertyListSerializer, PropertyImageSerializer,
@@ -33,8 +41,11 @@ from .serializers import (
     ServiceProviderDetailSerializer, ServiceProviderReviewSerializer,
     SubscriptionTierSerializer, SubscriptionAddOnSerializer,
     ServiceProviderSubscriptionSerializer, ServiceProviderPhotoSerializer,
+    ChatRoomSerializer, ChatMessageSerializer,
+    ViewingSlotSerializer,
+    OfferSerializer, PropertyDocumentSerializer,
+    PropertyFlagSerializer, ReferralSerializer,
 )
-from .notifications import notify_new_enquiry, notify_viewing_request, notify_reply
 
 
 class EnquiryRateThrottle(UserRateThrottle):
@@ -48,6 +59,19 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
         return obj.owner == request.user
+
+
+# ── Haversine distance helper ────────────────────────────────────
+
+def haversine_distance(lat1, lon1, lat2, lon2):
+    """Calculate distance in miles between two lat/lon points."""
+    R = 3959  # Earth radius in miles
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (math.sin(dlat / 2) ** 2 +
+         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *
+         math.sin(dlon / 2) ** 2)
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 class PropertyViewSet(viewsets.ModelViewSet):
@@ -75,7 +99,9 @@ class PropertyViewSet(viewsets.ModelViewSet):
         return obj
 
     def get_queryset(self):
-        queryset = Property.objects.all().select_related('owner').prefetch_related('images')
+        queryset = Property.objects.all().select_related('owner').prefetch_related(
+            'images', 'features',
+        )
         status_filter = self.request.query_params.get('status')
         property_type = self.request.query_params.get('property_type')
         city = self.request.query_params.get('city')
@@ -83,10 +109,8 @@ class PropertyViewSet(viewsets.ModelViewSet):
         if not self.request.user.is_authenticated:
             queryset = queryset.filter(status='active')
         elif self.request.query_params.get('mine') == 'true':
-            # Only show the current user's own properties
             queryset = queryset.filter(owner=self.request.user)
         else:
-            # Authenticated users see active + their own
             queryset = queryset.filter(
                 Q(status='active') | Q(owner=self.request.user)
             )
@@ -124,23 +148,41 @@ class PropertyViewSet(viewsets.ModelViewSet):
         if epc_rating:
             queryset = queryset.filter(epc_rating=epc_rating)
 
+        # Radius/distance search
+        lat = self.request.query_params.get('lat')
+        lon = self.request.query_params.get('lon')
+        radius = self.request.query_params.get('radius')  # in miles
+        if lat and lon and radius:
+            try:
+                lat, lon, radius = float(lat), float(lon), float(radius)
+                # Rough bounding box filter first for efficiency
+                lat_range = radius / 69.0
+                lon_range = radius / (69.0 * math.cos(math.radians(lat)))
+                queryset = queryset.filter(
+                    latitude__isnull=False,
+                    longitude__isnull=False,
+                    latitude__gte=lat - lat_range,
+                    latitude__lte=lat + lat_range,
+                    longitude__gte=lon - lon_range,
+                    longitude__lte=lon + lon_range,
+                )
+            except (ValueError, TypeError):
+                pass
+
         return queryset
 
     def perform_create(self, serializer):
         instance = serializer.save(owner=self.request.user)
-        # Record initial price in history
         PriceHistory.objects.create(property=instance, price=instance.price)
 
     def perform_update(self, serializer):
         old_price = serializer.instance.price
         instance = serializer.save()
-        # Track price change
         if instance.price != old_price:
             PriceHistory.objects.create(property=instance, price=instance.price)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        # Track view (non-critical, should not block response)
         try:
             ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
             PropertyView.objects.create(
@@ -203,7 +245,13 @@ class PropertyImageViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You can only add images to your own properties.")
         if property_obj.images.count() >= 10:
             raise ValidationError("Maximum 10 images per property.")
-        serializer.save(property=property_obj)
+        instance = serializer.save(property=property_obj)
+        # Async image processing
+        try:
+            from .tasks import process_property_image
+            process_property_image.delay(instance.id)
+        except Exception:
+            pass
 
     def perform_update(self, serializer):
         if serializer.instance.property.owner != self.request.user:
@@ -216,6 +264,8 @@ class PropertyImageViewSet(viewsets.ModelViewSet):
         was_primary = instance.is_primary
         prop = instance.property
         instance.image.delete(save=False)
+        if instance.thumbnail:
+            instance.thumbnail.delete(save=False)
         instance.delete()
         if was_primary:
             next_img = prop.images.first()
@@ -320,7 +370,6 @@ class EnquiryViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        # Users can see enquiries they sent or received (as property owner)
         return Enquiry.objects.filter(
             Q(sender=user) | Q(property__owner=user)
         ).select_related('property', 'sender').prefetch_related('replies__author')
@@ -329,12 +378,16 @@ class EnquiryViewSet(viewsets.ModelViewSet):
         prop = serializer.validated_data['property']
         if prop.owner == self.request.user:
             raise ValidationError("You cannot enquire about your own property.")
-        # Force is_read=False on create so sender can't mark their own enquiry as read
         enquiry = serializer.save(sender=self.request.user, is_read=False)
-        notify_new_enquiry(enquiry)
+        # Use async task instead of blocking
+        try:
+            from .tasks import send_enquiry_notification
+            send_enquiry_notification.delay(enquiry.id)
+        except Exception:
+            from .notifications import notify_new_enquiry
+            notify_new_enquiry(enquiry)
 
     def perform_update(self, serializer):
-        # Only property owner can mark as read
         if serializer.instance.property.owner != self.request.user:
             raise PermissionDenied()
         serializer.save()
@@ -363,11 +416,15 @@ class EnquiryViewSet(viewsets.ModelViewSet):
         if not message:
             raise ValidationError("Message cannot be empty.")
         reply_obj = Reply.objects.create(enquiry=enquiry, author=user, message=message)
-        # Auto-mark as read when owner replies
         if user == enquiry.property.owner and not enquiry.is_read:
             enquiry.is_read = True
             enquiry.save(update_fields=['is_read'])
-        notify_reply(reply_obj)
+        try:
+            from .tasks import send_reply_notification
+            send_reply_notification.delay(reply_obj.id)
+        except Exception:
+            from .notifications import notify_reply
+            notify_reply(reply_obj)
         return Response(ReplySerializer(reply_obj).data, status=status.HTTP_201_CREATED)
 
 
@@ -387,11 +444,15 @@ class ViewingRequestViewSet(viewsets.ModelViewSet):
         if prop.owner == self.request.user:
             raise ValidationError("You cannot request a viewing for your own property.")
         viewing = serializer.save(requester=self.request.user)
-        notify_viewing_request(viewing)
+        try:
+            from .tasks import send_viewing_notification
+            send_viewing_notification.delay(viewing.id)
+        except Exception:
+            from .notifications import notify_viewing_request
+            notify_viewing_request(viewing)
 
     def perform_update(self, serializer):
         instance = serializer.instance
-        # Only property owner can update status/seller_notes
         if instance.property.owner != self.request.user:
             raise PermissionDenied("Only the property owner can update viewing requests.")
         serializer.save()
@@ -411,7 +472,7 @@ class ViewingRequestViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def reply(self, request, pk=None):
-        """Post a reply to a viewing request. Both requester and property owner can reply."""
+        """Post a reply to a viewing request."""
         viewing = self.get_object()
         user = request.user
         if user != viewing.requester and user != viewing.property.owner:
@@ -420,7 +481,12 @@ class ViewingRequestViewSet(viewsets.ModelViewSet):
         if not message:
             raise ValidationError("Message cannot be empty.")
         reply_obj = Reply.objects.create(viewing_request=viewing, author=user, message=message)
-        notify_reply(reply_obj)
+        try:
+            from .tasks import send_reply_notification
+            send_reply_notification.delay(reply_obj.id)
+        except Exception:
+            from .notifications import notify_reply
+            notify_reply(reply_obj)
         return Response(ReplySerializer(reply_obj).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['patch'])
@@ -436,6 +502,11 @@ class ViewingRequestViewSet(viewsets.ModelViewSet):
         if 'seller_notes' in request.data:
             viewing.seller_notes = request.data['seller_notes']
         viewing.save(update_fields=['status', 'seller_notes', 'updated_at'])
+        try:
+            from .tasks import send_viewing_status_notification
+            send_viewing_status_notification.delay(viewing.id)
+        except Exception:
+            pass
         return Response(ViewingRequestSerializer(viewing).data)
 
 
@@ -459,18 +530,63 @@ class PropertyFeatureViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = None
 
 
+# ── Dashboard & Analytics ────────────────────────────────────────
+
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def dashboard_stats(request):
-    """Get seller dashboard statistics."""
+    """Get seller dashboard statistics with analytics."""
     user = request.user
     properties = Property.objects.filter(owner=user)
     total_views = PropertyView.objects.filter(property__owner=user).count()
     total_enquiries = Enquiry.objects.filter(property__owner=user).count()
     unread_enquiries = Enquiry.objects.filter(property__owner=user, is_read=False).count()
     total_saves = SavedProperty.objects.filter(property__owner=user).count()
-
     pending_viewings = ViewingRequest.objects.filter(property__owner=user, status='pending').count()
+    total_offers = Offer.objects.filter(property__owner=user).count()
+    pending_offers = Offer.objects.filter(property__owner=user, status='submitted').count()
+
+    # Views over last 30 days
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    views_by_day = (
+        PropertyView.objects.filter(property__owner=user, viewed_at__gte=thirty_days_ago)
+        .extra(select={'day': "date(viewed_at)"})
+        .values('day')
+        .annotate(count=Count('id'))
+        .order_by('day')
+    )
+
+    # Enquiry conversion rate (enquiries / views)
+    enquiry_rate = round((total_enquiries / total_views * 100), 1) if total_views > 0 else 0
+
+    # Per-property stats
+    property_stats = []
+    for prop in properties:
+        prop_views = prop.views.count()
+        prop_enquiries = prop.enquiries.count()
+        has_floorplan = prop.floorplans.exists()
+        image_count = prop.images.count()
+        tips = []
+        if image_count < 5:
+            tips.append(f'Add more photos ({image_count}/10). Listings with 5+ photos get 40% more enquiries.')
+        if not has_floorplan:
+            tips.append('Add a floorplan. Listings with floorplans get 30% more enquiries.')
+        if not prop.description or len(prop.description) < 100:
+            tips.append('Write a longer description (100+ chars) to attract more interest.')
+        if not prop.video_url:
+            tips.append('Add a virtual tour video to stand out from other listings.')
+
+        property_stats.append({
+            'id': prop.id,
+            'title': prop.title,
+            'status': prop.status,
+            'views': prop_views,
+            'enquiries': prop_enquiries,
+            'saves': prop.saved_by.count(),
+            'offers': prop.offers.count(),
+            'conversion_rate': round((prop_enquiries / prop_views * 100), 1) if prop_views > 0 else 0,
+            'tips': tips,
+        })
 
     data = {
         'total_listings': properties.count(),
@@ -480,6 +596,11 @@ def dashboard_stats(request):
         'unread_enquiries': unread_enquiries,
         'pending_viewings': pending_viewings,
         'total_saves': total_saves,
+        'total_offers': total_offers,
+        'pending_offers': pending_offers,
+        'enquiry_conversion_rate': enquiry_rate,
+        'views_by_day': list(views_by_day),
+        'property_stats': property_stats,
     }
     return Response(data)
 
@@ -491,7 +612,19 @@ def notification_counts(request):
     user = request.user
     unread = Enquiry.objects.filter(property__owner=user, is_read=False).count()
     pending = ViewingRequest.objects.filter(property__owner=user, status='pending').count()
-    return Response({'unread_enquiries': unread, 'pending_viewings': pending, 'total': unread + pending})
+    unread_chats = ChatMessage.objects.filter(
+        room__in=ChatRoom.objects.filter(Q(buyer=user) | Q(seller=user)),
+        is_read=False,
+    ).exclude(sender=user).count()
+    pending_offers = Offer.objects.filter(property__owner=user, status='submitted').count()
+    total = unread + pending + unread_chats + pending_offers
+    return Response({
+        'unread_enquiries': unread,
+        'pending_viewings': pending,
+        'unread_chats': unread_chats,
+        'pending_offers': pending_offers,
+        'total': total,
+    })
 
 
 @api_view(['GET', 'PATCH'])
@@ -522,6 +655,496 @@ def register_push_device(request):
     return Response({'registered': True, 'created': created})
 
 
+# ── Chat Views ───────────────────────────────────────────────────
+
+class ChatRoomViewSet(viewsets.ModelViewSet):
+    """Manage chat rooms between buyers and sellers."""
+    serializer_class = ChatRoomSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post']
+
+    def get_queryset(self):
+        user = self.request.user
+        return ChatRoom.objects.filter(
+            Q(buyer=user) | Q(seller=user)
+        ).select_related('property', 'buyer', 'seller').prefetch_related('messages')
+
+    def perform_create(self, serializer):
+        prop = serializer.validated_data['property']
+        if prop.owner == self.request.user:
+            raise ValidationError("You cannot start a chat about your own property.")
+        # Get or create the room
+        room, created = ChatRoom.objects.get_or_create(
+            property=prop,
+            buyer=self.request.user,
+            defaults={'seller': prop.owner},
+        )
+        if not created:
+            raise ValidationError("Chat room already exists for this property.")
+
+    def create(self, request, *args, **kwargs):
+        prop_id = request.data.get('property')
+        if not prop_id:
+            return Response({'detail': 'property is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        prop = get_object_or_404(Property, pk=prop_id)
+        if prop.owner == request.user:
+            return Response({'detail': 'Cannot chat about your own property.'}, status=status.HTTP_400_BAD_REQUEST)
+        room, created = ChatRoom.objects.get_or_create(
+            property=prop,
+            buyer=request.user,
+            defaults={'seller': prop.owner},
+        )
+        serializer = self.get_serializer(room)
+        return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+
+class ChatMessageViewSet(viewsets.ModelViewSet):
+    """Messages within a chat room."""
+    serializer_class = ChatMessageSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post']
+
+    def get_queryset(self):
+        room = get_object_or_404(ChatRoom, pk=self.kwargs['room_pk'])
+        user = self.request.user
+        if user != room.buyer and user != room.seller:
+            raise PermissionDenied()
+        return ChatMessage.objects.filter(room=room).select_related('sender')
+
+    def perform_create(self, serializer):
+        room = get_object_or_404(ChatRoom, pk=self.kwargs['room_pk'])
+        user = self.request.user
+        if user != room.buyer and user != room.seller:
+            raise PermissionDenied()
+        serializer.save(room=room, sender=user)
+        room.save(update_fields=['updated_at'])
+
+
+# ── Viewing Slots ────────────────────────────────────────────────
+
+class ViewingSlotViewSet(viewsets.ModelViewSet):
+    """Manage viewing availability slots."""
+    serializer_class = ViewingSlotSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
+
+    def get_queryset(self):
+        return ViewingSlot.objects.filter(
+            property_id=self.kwargs['property_pk']
+        )
+
+    def perform_create(self, serializer):
+        prop = get_object_or_404(Property, pk=self.kwargs['property_pk'])
+        if prop.owner != self.request.user:
+            raise PermissionDenied("Only the property owner can manage viewing slots.")
+        serializer.save(property=prop)
+
+    def perform_update(self, serializer):
+        if serializer.instance.property.owner != self.request.user:
+            raise PermissionDenied()
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.property.owner != self.request.user:
+            raise PermissionDenied()
+        instance.delete()
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def book_viewing_slot(request, property_pk, slot_pk):
+    """Book a viewing slot (creates a ViewingRequest tied to the slot)."""
+    prop = get_object_or_404(Property, pk=property_pk)
+    slot = get_object_or_404(ViewingSlot, pk=slot_pk, property=prop)
+
+    if prop.owner == request.user:
+        return Response({'detail': 'Cannot book a viewing for your own property.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not slot.get_is_available():
+        return Response({'detail': 'This slot is no longer available.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    viewing = ViewingRequest.objects.create(
+        property=prop,
+        requester=request.user,
+        preferred_date=slot.date or timezone.now().date(),
+        preferred_time=slot.start_time,
+        name=request.data.get('name', request.user.get_full_name()),
+        email=request.data.get('email', request.user.email),
+        phone=request.data.get('phone', ''),
+        message=request.data.get('message', ''),
+    )
+    ViewingSlotBooking.objects.create(slot=slot, viewing_request=viewing)
+
+    try:
+        from .tasks import send_viewing_notification
+        send_viewing_notification.delay(viewing.id)
+    except Exception:
+        pass
+
+    return Response(ViewingRequestSerializer(viewing).data, status=status.HTTP_201_CREATED)
+
+
+# ── Offers ───────────────────────────────────────────────────────
+
+class OfferViewSet(viewsets.ModelViewSet):
+    """Manage offers on properties."""
+    serializer_class = OfferSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'patch']
+
+    def get_queryset(self):
+        user = self.request.user
+        return Offer.objects.filter(
+            Q(buyer=user) | Q(property__owner=user)
+        ).select_related('property', 'buyer')
+
+    def perform_create(self, serializer):
+        prop = serializer.validated_data['property']
+        if prop.owner == self.request.user:
+            raise ValidationError("You cannot make an offer on your own property.")
+        offer = serializer.save(buyer=self.request.user, status='submitted')
+        try:
+            from .tasks import send_offer_notification
+            send_offer_notification.delay(offer.id, 'new')
+        except Exception:
+            pass
+
+    @action(detail=False, methods=['get'])
+    def received(self, request):
+        """Get offers received on the user's properties."""
+        qs = Offer.objects.filter(
+            property__owner=request.user
+        ).select_related('property', 'buyer').order_by('-created_at')
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        return Response(self.get_serializer(qs, many=True).data)
+
+    @action(detail=True, methods=['patch'])
+    def respond(self, request, pk=None):
+        """Seller responds to an offer (accept, reject, counter)."""
+        offer = self.get_object()
+        if offer.property.owner != request.user:
+            raise PermissionDenied()
+
+        new_status = request.data.get('status')
+        if new_status not in ['accepted', 'rejected', 'countered']:
+            raise ValidationError("Status must be 'accepted', 'rejected', or 'countered'.")
+
+        offer.status = new_status
+        if 'seller_notes' in request.data:
+            offer.seller_notes = request.data['seller_notes']
+        if new_status == 'countered':
+            counter = request.data.get('counter_amount')
+            if not counter:
+                raise ValidationError("counter_amount is required for counter offers.")
+            offer.counter_amount = Decimal(str(counter))
+        offer.save()
+
+        try:
+            from .tasks import send_offer_notification
+            send_offer_notification.delay(offer.id, 'status_update')
+        except Exception:
+            pass
+
+        return Response(OfferSerializer(offer).data)
+
+    @action(detail=True, methods=['patch'])
+    def withdraw(self, request, pk=None):
+        """Buyer withdraws their offer."""
+        offer = self.get_object()
+        if offer.buyer != request.user:
+            raise PermissionDenied()
+        if offer.status not in ['submitted', 'under_review', 'countered']:
+            raise ValidationError("Cannot withdraw this offer.")
+        offer.status = 'withdrawn'
+        offer.save(update_fields=['status', 'updated_at'])
+        return Response(OfferSerializer(offer).data)
+
+
+# ── Documents ────────────────────────────────────────────────────
+
+class PropertyDocumentViewSet(viewsets.ModelViewSet):
+    """Manage property documents (title deeds, EPC, etc.)."""
+    serializer_class = PropertyDocumentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_queryset(self):
+        prop = get_object_or_404(Property, pk=self.kwargs['property_pk'])
+        user = self.request.user
+        if prop.owner == user:
+            return PropertyDocument.objects.filter(property=prop)
+        # Non-owners can only see public documents
+        return PropertyDocument.objects.filter(property=prop, is_public=True)
+
+    def perform_create(self, serializer):
+        prop = get_object_or_404(Property, pk=self.kwargs['property_pk'])
+        if prop.owner != self.request.user:
+            raise PermissionDenied("Only the property owner can upload documents.")
+        serializer.save(property=prop, uploaded_by=self.request.user)
+
+    def perform_update(self, serializer):
+        if serializer.instance.property.owner != self.request.user:
+            raise PermissionDenied()
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.property.owner != self.request.user:
+            raise PermissionDenied()
+        instance.file.delete(save=False)
+        instance.delete()
+
+
+# ── Property Flagging / Moderation ──────────────────────────────
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def flag_property(request, property_pk):
+    """Flag a property listing for moderation."""
+    prop = get_object_or_404(Property, pk=property_pk)
+    if prop.owner == request.user:
+        return Response({'detail': 'Cannot flag your own property.'}, status=status.HTTP_400_BAD_REQUEST)
+    if PropertyFlag.objects.filter(property=prop, reporter=request.user).exists():
+        return Response({'detail': 'You have already flagged this property.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    reason = request.data.get('reason', '')
+    if reason not in dict(PropertyFlag.REASON_CHOICES):
+        return Response({'detail': 'Invalid reason.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    flag = PropertyFlag.objects.create(
+        property=prop,
+        reporter=request.user,
+        reason=reason,
+        description=request.data.get('description', ''),
+    )
+    return Response(PropertyFlagSerializer(flag).data, status=status.HTTP_201_CREATED)
+
+
+# ── Referrals ────────────────────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def my_referrals(request):
+    """Get the user's referral code and referral history."""
+    user = request.user
+    referrals = Referral.objects.filter(referrer=user).select_related('referred_user')
+    return Response({
+        'referral_code': user.referral_code,
+        'total_referrals': referrals.count(),
+        'referrals': ReferralSerializer(referrals, many=True).data,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def apply_referral(request):
+    """Apply a referral code during registration."""
+    code = request.data.get('referral_code', '').strip().upper()
+    user_id = request.data.get('user_id')
+
+    if not code or not user_id:
+        return Response({'detail': 'referral_code and user_id are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    try:
+        referrer = User.objects.get(referral_code=code)
+        referred = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return Response({'detail': 'Invalid referral code or user.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if referrer == referred:
+        return Response({'detail': 'Cannot refer yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+    if Referral.objects.filter(referred_user=referred).exists():
+        return Response({'detail': 'This user was already referred.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    Referral.objects.create(referrer=referrer, referred_user=referred)
+    return Response({'status': 'ok', 'referrer': referrer.email})
+
+
+# ── Mortgage Calculator ─────────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def mortgage_calculator(request):
+    """Calculate estimated monthly mortgage payment."""
+    try:
+        price = float(request.query_params.get('price', 0))
+        deposit_pct = float(request.query_params.get('deposit_pct', 10))
+        interest_rate = float(request.query_params.get('interest_rate', 4.5))
+        term_years = int(request.query_params.get('term_years', 25))
+    except (ValueError, TypeError):
+        return Response({'detail': 'Invalid parameters.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if price <= 0 or term_years <= 0:
+        return Response({'detail': 'Price and term must be positive.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    deposit = price * (deposit_pct / 100)
+    loan = price - deposit
+    monthly_rate = (interest_rate / 100) / 12
+    num_payments = term_years * 12
+
+    if monthly_rate > 0:
+        monthly_payment = loan * (monthly_rate * (1 + monthly_rate) ** num_payments) / \
+                          ((1 + monthly_rate) ** num_payments - 1)
+    else:
+        monthly_payment = loan / num_payments
+
+    total_cost = monthly_payment * num_payments
+    total_interest = total_cost - loan
+
+    # Stamp duty (England/NI rates as of 2024)
+    if price <= 250000:
+        stamp_duty = 0
+    elif price <= 925000:
+        stamp_duty = (price - 250000) * 0.05
+    elif price <= 1500000:
+        stamp_duty = (925000 - 250000) * 0.05 + (price - 925000) * 0.10
+    else:
+        stamp_duty = (925000 - 250000) * 0.05 + (1500000 - 925000) * 0.10 + (price - 1500000) * 0.12
+
+    return Response({
+        'price': price,
+        'deposit': round(deposit, 2),
+        'loan_amount': round(loan, 2),
+        'monthly_payment': round(monthly_payment, 2),
+        'total_cost': round(total_cost, 2),
+        'total_interest': round(total_interest, 2),
+        'stamp_duty': round(stamp_duty, 2),
+        'term_years': term_years,
+        'interest_rate': interest_rate,
+    })
+
+
+# ── Neighbourhood Data ──────────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def neighbourhood_info(request, property_pk):
+    """Get neighbourhood information for a property's location."""
+    prop = get_object_or_404(Property, pk=property_pk)
+    postcode = prop.postcode.strip().replace(' ', '+')
+    data = {'postcode': prop.postcode, 'city': prop.city, 'county': prop.county}
+
+    # Crime data from police.uk API
+    cache_key = f'neighbourhood_{prop.postcode}'
+    cached = cache.get(cache_key)
+    if cached:
+        return Response(cached)
+
+    if prop.latitude and prop.longitude:
+        try:
+            crime_resp = requests.get(
+                'https://data.police.uk/api/crimes-street/all-crime',
+                params={'lat': prop.latitude, 'lng': prop.longitude, 'date': '2024-01'},
+                timeout=10,
+            )
+            if crime_resp.status_code == 200:
+                crimes = crime_resp.json()
+                crime_counts = defaultdict(int)
+                for c in crimes:
+                    crime_counts[c.get('category', 'other')] += 1
+                data['crime_summary'] = dict(crime_counts)
+                data['total_crimes_nearby'] = len(crimes)
+        except Exception as e:
+            logger.debug('Crime API error: %s', e)
+
+    # Postcode data
+    try:
+        pc_resp = requests.get(
+            f'https://api.postcodes.io/postcodes/{prop.postcode.replace(" ", "")}',
+            timeout=10,
+        )
+        if pc_resp.status_code == 200:
+            pc_data = pc_resp.json().get('result', {})
+            data['region'] = pc_data.get('region')
+            data['parliamentary_constituency'] = pc_data.get('parliamentary_constituency')
+            data['admin_district'] = pc_data.get('admin_district')
+            data['nuts'] = pc_data.get('nuts')
+    except Exception as e:
+        logger.debug('Postcode API error: %s', e)
+
+    cache.set(cache_key, data, 86400)  # Cache for 24h
+    return Response(data)
+
+
+# ── Bulk Import/Export ───────────────────────────────────────────
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def bulk_import_properties(request):
+    """Import multiple properties from JSON data."""
+    properties_data = request.data.get('properties', [])
+    if not properties_data or not isinstance(properties_data, list):
+        return Response({'detail': 'Provide a list of properties.'}, status=status.HTTP_400_BAD_REQUEST)
+    if len(properties_data) > 50:
+        return Response({'detail': 'Maximum 50 properties per import.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    created = []
+    errors = []
+    for idx, prop_data in enumerate(properties_data):
+        try:
+            prop = Property.objects.create(
+                owner=request.user,
+                title=prop_data['title'],
+                property_type=prop_data.get('property_type', 'other'),
+                price=Decimal(str(prop_data['price'])),
+                address_line_1=prop_data['address_line_1'],
+                city=prop_data['city'],
+                postcode=prop_data['postcode'],
+                bedrooms=prop_data.get('bedrooms', 0),
+                bathrooms=prop_data.get('bathrooms', 0),
+                reception_rooms=prop_data.get('reception_rooms', 0),
+                description=prop_data.get('description', ''),
+                status='draft',
+            )
+            PriceHistory.objects.create(property=prop, price=prop.price)
+            created.append({'id': prop.id, 'title': prop.title, 'slug': prop.slug})
+        except Exception as e:
+            errors.append({'index': idx, 'error': str(e)})
+
+    return Response({
+        'created': len(created),
+        'errors': len(errors),
+        'properties': created,
+        'error_details': errors,
+    }, status=status.HTTP_201_CREATED if created else status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def export_properties(request):
+    """Export the user's properties as JSON."""
+    properties = Property.objects.filter(owner=request.user).prefetch_related('images', 'features')
+    data = []
+    for prop in properties:
+        data.append({
+            'title': prop.title,
+            'property_type': prop.property_type,
+            'status': prop.status,
+            'price': str(prop.price),
+            'address_line_1': prop.address_line_1,
+            'address_line_2': prop.address_line_2,
+            'city': prop.city,
+            'county': prop.county,
+            'postcode': prop.postcode,
+            'bedrooms': prop.bedrooms,
+            'bathrooms': prop.bathrooms,
+            'reception_rooms': prop.reception_rooms,
+            'square_feet': prop.square_feet,
+            'epc_rating': prop.epc_rating,
+            'description': prop.description,
+            'features': list(prop.features.values_list('name', flat=True)),
+            'created_at': prop.created_at.isoformat(),
+        })
+    return Response({'properties': data, 'count': len(data)})
+
+
 # ── Service Provider views ───────────────────────────────────────
 
 class IsServiceProviderOwnerOrReadOnly(permissions.BasePermission):
@@ -543,7 +1166,6 @@ class ServiceProviderViewSet(viewsets.ModelViewSet):
     serializer_class = ServiceProviderDetailSerializer
 
     def get_parsers(self):
-        """Use multipart for create/update (file uploads), JSON for other actions."""
         if self.action in ['create', 'update', 'partial_update']:
             return [MultiPartParser(), FormParser()]
         return super().get_parsers()
@@ -590,14 +1212,8 @@ class ServiceProviderViewSet(viewsets.ModelViewSet):
                 Q(coverage_postcodes__icontains=location)
             )
 
-        # Tier-priority ordering: Pro > Growth > Free for public listings
         if self.action == 'list' and not self.request.query_params.get('mine'):
-            from django.db.models import Case, When, Value, IntegerField, Subquery, OuterRef
-            tier_slug = Subquery(
-                ServiceProviderSubscription.objects.filter(
-                    provider=OuterRef('pk'), status='active',
-                ).order_by('-started_at').values('tier__slug')[:1]
-            )
+            from django.db.models import Case, When, Value, IntegerField
             queryset = queryset.annotate(
                 tier_priority=Case(
                     When(subscriptions__tier__slug='pro', subscriptions__status='active', then=Value(0)),
@@ -613,7 +1229,6 @@ class ServiceProviderViewSet(viewsets.ModelViewSet):
         if ServiceProvider.objects.filter(owner=self.request.user).exists():
             raise ValidationError("You already have a service provider listing.")
         provider = serializer.save(owner=self.request.user)
-        # Auto-assign free tier subscription
         free_tier = SubscriptionTier.objects.filter(slug='free', is_active=True).first()
         if free_tier:
             ServiceProviderSubscription.objects.create(
@@ -624,8 +1239,6 @@ class ServiceProviderViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         instance = serializer.instance
         tier = instance.current_tier
-
-        # Enforce category limit
         new_categories = serializer.validated_data.get('categories')
         if new_categories is not None and tier:
             max_cats = tier.max_service_categories
@@ -634,13 +1247,10 @@ class ServiceProviderViewSet(viewsets.ModelViewSet):
                     f"Your {tier.name} plan allows a maximum of {max_cats} "
                     f"categor{'y' if max_cats == 1 else 'ies'}. Upgrade your plan for more."
                 )
-
-        # Enforce logo restriction
         if 'logo' in serializer.validated_data and tier and not tier.allow_logo:
             raise ValidationError(
                 f"Your {tier.name} plan does not include logo uploads. Upgrade to add your logo."
             )
-
         serializer.save()
 
 
@@ -695,7 +1305,6 @@ def property_services(request, property_pk):
     if category:
         providers = providers.filter(categories__slug=category)
 
-    # Tier-priority ordering
     providers = providers.annotate(
         tier_priority=Case(
             When(subscriptions__tier__slug='pro', subscriptions__status='active', then=Value(0)),
@@ -744,7 +1353,7 @@ def my_subscription(request):
         'usage': {
             'categories_used': provider.categories.count(),
             'categories_max': tier.max_service_categories if tier else 1,
-            'locations_used': 1,  # Simple count — expand as location model grows
+            'locations_used': 1,
             'locations_max': tier.max_locations if tier else 1,
             'photos_used': provider.photos.count(),
             'photos_max': tier.max_photos if tier else 0,
@@ -782,7 +1391,6 @@ def create_checkout(request):
     except ServiceProvider.DoesNotExist:
         return Response({'detail': 'Register as a service provider first.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Get or create Stripe customer
     if provider.stripe_customer_id:
         customer_id = provider.stripe_customer_id
     else:
@@ -816,7 +1424,7 @@ def create_checkout(request):
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def create_portal(request):
-    """Create a Stripe Billing Portal session so the provider can manage billing."""
+    """Create a Stripe Billing Portal session."""
     import stripe
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -826,7 +1434,7 @@ def create_portal(request):
         return Response({'detail': 'No service provider profile found.'}, status=status.HTTP_404_NOT_FOUND)
 
     if not provider.stripe_customer_id:
-        return Response({'detail': 'No billing account found. Subscribe to a plan first.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'detail': 'No billing account found.'}, status=status.HTTP_400_BAD_REQUEST)
 
     site_url = request.build_absolute_uri('/').rstrip('/')
 
@@ -880,7 +1488,6 @@ def stripe_webhook(request):
 
 def _handle_checkout_completed(session):
     """Process a completed Stripe Checkout Session."""
-    from django.utils import timezone
     import stripe
 
     stripe_sub_id = session.get('subscription')
@@ -901,15 +1508,12 @@ def _handle_checkout_completed(session):
         logger.error('Provider or tier not found for checkout: provider=%s tier=%s', provider_id, tier_slug)
         return
 
-    # Retrieve Stripe subscription for period dates
     stripe.api_key = settings.STRIPE_SECRET_KEY
     stripe_sub = stripe.Subscription.retrieve(stripe_sub_id)
 
-    # Cancel existing active subscriptions (except free)
     provider.subscriptions.filter(status='active').exclude(tier__slug='free').update(
         status='cancelled', cancelled_at=timezone.now()
     )
-    # Also deactivate any free tier subscription
     provider.subscriptions.filter(status='active', tier__slug='free').update(status='cancelled')
 
     ServiceProviderSubscription.objects.create(
@@ -927,7 +1531,6 @@ def _handle_checkout_completed(session):
         ),
     )
 
-    # Ensure provider has customer ID saved
     if customer_id and not provider.stripe_customer_id:
         provider.stripe_customer_id = customer_id
         provider.save(update_fields=['stripe_customer_id'])
@@ -936,9 +1539,6 @@ def _handle_checkout_completed(session):
 
 
 def _handle_subscription_updated(sub_data):
-    """Handle Stripe subscription updated event."""
-    from django.utils import timezone
-
     stripe_sub_id = sub_data.get('id')
     try:
         sub = ServiceProviderSubscription.objects.get(stripe_subscription_id=stripe_sub_id)
@@ -946,7 +1546,6 @@ def _handle_subscription_updated(sub_data):
         logger.warning('Subscription not found for update: %s', stripe_sub_id)
         return
 
-    # Update status
     stripe_status = sub_data.get('status')
     status_map = {
         'active': 'active',
@@ -957,7 +1556,6 @@ def _handle_subscription_updated(sub_data):
     sub.status = status_map.get(stripe_status, sub.status)
     sub.cancel_at_period_end = sub_data.get('cancel_at_period_end', False)
 
-    # Update period dates
     if sub_data.get('current_period_start'):
         sub.current_period_start = timezone.datetime.fromtimestamp(
             sub_data['current_period_start'], tz=timezone.utc
@@ -967,7 +1565,6 @@ def _handle_subscription_updated(sub_data):
             sub_data['current_period_end'], tz=timezone.utc
         )
 
-    # Check if tier changed (plan change)
     items = sub_data.get('items', {}).get('data', [])
     if items:
         price_id = items[0].get('price', {}).get('id', '')
@@ -976,7 +1573,6 @@ def _handle_subscription_updated(sub_data):
         ).first()
         if new_tier and new_tier != sub.tier:
             sub.tier = new_tier
-            # Update billing cycle
             interval = items[0].get('price', {}).get('recurring', {}).get('interval', '')
             sub.billing_cycle = 'annual' if interval == 'year' else 'monthly'
 
@@ -985,9 +1581,6 @@ def _handle_subscription_updated(sub_data):
 
 
 def _handle_subscription_deleted(sub_data):
-    """Handle Stripe subscription cancelled/deleted."""
-    from django.utils import timezone
-
     stripe_sub_id = sub_data.get('id')
     try:
         sub = ServiceProviderSubscription.objects.get(stripe_subscription_id=stripe_sub_id)
@@ -998,7 +1591,6 @@ def _handle_subscription_deleted(sub_data):
     sub.cancelled_at = timezone.now()
     sub.save(update_fields=['status', 'cancelled_at'])
 
-    # Auto-assign free tier
     provider = sub.provider
     free_tier = SubscriptionTier.objects.filter(slug='free', is_active=True).first()
     if free_tier and not provider.subscriptions.filter(status='active').exists():
@@ -1011,7 +1603,6 @@ def _handle_subscription_deleted(sub_data):
 
 
 def _handle_payment_failed(invoice_data):
-    """Handle failed payment — set subscription to past_due."""
     stripe_sub_id = invoice_data.get('subscription')
     if not stripe_sub_id:
         return
@@ -1022,9 +1613,6 @@ def _handle_payment_failed(invoice_data):
 
 
 def _handle_invoice_paid(invoice_data):
-    """Handle successful invoice payment — reactivate subscription."""
-    from django.utils import timezone
-
     stripe_sub_id = invoice_data.get('subscription')
     if not stripe_sub_id:
         return
@@ -1081,7 +1669,7 @@ class ServiceProviderPhotoViewSet(viewsets.ModelViewSet):
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
 def house_price_lookup(request):
-    """Proxy Land Registry Price Paid Data API to avoid browser CORS/fetch issues."""
+    """Proxy Land Registry Price Paid Data API."""
     postcode = request.query_params.get('postcode', '').strip().upper()
     if not postcode:
         return Response({'error': 'Postcode is required'}, status=400)
@@ -1103,3 +1691,12 @@ def house_price_lookup(request):
             {'error': 'Could not connect to Land Registry. Please try again.'},
             status=502,
         )
+
+
+# ── Health Check ─────────────────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def health_check(request):
+    """Health check endpoint for monitoring."""
+    return Response({'status': 'healthy', 'version': '2.0.0'})

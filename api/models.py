@@ -31,6 +31,12 @@ class User(AbstractUser):
         help_text='Indicates the seller has verified their identity.',
     )
     phone = models.CharField(max_length=20, blank=True)
+    dark_mode = models.BooleanField(default=False, help_text='User prefers dark mode')
+    notification_enquiries = models.BooleanField(default=True)
+    notification_viewings = models.BooleanField(default=True)
+    notification_price_drops = models.BooleanField(default=True)
+    notification_saved_searches = models.BooleanField(default=True)
+    referral_code = models.CharField(max_length=20, unique=True, blank=True, null=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name']
@@ -39,6 +45,15 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    def save(self, *args, **kwargs):
+        if not self.referral_code:
+            import secrets
+            code = secrets.token_urlsafe(8)[:10].upper()
+            while User.objects.filter(referral_code=code).exists():
+                code = secrets.token_urlsafe(8)[:10].upper()
+            self.referral_code = code
+        super().save(*args, **kwargs)
 
 
 class PropertyFeature(models.Model):
@@ -105,6 +120,10 @@ class Property(models.Model):
     county = models.CharField(max_length=100, blank=True)
     postcode = models.CharField(max_length=10)
 
+    # Geolocation (for distance/radius search)
+    latitude = models.FloatField(null=True, blank=True, db_index=True)
+    longitude = models.FloatField(null=True, blank=True, db_index=True)
+
     # Details
     bedrooms = models.PositiveIntegerField(default=0)
     bathrooms = models.PositiveIntegerField(default=0)
@@ -112,6 +131,10 @@ class Property(models.Model):
     square_feet = models.PositiveIntegerField(null=True, blank=True)
     epc_rating = models.CharField(max_length=1, choices=EPC_RATINGS, blank=True)
     features = models.ManyToManyField(PropertyFeature, blank=True, related_name='properties')
+
+    # Video / virtual tour
+    video_url = models.URLField(blank=True, help_text='YouTube or Matterport URL for virtual tour')
+    video_thumbnail = models.ImageField(upload_to='properties/video_thumbnails/', blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -122,6 +145,14 @@ class Property(models.Model):
     class Meta:
         verbose_name_plural = 'Properties'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['city']),
+            models.Index(fields=['postcode']),
+            models.Index(fields=['price']),
+            models.Index(fields=['property_type']),
+            models.Index(fields=['bedrooms']),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -141,6 +172,7 @@ class PropertyImage(models.Model):
         Property, on_delete=models.CASCADE, related_name='images'
     )
     image = models.ImageField(upload_to='properties/images/')
+    thumbnail = models.ImageField(upload_to='properties/thumbnails/', blank=True, null=True)
     order = models.PositiveIntegerField(default=0)
     is_primary = models.BooleanField(default=False)
     caption = models.CharField(max_length=200, blank=True)
@@ -318,6 +350,9 @@ class PropertyView(models.Model):
 
     class Meta:
         ordering = ['-viewed_at']
+        indexes = [
+            models.Index(fields=['property', '-viewed_at']),
+        ]
 
     def __str__(self):
         return f"View of {self.property.title} at {self.viewed_at}"
@@ -325,6 +360,13 @@ class PropertyView(models.Model):
 
 class SavedSearch(models.Model):
     """A saved search with alert preferences."""
+
+    ALERT_FREQUENCY_CHOICES = [
+        ('instant', 'Instant'),
+        ('daily', 'Daily Digest'),
+        ('weekly', 'Weekly Digest'),
+    ]
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='saved_searches'
     )
@@ -338,6 +380,9 @@ class SavedSearch(models.Model):
     min_bathrooms = models.PositiveIntegerField(null=True, blank=True)
     epc_rating = models.CharField(max_length=1, blank=True)
     email_alerts = models.BooleanField(default=True)
+    alert_frequency = models.CharField(
+        max_length=10, choices=ALERT_FREQUENCY_CHOICES, default='instant'
+    )
     last_notified = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -378,6 +423,235 @@ class PushNotificationDevice(models.Model):
     def __str__(self):
         return f"{self.user.email} - {self.platform}"
 
+
+# ── Chat / Real-Time Messaging ──────────────────────────────────
+
+class ChatRoom(models.Model):
+    """A chat room between a buyer and seller for a specific property."""
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='chat_rooms'
+    )
+    buyer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='buyer_chats'
+    )
+    seller = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='seller_chats'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['property', 'buyer']
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"Chat: {self.buyer.email} <-> {self.seller.email} re: {self.property.title}"
+
+
+class ChatMessage(models.Model):
+    """A message in a chat room."""
+    room = models.ForeignKey(
+        ChatRoom, on_delete=models.CASCADE, related_name='messages'
+    )
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='chat_messages'
+    )
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.sender.email}: {self.message[:50]}"
+
+
+# ── Viewing Scheduler ───────────────────────────────────────────
+
+class ViewingSlot(models.Model):
+    """An available time slot set by a property seller for viewings."""
+    DAY_CHOICES = [
+        (0, 'Monday'), (1, 'Tuesday'), (2, 'Wednesday'),
+        (3, 'Thursday'), (4, 'Friday'), (5, 'Saturday'), (6, 'Sunday'),
+    ]
+
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='viewing_slots'
+    )
+    date = models.DateField(null=True, blank=True, help_text='Specific date, or leave blank for recurring')
+    day_of_week = models.IntegerField(choices=DAY_CHOICES, null=True, blank=True)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    max_bookings = models.PositiveIntegerField(default=1)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['date', 'day_of_week', 'start_time']
+
+    def __str__(self):
+        if self.date:
+            return f"{self.property.title}: {self.date} {self.start_time}-{self.end_time}"
+        return f"{self.property.title}: {self.get_day_of_week_display()} {self.start_time}-{self.end_time}"
+
+    def get_bookings_count(self):
+        return self.bookings.filter(
+            viewing_request__status__in=['pending', 'confirmed']
+        ).count()
+
+    def get_is_available(self):
+        return self.is_active and self.get_bookings_count() < self.max_bookings
+
+
+class ViewingSlotBooking(models.Model):
+    """Links a viewing request to a specific slot."""
+    slot = models.ForeignKey(
+        ViewingSlot, on_delete=models.CASCADE, related_name='bookings'
+    )
+    viewing_request = models.OneToOneField(
+        ViewingRequest, on_delete=models.CASCADE, related_name='slot_booking'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+# ── Offer Management ────────────────────────────────────────────
+
+class Offer(models.Model):
+    """A formal offer from a buyer to a seller."""
+    STATUS_CHOICES = [
+        ('submitted', 'Submitted'),
+        ('under_review', 'Under Review'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+        ('countered', 'Countered'),
+        ('withdrawn', 'Withdrawn'),
+        ('expired', 'Expired'),
+    ]
+
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='offers'
+    )
+    buyer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='offers_made'
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    message = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
+    counter_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        help_text='Counter-offer amount from seller'
+    )
+    seller_notes = models.TextField(blank=True)
+    is_cash_buyer = models.BooleanField(default=False)
+    is_chain_free = models.BooleanField(default=False)
+    mortgage_agreed = models.BooleanField(default=False)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Offer £{self.amount:,.0f} on {self.property.title} by {self.buyer.email}"
+
+
+# ── Property Documents ──────────────────────────────────────────
+
+class PropertyDocument(models.Model):
+    """Secure document attached to a property (title deeds, EPC, etc.)."""
+    DOCUMENT_TYPES = [
+        ('epc', 'EPC Certificate'),
+        ('title_deeds', 'Title Deeds'),
+        ('searches', 'Searches'),
+        ('ta6', 'TA6 Property Information'),
+        ('ta10', 'TA10 Fittings & Contents'),
+        ('floorplan', 'Floorplan'),
+        ('survey', 'Survey Report'),
+        ('other', 'Other'),
+    ]
+
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='documents'
+    )
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='uploaded_documents'
+    )
+    document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPES)
+    title = models.CharField(max_length=200)
+    file = models.FileField(upload_to='properties/documents/')
+    is_public = models.BooleanField(
+        default=False,
+        help_text='If true, any authenticated user can view. Otherwise only owner and accepted buyers.'
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['document_type', '-uploaded_at']
+
+    def __str__(self):
+        return f"{self.title} ({self.get_document_type_display()}) - {self.property.title}"
+
+
+# ── Property Flagging / Moderation ──────────────────────────────
+
+class PropertyFlag(models.Model):
+    """A user flag/report on a property listing."""
+    REASON_CHOICES = [
+        ('spam', 'Spam or Scam'),
+        ('inappropriate', 'Inappropriate Content'),
+        ('inaccurate', 'Inaccurate Information'),
+        ('duplicate', 'Duplicate Listing'),
+        ('sold', 'Already Sold'),
+        ('other', 'Other'),
+    ]
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending Review'),
+        ('reviewed', 'Reviewed'),
+        ('actioned', 'Actioned'),
+        ('dismissed', 'Dismissed'),
+    ]
+
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='flags'
+    )
+    reporter = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='property_flags'
+    )
+    reason = models.CharField(max_length=20, choices=REASON_CHOICES)
+    description = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    admin_notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['property', 'reporter']
+
+    def __str__(self):
+        return f"Flag on {self.property.title} by {self.reporter.email}: {self.reason}"
+
+
+# ── Referral Programme ──────────────────────────────────────────
+
+class Referral(models.Model):
+    """Tracks referrals between users."""
+    referrer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='referrals_made'
+    )
+    referred_user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='referral'
+    )
+    reward_granted = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.referrer.email} referred {self.referred_user.email}"
+
+
+# ── Service Provider Models ─────────────────────────────────────
 
 class ServiceCategory(models.Model):
     """A predefined category of service (e.g. EPC Inspections, Conveyancing)."""

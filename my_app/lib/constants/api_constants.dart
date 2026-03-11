@@ -100,6 +100,66 @@ class ApiConstants {
   static String get createPortal =>
       '$apiUrl/subscriptions/create-portal/';
 
+  // House prices
+  static String get housePrices => '$apiUrl/house-prices/';
+
+  // Chat rooms
+  static String get chatRooms => '$apiUrl/chat-rooms/';
+  static String chatRoomDetail(int id) => '$apiUrl/chat-rooms/$id/';
+  static String chatMessages(int roomId) =>
+      '$apiUrl/chat-rooms/$roomId/messages/';
+
+  // Offers
+  static String get offers => '$apiUrl/offers/';
+  static String offerDetail(int id) => '$apiUrl/offers/$id/';
+  static String offerRespond(int id) => '$apiUrl/offers/$id/respond/';
+  static String offerWithdraw(int id) => '$apiUrl/offers/$id/withdraw/';
+
+  // Property documents
+  static String propertyDocuments(int propertyId) =>
+      '$apiUrl/properties/$propertyId/documents/';
+  static String propertyDocument(int propertyId, int docId) =>
+      '$apiUrl/properties/$propertyId/documents/$docId/';
+
+  // Property flagging
+  static String propertyFlag(int propertyId) =>
+      '$apiUrl/properties/$propertyId/flag/';
+
+  // Neighbourhood info
+  static String propertyNeighbourhood(int propertyId) =>
+      '$apiUrl/properties/$propertyId/neighbourhood/';
+
+  // Viewing slots
+  static String viewingSlots(int propertyId) =>
+      '$apiUrl/properties/$propertyId/viewing-slots/';
+  static String viewingSlot(int propertyId, int slotId) =>
+      '$apiUrl/properties/$propertyId/viewing-slots/$slotId/';
+  static String bookViewingSlot(int propertyId, int slotId) =>
+      '$apiUrl/properties/$propertyId/viewing-slots/$slotId/book/';
+
+  // Mortgage calculator
+  static String get mortgageCalculator => '$apiUrl/mortgage-calculator/';
+
+  // Referrals
+  static String get referrals => '$apiUrl/referrals/';
+  static String get applyReferral => '$apiUrl/referrals/apply/';
+
+  // Bulk import/export
+  static String get bulkImport => '$apiUrl/properties/bulk-import/';
+  static String get exportProperties => '$apiUrl/properties/export/';
+
+  // Push notifications
+  static String get pushRegister => '$apiUrl/push/register/';
+
+  // Health check
+  static String get healthCheck => '$apiUrl/health/';
+
+  // WebSocket
+  static String get _wsBaseUrl =>
+      baseUrl.replaceFirst('http', 'ws');
+  static String chatWebSocket(int roomId) =>
+      '$_wsBaseUrl/ws/chat/$roomId/';
+
   // Auth
   static String get login => '$authUrl/token/login/';
   static String get logout => '$authUrl/token/logout/';

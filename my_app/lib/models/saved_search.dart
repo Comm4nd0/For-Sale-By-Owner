@@ -9,6 +9,7 @@ class SavedSearch {
   final int? minBathrooms;
   final String epcRating;
   final bool emailAlerts;
+  final String alertFrequency;
   final String createdAt;
 
   SavedSearch({
@@ -22,6 +23,7 @@ class SavedSearch {
     this.minBathrooms,
     required this.epcRating,
     required this.emailAlerts,
+    required this.alertFrequency,
     required this.createdAt,
   });
 
@@ -41,6 +43,7 @@ class SavedSearch {
       minBathrooms: json['min_bathrooms'],
       epcRating: json['epc_rating'] ?? '',
       emailAlerts: json['email_alerts'] ?? true,
+      alertFrequency: json['alert_frequency'] ?? 'instant',
       createdAt: json['created_at'] ?? '',
     );
   }

@@ -7,6 +7,9 @@ from .models import (
     ServiceCategory, ServiceProvider, ServiceProviderReview,
     SubscriptionTier, SubscriptionAddOn, ServiceProviderSubscription,
     ServiceProviderPhoto,
+    ChatRoom, ChatMessage,
+    ViewingSlot, ViewingSlotBooking,
+    Offer, PropertyDocument, PropertyFlag, Referral,
 )
 
 User = get_user_model()
@@ -20,10 +23,17 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    referral_code = serializers.CharField(read_only=True)
+
     class Meta:
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name', 'phone']
-        read_only_fields = ['id', 'email']
+        fields = [
+            'id', 'email', 'first_name', 'last_name', 'phone',
+            'dark_mode', 'referral_code',
+            'notification_enquiries', 'notification_viewings',
+            'notification_price_drops', 'notification_saved_searches',
+        ]
+        read_only_fields = ['id', 'email', 'referral_code']
 
 
 class RelativeImageField(serializers.ImageField):
@@ -37,11 +47,12 @@ class RelativeImageField(serializers.ImageField):
 
 class PropertyImageSerializer(serializers.ModelSerializer):
     image = RelativeImageField()
+    thumbnail = RelativeImageField(read_only=True)
 
     class Meta:
         model = PropertyImage
-        fields = ['id', 'image', 'order', 'is_primary', 'caption', 'uploaded_at']
-        read_only_fields = ['id', 'uploaded_at']
+        fields = ['id', 'image', 'thumbnail', 'order', 'is_primary', 'caption', 'uploaded_at']
+        read_only_fields = ['id', 'thumbnail', 'uploaded_at']
 
 
 class PropertyFloorplanSerializer(serializers.ModelSerializer):
@@ -84,6 +95,7 @@ class PropertySerializer(serializers.ModelSerializer):
     is_saved = serializers.SerializerMethodField()
     view_count = serializers.SerializerMethodField()
     enquiry_count = serializers.SerializerMethodField()
+    offer_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Property
@@ -93,11 +105,13 @@ class PropertySerializer(serializers.ModelSerializer):
             'property_type', 'property_type_display',
             'status', 'status_display', 'price',
             'address_line_1', 'address_line_2', 'city', 'county', 'postcode',
+            'latitude', 'longitude',
             'bedrooms', 'bathrooms', 'reception_rooms', 'square_feet',
             'epc_rating', 'epc_rating_display',
             'features', 'feature_list',
             'images', 'floorplans', 'primary_image', 'is_saved',
-            'price_history', 'view_count', 'enquiry_count',
+            'price_history', 'view_count', 'enquiry_count', 'offer_count',
+            'video_url', 'video_thumbnail',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'owner', 'slug', 'created_at', 'updated_at']
@@ -126,6 +140,12 @@ class PropertySerializer(serializers.ModelSerializer):
             return obj.enquiries.count()
         return None
 
+    def get_offer_count(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated and obj.owner == request.user:
+            return obj.offers.count()
+        return None
+
 
 class PropertyListSerializer(PropertySerializer):
     """Lighter serializer for list views — omits full images array."""
@@ -136,10 +156,12 @@ class PropertyListSerializer(PropertySerializer):
             'property_type', 'property_type_display',
             'status', 'status_display', 'price',
             'address_line_1', 'address_line_2', 'city', 'county', 'postcode',
+            'latitude', 'longitude',
             'bedrooms', 'bathrooms', 'reception_rooms', 'square_feet',
             'epc_rating', 'epc_rating_display',
             'feature_list', 'primary_image', 'is_saved',
-            'view_count', 'created_at', 'updated_at',
+            'view_count', 'video_url',
+            'created_at', 'updated_at',
         ]
 
 
@@ -224,7 +246,7 @@ class SavedSearchSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'location', 'property_type',
             'min_price', 'max_price', 'min_bedrooms', 'min_bathrooms',
-            'epc_rating', 'email_alerts', 'created_at',
+            'epc_rating', 'email_alerts', 'alert_frequency', 'created_at',
         ]
         read_only_fields = ['id', 'created_at']
 
@@ -236,6 +258,156 @@ class DashboardStatsSerializer(serializers.Serializer):
     total_enquiries = serializers.IntegerField()
     unread_enquiries = serializers.IntegerField()
     total_saves = serializers.IntegerField()
+
+
+# ── Chat Serializers ─────────────────────────────────────────────
+
+class ChatMessageSerializer(serializers.ModelSerializer):
+    sender_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ChatMessage
+        fields = ['id', 'room', 'sender', 'sender_name', 'message', 'is_read', 'created_at']
+        read_only_fields = ['id', 'sender', 'created_at']
+
+    def get_sender_name(self, obj):
+        return obj.sender.get_full_name() or obj.sender.email
+
+
+class ChatRoomSerializer(serializers.ModelSerializer):
+    buyer_name = serializers.SerializerMethodField()
+    seller_name = serializers.SerializerMethodField()
+    property_title = serializers.CharField(source='property.title', read_only=True)
+    property_slug = serializers.CharField(source='property.slug', read_only=True)
+    last_message = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ChatRoom
+        fields = [
+            'id', 'property', 'property_title', 'property_slug',
+            'buyer', 'buyer_name', 'seller', 'seller_name',
+            'last_message', 'unread_count',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'buyer', 'seller', 'created_at', 'updated_at']
+
+    def get_buyer_name(self, obj):
+        return obj.buyer.get_full_name() or obj.buyer.email
+
+    def get_seller_name(self, obj):
+        return obj.seller.get_full_name() or obj.seller.email
+
+    def get_last_message(self, obj):
+        msg = obj.messages.order_by('-created_at').first()
+        if msg:
+            return {
+                'message': msg.message[:100],
+                'sender_id': msg.sender_id,
+                'created_at': msg.created_at.isoformat(),
+            }
+        return None
+
+    def get_unread_count(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.messages.filter(is_read=False).exclude(sender=request.user).count()
+        return 0
+
+
+# ── Viewing Slot Serializers ─────────────────────────────────────
+
+class ViewingSlotSerializer(serializers.ModelSerializer):
+    is_available = serializers.SerializerMethodField()
+    current_bookings = serializers.SerializerMethodField()
+    day_display = serializers.CharField(source='get_day_of_week_display', read_only=True)
+
+    def get_is_available(self, obj):
+        return obj.get_is_available()
+
+    def get_current_bookings(self, obj):
+        return obj.get_bookings_count()
+
+    class Meta:
+        model = ViewingSlot
+        fields = [
+            'id', 'property', 'date', 'day_of_week', 'day_display',
+            'start_time', 'end_time', 'max_bookings', 'current_bookings',
+            'is_available', 'is_active',
+        ]
+        read_only_fields = ['id']
+
+
+# ── Offer Serializers ────────────────────────────────────────────
+
+class OfferSerializer(serializers.ModelSerializer):
+    buyer_name = serializers.SerializerMethodField()
+    property_title = serializers.CharField(source='property.title', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = Offer
+        fields = [
+            'id', 'property', 'property_title',
+            'buyer', 'buyer_name',
+            'amount', 'message', 'status', 'status_display',
+            'counter_amount', 'seller_notes',
+            'is_cash_buyer', 'is_chain_free', 'mortgage_agreed',
+            'expires_at', 'created_at', 'updated_at',
+        ]
+        read_only_fields = [
+            'id', 'buyer', 'status', 'counter_amount',
+            'seller_notes', 'created_at', 'updated_at',
+        ]
+
+    def get_buyer_name(self, obj):
+        return obj.buyer.get_full_name() or obj.buyer.email
+
+
+# ── Document Serializers ─────────────────────────────────────────
+
+class PropertyDocumentSerializer(serializers.ModelSerializer):
+    uploaded_by_name = serializers.SerializerMethodField()
+    document_type_display = serializers.CharField(
+        source='get_document_type_display', read_only=True
+    )
+
+    class Meta:
+        model = PropertyDocument
+        fields = [
+            'id', 'property', 'uploaded_by', 'uploaded_by_name',
+            'document_type', 'document_type_display',
+            'title', 'file', 'is_public', 'uploaded_at',
+        ]
+        read_only_fields = ['id', 'uploaded_by', 'uploaded_at']
+
+    def get_uploaded_by_name(self, obj):
+        return obj.uploaded_by.get_full_name() or obj.uploaded_by.email
+
+
+# ── Flag / Moderation Serializers ────────────────────────────────
+
+class PropertyFlagSerializer(serializers.ModelSerializer):
+    reason_display = serializers.CharField(source='get_reason_display', read_only=True)
+
+    class Meta:
+        model = PropertyFlag
+        fields = [
+            'id', 'property', 'reporter', 'reason', 'reason_display',
+            'description', 'status', 'created_at',
+        ]
+        read_only_fields = ['id', 'reporter', 'status', 'created_at']
+
+
+# ── Referral Serializers ─────────────────────────────────────────
+
+class ReferralSerializer(serializers.ModelSerializer):
+    referred_email = serializers.CharField(source='referred_user.email', read_only=True)
+
+    class Meta:
+        model = Referral
+        fields = ['id', 'referrer', 'referred_user', 'referred_email', 'reward_granted', 'created_at']
+        read_only_fields = ['id', 'referrer', 'referred_user', 'created_at']
 
 
 # ── Service Provider serializers ─────────────────────────────────
