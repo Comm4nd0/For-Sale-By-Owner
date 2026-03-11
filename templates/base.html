@@ -259,14 +259,17 @@
         const Auth = {
             getToken() { return localStorage.getItem('auth_token'); },
             setToken(token) { localStorage.setItem('auth_token', token); },
-            clear() { localStorage.removeItem('auth_token'); },
+            clear() {
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('cached_user');
+            },
             isLoggedIn() { return !!this.getToken(); },
             getCSRFToken() {
                 const match = document.cookie.match(/csrftoken=([^;]+)/);
                 return match ? match[1] : '';
             },
             headers(json = true) {
-                const h = { 'X-CSRFToken': this.getCSRFToken() };
+                const h = { 'X-CSRFToken': this.getCSRFToken(), 'Cache-Control': 'no-cache' };
                 if (json) h['Content-Type'] = 'application/json';
                 const t = this.getToken();
                 if (t) h['Authorization'] = 'Token ' + t;
@@ -280,21 +283,39 @@
                 return true;
             },
             async authFetch(url, options = {}) {
-                const res = await fetch(url, options.headers ? options : { ...options, headers: this.headers(options.json !== false) });
+                const fetchOpts = options.headers
+                    ? options
+                    : { ...options, headers: this.headers(options.json !== false) };
+                // Prevent browser from serving stale cached responses
+                fetchOpts.cache = 'no-store';
+                const res = await fetch(url, fetchOpts);
                 if (res.status === 401 && this.getToken()) {
                     // Token is stale (e.g. DB was flushed) — clear and retry as anonymous
                     this.clear();
-                    const { Authorization, ...cleanHeaders } = options.headers || {};
-                    return fetch(url, { ...options, headers: cleanHeaders });
+                    const { Authorization, ...cleanHeaders } = fetchOpts.headers || {};
+                    return fetch(url, { ...fetchOpts, headers: cleanHeaders });
                 }
                 return res;
             },
-            async logout() {
-                try {
-                    await fetch('/auth/token/logout/', { method: 'POST', headers: this.headers() });
-                } catch(e) {}
+            logout() {
+                // Save token before clearing so we can invalidate it on server
+                const token = this.getToken();
+                const csrf = this.getCSRFToken();
+                // Clear ALL client state immediately
                 this.clear();
-                window.location.href = '/';
+                // Invalidate token on server (fire-and-forget)
+                if (token) {
+                    fetch('/auth/token/logout/', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Token ' + token, 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
+                    }).catch(() => {});
+                }
+                // Force a full page reload even if already on '/'
+                if (window.location.pathname === '/') {
+                    window.location.reload();
+                } else {
+                    window.location.href = '/';
+                }
             }
         };
 
@@ -335,11 +356,15 @@
                         </div>
                     </div>
                     <a href="/house-prices/">House Prices</a>
+                    <a href="/mortgage-calculator/">Mortgage Calculator</a>
                     <a href="/dashboard/" id="nav-dashboard-link">Dashboard</a>
+                    <a href="/messages/" id="nav-messages-link">Messages</a>
                     <div class="nav-dropdown nav-dropdown-end">
                         <button class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true">Account</button>
                         <div class="nav-dropdown-menu" role="menu">
                             <a href="/saved/" role="menuitem">Saved</a>
+                            <a href="/saved-searches/" role="menuitem">Saved Searches</a>
+                            <a href="/referrals/" role="menuitem">Referrals</a>
                             <a href="/profile/" role="menuitem">Profile</a>
                             <a href="#" onclick="Auth.logout(); return false;" role="menuitem">Logout</a>
                         </div>
@@ -349,6 +374,7 @@
                 nav.innerHTML = `
                     <a href="/services/">Services</a>
                     <a href="/house-prices/">House Prices</a>
+                    <a href="/mortgage-calculator/">Mortgage Calculator</a>
                     <a href="/pricing/">Pricing</a>
                     <a href="/login/">Login</a>
                     <a href="/register/">Register</a>
@@ -437,6 +463,25 @@
                     if (data && data.total > 0) {
                         const count = data.total > 99 ? '99+' : data.total;
                         link.innerHTML = `Dashboard <span class="nav-badge">${count}</span>`;
+                    }
+                })
+                .catch(() => {});
+        })();
+
+        // Messages unread badge
+        (function() {
+            if (!Auth.isLoggedIn()) return;
+            const link = document.getElementById('nav-messages-link');
+            if (!link) return;
+            Auth.authFetch('/api/chat-rooms/', { headers: Auth.headers() })
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (!data) return;
+                    const rooms = Array.isArray(data) ? data : (data.results || []);
+                    const unread = rooms.reduce((sum, r) => sum + (r.unread_count || 0), 0);
+                    if (unread > 0) {
+                        const count = unread > 99 ? '99+' : unread;
+                        link.innerHTML = `Messages <span class="nav-badge">${count}</span>`;
                     }
                 })
                 .catch(() => {});

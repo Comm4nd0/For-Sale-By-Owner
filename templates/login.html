@@ -39,7 +39,9 @@
 
 {% block extra_js %}
 <script>
-    if (Auth.isLoggedIn()) window.location.href = '/';
+    // Always clear any stale token when visiting login page — the user
+    // is here to (re-)authenticate, so any previous session should be discarded.
+    Auth.clear();
 
     // Show success message after registration redirect
     if (new URLSearchParams(window.location.search).get('registered') === '1') {

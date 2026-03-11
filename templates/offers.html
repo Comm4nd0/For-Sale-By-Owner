@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+
+{% block title %}Offers - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-title { color: #115E66; margin-bottom: 1.5rem; }
+
+    .tab-nav { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 2px solid #E2E2E2; }
+    .tab-btn { padding: 0.6rem 1.25rem; background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; font-size: 0.95rem; font-family: inherit; color: #4A5C62; display: inline-flex; align-items: center; gap: 0.4rem; }
+    .tab-btn.active { color: #115E66; font-weight: 600; border-bottom-color: #19747E; }
+    .tab-btn:hover { color: #115E66; }
+    .tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; font-size: 0.75rem; font-weight: 700; line-height: 1; background: #856404; color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .offer-card { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.25rem; margin-bottom: 0.75rem; }
+    .offer-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem; }
+    .offer-property { font-size: 0.85rem; color: #4A5C62; margin-bottom: 0.25rem; }
+    .offer-from { font-weight: 600; color: #115E66; }
+    .offer-date { font-size: 0.8rem; color: #8FA3A8; }
+    .offer-amount { font-size: 1.5rem; font-weight: 700; color: #19747E; margin-bottom: 0.5rem; }
+    .offer-message { color: #1A2C33; font-size: 0.9rem; margin-bottom: 0.5rem; }
+
+    .offer-attributes { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .attr-tag { font-size: 0.75rem; padding: 2px 8px; border-radius: 3px; font-weight: 600; }
+    .attr-tag.positive { background: #D1E8E2; color: #115E66; }
+    .attr-tag.neutral { background: #F0F0F0; color: #4A5C62; }
+
+    .status-badge { font-size: 0.75rem; padding: 2px 10px; border-radius: 3px; font-weight: 600; white-space: nowrap; }
+    .status-submitted { background: #D6EAF8; color: #1A5276; }
+    .status-under_review { background: #FFF3CD; color: #856404; }
+    .status-accepted { background: #D1E8E2; color: #115E66; }
+    .status-rejected { background: #f8d7d4; color: #B03A2E; }
+    .status-countered { background: #FFF3CD; color: #7D6608; }
+    .status-withdrawn { background: #E2E2E2; color: #4A5C62; }
+    .status-expired { background: #E2E2E2; color: #4A5C62; }
+
+    .offer-counter { background: #FFF3CD; border-radius: 6px; padding: 0.75rem; margin-bottom: 0.75rem; }
+    .offer-counter .counter-label { font-size: 0.85rem; color: #7D6608; font-weight: 600; }
+    .offer-counter .counter-amount { font-size: 1.2rem; font-weight: 700; color: #7D6608; }
+    .offer-counter .counter-notes { font-size: 0.85rem; color: #4A5C62; margin-top: 0.25rem; }
+
+    .offer-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+    .offer-actions .btn { font-size: 0.85rem; padding: 0.4rem 1rem; }
+
+    .counter-form, .edit-form { background: #F7F5F2; border-radius: 6px; padding: 1rem; margin-top: 0.75rem; display: none; }
+    .counter-form.open, .edit-form.open { display: block; }
+    .counter-form .form-group, .edit-form .form-group { margin-bottom: 0.75rem; }
+    .counter-form label, .edit-form label { display: block; margin-bottom: 0.2rem; font-size: 0.85rem; font-weight: 500; color: #4A5C62; }
+    .counter-form input, .counter-form textarea, .edit-form input[type="number"], .edit-form textarea { width: 100%; padding: 0.5rem; border: 1px solid #E2E2E2; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
+    .counter-form textarea, .edit-form textarea { min-height: 60px; resize: vertical; }
+    .edit-form .edit-checkbox { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.35rem; font-size: 0.9rem; color: #1A2C33; cursor: pointer; }
+    .edit-form .edit-checkbox input[type="checkbox"] { width: 16px; height: 16px; accent-color: #19747E; }
+
+    .empty-state { text-align: center; padding: 3rem 1rem; color: #4A5C62; }
+    .empty-state p { margin-bottom: 1rem; }
+
+    .pagination { display: flex; justify-content: center; gap: 0.75rem; margin-top: 1rem; }
+    .pagination button { padding: 0.4rem 1rem; border-radius: 6px; border: 1px solid #E2E2E2; background: white; cursor: pointer; font-family: inherit; font-size: 0.9rem; }
+    .pagination button:hover { background: #D1E8E2; }
+    .pagination button:disabled { opacity: 0.4; cursor: default; }
+
+    @media (max-width: 768px) {
+        .tab-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .tab-btn { font-size: 0.85rem; padding: 0.5rem 0.75rem; white-space: nowrap; }
+        .offer-header { flex-direction: column; align-items: flex-start; }
+        .offer-amount { font-size: 1.25rem; }
+        .offer-actions .btn { flex: 1 1 auto; text-align: center; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 class="page-title">Offers</h2>
+<div id="offers-content"><p>Loading...</p></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+
+    let receivedPage = 1;
+    let sentPage = 1;
+    let currentUserId = null;
+
+    async function loadOffers() {
+        try {
+            // Fetch current user and offers
+            const [userRes, recRes, sentRes] = await Promise.all([
+                Auth.authFetch('/auth/users/me/'),
+                Auth.authFetch('/api/offers/received/'),
+                Auth.authFetch('/api/offers/'),
+            ]);
+            const user = await userRes.json();
+            currentUserId = user.id;
+            const recData = await recRes.json();
+            const sentData = await sentRes.json();
+            const recOffers = recData.results || recData;
+            // Filter "My Offers" to only those the current user submitted
+            const allOffers = sentData.results || sentData;
+            const sentOffers = allOffers.filter(o => o.buyer === currentUserId);
+            sentData.results = sentOffers;
+            const pendingCount = (Array.isArray(recOffers) ? recOffers : []).filter(o => o.status === 'submitted' || o.status === 'under_review').length;
+
+            document.getElementById('offers-content').innerHTML = `
+                <div class="tab-nav">
+                    <button class="tab-btn active" onclick="switchTab('received', this)">Received ${pendingCount > 0 ? `<span class="tab-badge">${pendingCount}</span>` : ''}</button>
+                    <button class="tab-btn" onclick="switchTab('sent', this)">My Offers</button>
+                </div>
+                <div class="tab-content active" id="tab-received">
+                    <div id="received-list"></div>
+                    <div id="received-pagination" class="pagination"></div>
+                </div>
+                <div class="tab-content" id="tab-sent">
+                    <div id="sent-list"></div>
+                    <div id="sent-pagination" class="pagination"></div>
+                </div>
+            `;
+
+            renderReceived(recData);
+            renderSent(sentData);
+        } catch (err) {
+            document.getElementById('offers-content').innerHTML = '<div class="alert alert-error">Failed to load offers. Please try again.</div>';
+        }
+    }
+
+    function switchTab(tab, btn) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + tab).classList.add('active');
+    }
+
+    async function loadReceived() {
+        try {
+            const res = await Auth.authFetch(`/api/offers/received/?page=${receivedPage}`);
+            const data = await res.json();
+            renderReceived(data);
+        } catch (err) {
+            document.getElementById('received-list').innerHTML = '<div class="alert alert-error">Failed to load.</div>';
+        }
+    }
+
+    function renderReceived(data) {
+        const offers = data.results || data;
+        const listEl = document.getElementById('received-list');
+
+        if (!offers.length) {
+            listEl.innerHTML = '<div class="empty-state"><p>No offers received yet.</p></div>';
+            document.getElementById('received-pagination').innerHTML = '';
+            return;
+        }
+
+        listEl.innerHTML = offers.map(o => `
+            <div class="offer-card" id="offer-${o.id}">
+                <div class="offer-header">
+                    <div>
+                        <span class="offer-from">${escHtml(o.buyer_name)}</span>
+                        <div class="offer-property">Re: ${escHtml(o.property_title)}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <span class="status-badge status-${escHtml(o.status)}">${escHtml(o.status_display)}</span>
+                        <div class="offer-date">${new Date(o.created_at).toLocaleDateString()}</div>
+                    </div>
+                </div>
+                <div class="offer-amount">&pound;${Number(o.amount).toLocaleString()}</div>
+                <div class="offer-attributes">
+                    ${o.is_cash_buyer ? '<span class="attr-tag positive">Cash Buyer</span>' : ''}
+                    ${o.is_chain_free ? '<span class="attr-tag positive">Chain Free</span>' : ''}
+                    ${o.mortgage_agreed ? '<span class="attr-tag positive">Mortgage Agreed</span>' : ''}
+                </div>
+                ${o.message ? `<div class="offer-message">${escHtml(o.message)}</div>` : ''}
+                ${o.status === 'submitted' || o.status === 'under_review' ? `
+                <div class="offer-actions">
+                    <button class="btn btn-primary" onclick="respondOffer(${o.id}, 'accepted')">Accept</button>
+                    <button class="btn btn-danger" onclick="respondOffer(${o.id}, 'rejected')">Reject</button>
+                    <button class="btn btn-secondary" onclick="toggleCounterForm(${o.id})">Counter</button>
+                </div>
+                <div class="counter-form" id="counter-form-${o.id}">
+                    <div class="form-group">
+                        <label>Counter Amount (&pound;)</label>
+                        <input type="number" id="counter-amount-${o.id}" min="1" step="1" placeholder="Enter counter offer amount">
+                    </div>
+                    <div class="form-group">
+                        <label>Notes (optional)</label>
+                        <textarea id="counter-notes-${o.id}" placeholder="Add notes for the buyer..."></textarea>
+                    </div>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn btn-primary" style="font-size:0.85rem;" onclick="submitCounter(${o.id})">Send Counter Offer</button>
+                        <button class="btn btn-secondary" style="font-size:0.85rem;" onclick="toggleCounterForm(${o.id})">Cancel</button>
+                    </div>
+                </div>` : ''}
+            </div>
+        `).join('');
+
+        const pagEl = document.getElementById('received-pagination');
+        pagEl.innerHTML = `
+            <button ${!data.previous ? 'disabled' : ''} onclick="receivedPage--; loadReceived();">&laquo; Prev</button>
+            <span style="padding:0.4rem 0.5rem; color:#4A5C62; font-size:0.9rem;">Page ${receivedPage}</span>
+            <button ${!data.next ? 'disabled' : ''} onclick="receivedPage++; loadReceived();">Next &raquo;</button>
+        `;
+    }
+
+    async function loadSent() {
+        try {
+            const res = await Auth.authFetch(`/api/offers/?page=${sentPage}`);
+            const data = await res.json();
+            // Filter to only offers the current user submitted
+            const all = data.results || data;
+            const filtered = all.filter(o => o.buyer === currentUserId);
+            if (data.results) data.results = filtered;
+            renderSent(data.results ? data : filtered);
+        } catch (err) {
+            document.getElementById('sent-list').innerHTML = '<div class="alert alert-error">Failed to load.</div>';
+        }
+    }
+
+    function renderSent(data) {
+        const offers = data.results || data;
+        const listEl = document.getElementById('sent-list');
+
+        if (!offers.length) {
+            listEl.innerHTML = '<div class="empty-state"><p>You haven\'t made any offers yet.</p><p><a href="/" class="btn btn-primary">Browse Properties</a></p></div>';
+            document.getElementById('sent-pagination').innerHTML = '';
+            return;
+        }
+
+        listEl.innerHTML = offers.map(o => `
+            <div class="offer-card" id="sent-offer-${o.id}">
+                <div class="offer-header">
+                    <div>
+                        <div class="offer-property">Re: ${escHtml(o.property_title)}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <span class="status-badge status-${escHtml(o.status)}">${escHtml(o.status_display)}</span>
+                        <div class="offer-date">${new Date(o.created_at).toLocaleDateString()}</div>
+                    </div>
+                </div>
+                <div class="offer-amount">&pound;${Number(o.amount).toLocaleString()}</div>
+                <div class="offer-attributes">
+                    ${o.is_cash_buyer ? '<span class="attr-tag positive">Cash Buyer</span>' : ''}
+                    ${o.is_chain_free ? '<span class="attr-tag positive">Chain Free</span>' : ''}
+                    ${o.mortgage_agreed ? '<span class="attr-tag positive">Mortgage Agreed</span>' : ''}
+                </div>
+                ${o.message ? `<div class="offer-message">${escHtml(o.message)}</div>` : ''}
+                ${o.counter_amount ? `
+                <div class="offer-counter">
+                    <div class="counter-label">Counter Offer</div>
+                    <div class="counter-amount">&pound;${Number(o.counter_amount).toLocaleString()}</div>
+                    ${o.seller_notes ? `<div class="counter-notes">${escHtml(o.seller_notes)}</div>` : ''}
+                </div>` : ''}
+                ${o.status === 'submitted' ? `
+                <div class="offer-actions">
+                    <button class="btn btn-secondary" onclick="toggleEditForm(${o.id})">Edit</button>
+                    <button class="btn btn-danger" onclick="withdrawOffer(${o.id})">Withdraw Offer</button>
+                </div>
+                <div class="edit-form" id="edit-form-${o.id}">
+                    <div class="form-group">
+                        <label>Offer Amount (&pound;)</label>
+                        <input type="number" id="edit-amount-${o.id}" value="${o.amount}" min="1" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Message</label>
+                        <textarea id="edit-message-${o.id}">${escHtml(o.message || '')}</textarea>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0.5rem;">
+                        <label class="edit-checkbox"><input type="checkbox" id="edit-cash-${o.id}" ${o.is_cash_buyer ? 'checked' : ''}> Cash buyer</label>
+                        <label class="edit-checkbox"><input type="checkbox" id="edit-chain-${o.id}" ${o.is_chain_free ? 'checked' : ''}> Chain free</label>
+                        <label class="edit-checkbox"><input type="checkbox" id="edit-mortgage-${o.id}" ${o.mortgage_agreed ? 'checked' : ''}> Mortgage agreed in principle</label>
+                    </div>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn btn-primary" style="font-size:0.85rem;" onclick="submitEditOffer(${o.id})">Save Changes</button>
+                        <button class="btn btn-secondary" style="font-size:0.85rem;" onclick="toggleEditForm(${o.id})">Cancel</button>
+                    </div>
+                    <div id="edit-msg-${o.id}" class="alert" style="display:none;margin-top:0.5rem;"></div>
+                </div>` : (o.status === 'under_review' ? `
+                <div class="offer-actions">
+                    <button class="btn btn-danger" onclick="withdrawOffer(${o.id})">Withdraw Offer</button>
+                </div>` : '')}
+            </div>
+        `).join('');
+
+        const pagEl = document.getElementById('sent-pagination');
+        pagEl.innerHTML = `
+            <button ${!data.previous ? 'disabled' : ''} onclick="sentPage--; loadSent();">&laquo; Prev</button>
+            <span style="padding:0.4rem 0.5rem; color:#4A5C62; font-size:0.9rem;">Page ${sentPage}</span>
+            <button ${!data.next ? 'disabled' : ''} onclick="sentPage++; loadSent();">Next &raquo;</button>
+        `;
+    }
+
+    function toggleCounterForm(id) {
+        const form = document.getElementById(`counter-form-${id}`);
+        if (form) form.classList.toggle('open');
+    }
+
+    async function respondOffer(id, status) {
+        const action = status === 'accepted' ? 'accept' : 'reject';
+        if (!confirm(`Are you sure you want to ${action} this offer?`)) return;
+
+        try {
+            const res = await Auth.authFetch(`/api/offers/${id}/respond/`, {
+                method: 'PATCH',
+                headers: Auth.headers(),
+                body: JSON.stringify({ status }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.detail || `Failed to ${action} offer.`);
+            }
+            alert(`Offer ${status === 'accepted' ? 'accepted' : 'rejected'} successfully.`);
+            loadOffers();
+        } catch (err) {
+            alert(err.message || `Failed to ${action} offer.`);
+        }
+    }
+
+    async function submitCounter(id) {
+        const amount = document.getElementById(`counter-amount-${id}`).value;
+        const notes = document.getElementById(`counter-notes-${id}`).value.trim();
+
+        if (!amount || Number(amount) <= 0) {
+            alert('Please enter a valid counter offer amount.');
+            return;
+        }
+
+        try {
+            const res = await Auth.authFetch(`/api/offers/${id}/respond/`, {
+                method: 'PATCH',
+                headers: Auth.headers(),
+                body: JSON.stringify({
+                    status: 'countered',
+                    counter_amount: amount,
+                    seller_notes: notes,
+                }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.detail || 'Failed to send counter offer.');
+            }
+            alert('Counter offer sent successfully.');
+            loadOffers();
+        } catch (err) {
+            alert(err.message || 'Failed to send counter offer.');
+        }
+    }
+
+    async function withdrawOffer(id) {
+        if (!confirm('Are you sure you want to withdraw this offer?')) return;
+
+        try {
+            const res = await Auth.authFetch(`/api/offers/${id}/withdraw/`, {
+                method: 'PATCH',
+                headers: Auth.headers(),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.detail || 'Failed to withdraw offer.');
+            }
+            alert('Offer withdrawn successfully.');
+            loadOffers();
+        } catch (err) {
+            alert(err.message || 'Failed to withdraw offer.');
+        }
+    }
+
+    function toggleEditForm(id) {
+        const form = document.getElementById(`edit-form-${id}`);
+        if (form) form.classList.toggle('open');
+    }
+
+    async function submitEditOffer(id) {
+        const msgEl = document.getElementById(`edit-msg-${id}`);
+        const amount = document.getElementById(`edit-amount-${id}`).value;
+        if (!amount || Number(amount) <= 0) {
+            msgEl.className = 'alert alert-error';
+            msgEl.textContent = 'Please enter a valid offer amount.';
+            msgEl.style.display = 'block';
+            return;
+        }
+        msgEl.style.display = 'none';
+
+        try {
+            const res = await Auth.authFetch(`/api/offers/${id}/`, {
+                method: 'PATCH',
+                headers: Auth.headers(),
+                body: JSON.stringify({
+                    amount: amount,
+                    message: document.getElementById(`edit-message-${id}`).value,
+                    is_cash_buyer: document.getElementById(`edit-cash-${id}`).checked,
+                    is_chain_free: document.getElementById(`edit-chain-${id}`).checked,
+                    mortgage_agreed: document.getElementById(`edit-mortgage-${id}`).checked,
+                }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.detail || Object.values(data).flat().join(', '));
+            }
+            alert('Offer updated successfully.');
+            loadOffers();
+        } catch (err) {
+            msgEl.className = 'alert alert-error';
+            msgEl.textContent = err.message || 'Failed to update offer.';
+            msgEl.style.display = 'block';
+        }
+    }
+
+    loadOffers();
+</script>
+{% endblock %}

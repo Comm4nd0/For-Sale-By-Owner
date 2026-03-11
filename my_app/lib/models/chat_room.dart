@@ -37,8 +37,12 @@ class ChatRoom {
       buyerName: json['buyer_name'] ?? '',
       sellerId: json['seller'] ?? 0,
       sellerName: json['seller_name'] ?? '',
-      lastMessage: json['last_message'],
-      lastMessageAt: json['last_message_at'],
+      lastMessage: json['last_message'] is Map
+          ? json['last_message']['message'] as String?
+          : json['last_message'] as String?,
+      lastMessageAt: json['last_message'] is Map
+          ? json['last_message']['created_at'] as String?
+          : json['last_message_at'] as String?,
       unreadCount: json['unread_count'] ?? 0,
       createdAt: json['created_at'] ?? '',
     );

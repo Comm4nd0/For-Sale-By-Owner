@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Mortgage Calculator - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .mc-hero { background: linear-gradient(135deg, #115E66 0%, #19747E 100%); color: white; padding: 2.5rem 0; margin: -2rem 0 2rem; }
+    .mc-hero h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+    .mc-hero p { opacity: 0.85; font-size: 1rem; }
+
+    .mc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+    .mc-form-card, .mc-results-card { background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E2E2; padding: 1.5rem; }
+    .mc-form-card h2, .mc-results-card h2 { font-size: 1.15rem; color: #115E66; margin-bottom: 1.25rem; }
+
+    .mc-field { margin-bottom: 1rem; }
+    .mc-field label { display: block; font-size: 0.85rem; font-weight: 600; color: #4A5C62; margin-bottom: 0.35rem; }
+    .mc-field input { width: 100%; padding: 0.65rem 0.75rem; border: 1px solid #D1E8E2; border-radius: 6px; font-size: 1rem; font-family: inherit; box-sizing: border-box; }
+    .mc-field input:focus { outline: none; border-color: #19747E; box-shadow: 0 0 0 2px rgba(25,116,126,0.15); }
+    .mc-field .mc-input-wrap { position: relative; }
+    .mc-field .mc-prefix, .mc-field .mc-suffix { position: absolute; top: 50%; transform: translateY(-50%); color: #8FA3A8; font-size: 0.9rem; pointer-events: none; }
+    .mc-field .mc-prefix { left: 0.75rem; }
+    .mc-field .mc-suffix { right: 0.75rem; }
+    .mc-field input.has-prefix { padding-left: 1.75rem; }
+    .mc-field input.has-suffix { padding-right: 2rem; }
+
+    .mc-calculate-btn { width: 100%; padding: 0.75rem; font-size: 1rem; font-weight: 600; margin-top: 0.5rem; }
+
+    .mc-monthly { text-align: center; padding: 1.25rem 0; margin-bottom: 1rem; border-bottom: 1px solid #EDF2EF; }
+    .mc-monthly-label { font-size: 0.85rem; color: #4A5C62; margin-bottom: 0.25rem; }
+    .mc-monthly-value { font-size: 2rem; font-weight: 700; color: #115E66; }
+
+    .mc-breakdown { list-style: none; padding: 0; margin: 0; }
+    .mc-breakdown li { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid #EDF2EF; font-size: 0.9rem; color: #1A2C33; }
+    .mc-breakdown li:last-child { border-bottom: none; }
+    .mc-breakdown .mc-label { color: #4A5C62; }
+    .mc-breakdown .mc-value { font-weight: 600; }
+
+    .mc-placeholder { text-align: center; padding: 3rem 1rem; color: #8FA3A8; }
+    .mc-placeholder svg { margin-bottom: 0.75rem; }
+
+    .mc-error { text-align: center; padding: 1rem; color: #B03A2E; font-size: 0.9rem; }
+
+    @media (max-width: 768px) {
+        .mc-hero h1 { font-size: 1.4rem; }
+        .mc-grid { grid-template-columns: 1fr; }
+        .mc-monthly-value { font-size: 1.6rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="mc-hero">
+    <div class="container">
+        <h1>Mortgage Calculator</h1>
+        <p>Estimate your monthly mortgage repayments, total cost, and UK stamp duty.</p>
+    </div>
+</section>
+
+<div class="container">
+    <div class="mc-grid">
+        <div class="mc-form-card">
+            <h2>Your Details</h2>
+            <form id="mc-form" onsubmit="return false;">
+                <div class="mc-field">
+                    <label for="mc-price">Property Price</label>
+                    <div class="mc-input-wrap">
+                        <span class="mc-prefix">&pound;</span>
+                        <input type="number" id="mc-price" class="has-prefix" value="250000" min="1" step="1000" required>
+                    </div>
+                </div>
+                <div class="mc-field">
+                    <label for="mc-deposit">Deposit</label>
+                    <div class="mc-input-wrap">
+                        <input type="number" id="mc-deposit" class="has-suffix" value="10" min="0" max="100" step="1" required>
+                        <span class="mc-suffix">%</span>
+                    </div>
+                </div>
+                <div class="mc-field">
+                    <label for="mc-rate">Interest Rate</label>
+                    <div class="mc-input-wrap">
+                        <input type="number" id="mc-rate" class="has-suffix" value="4.5" min="0" max="30" step="0.1" required>
+                        <span class="mc-suffix">%</span>
+                    </div>
+                </div>
+                <div class="mc-field">
+                    <label for="mc-term">Mortgage Term</label>
+                    <div class="mc-input-wrap">
+                        <input type="number" id="mc-term" class="has-suffix" value="25" min="1" max="40" step="1" required>
+                        <span class="mc-suffix">years</span>
+                    </div>
+                </div>
+                <button class="btn btn-primary mc-calculate-btn" id="mc-btn" type="submit">Calculate</button>
+            </form>
+        </div>
+
+        <div class="mc-results-card">
+            <h2>Results</h2>
+            <div id="mc-results">
+                <div class="mc-placeholder">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H9l4-7v4h2l-4 7z" fill="#D1E8E2"/></svg>
+                    <p>Enter your details and click Calculate to see your estimated mortgage repayments.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    var form = document.getElementById('mc-form');
+    var btn = document.getElementById('mc-btn');
+    var resultsEl = document.getElementById('mc-results');
+
+    // Pre-fill from URL params
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('price')) {
+        document.getElementById('mc-price').value = params.get('price');
+    }
+
+    form.addEventListener('submit', doCalculate);
+
+    // Auto-calculate if price was provided via URL
+    if (params.get('price')) doCalculate();
+
+    function doCalculate() {
+        var price = parseFloat(document.getElementById('mc-price').value);
+        var depositPct = parseFloat(document.getElementById('mc-deposit').value);
+        var rate = parseFloat(document.getElementById('mc-rate').value);
+        var term = parseInt(document.getElementById('mc-term').value);
+
+        if (!price || price <= 0 || isNaN(depositPct) || isNaN(rate) || !term || term <= 0) {
+            resultsEl.innerHTML = '<div class="mc-error">Please fill in all fields with valid values.</div>';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Calculating...';
+
+        var url = '/api/mortgage-calculator/?' + new URLSearchParams({
+            price: price,
+            deposit_pct: depositPct,
+            interest_rate: rate,
+            term_years: term
+        });
+
+        fetch(url)
+            .then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function(data) {
+                renderResults(data);
+            })
+            .catch(function() {
+                resultsEl.innerHTML = '<div class="mc-error">Could not calculate mortgage. Please try again.</div>';
+            })
+            .finally(function() {
+                btn.disabled = false;
+                btn.textContent = 'Calculate';
+            });
+    }
+
+    function renderResults(d) {
+        var html = '<div class="mc-monthly">' +
+            '<div class="mc-monthly-label">Estimated Monthly Payment</div>' +
+            '<div class="mc-monthly-value">' + fmt(d.monthly_payment) + '</div>' +
+            '</div>' +
+            '<ul class="mc-breakdown">' +
+            '<li><span class="mc-label">Property Price</span><span class="mc-value">' + fmt(d.price) + '</span></li>' +
+            '<li><span class="mc-label">Deposit</span><span class="mc-value">' + fmt(d.deposit) + '</span></li>' +
+            '<li><span class="mc-label">Loan Amount</span><span class="mc-value">' + fmt(d.loan_amount) + '</span></li>' +
+            '<li><span class="mc-label">Interest Rate</span><span class="mc-value">' + Number(d.interest_rate).toFixed(1) + '%</span></li>' +
+            '<li><span class="mc-label">Term</span><span class="mc-value">' + d.term_years + ' years</span></li>' +
+            '<li><span class="mc-label">Total Repayment</span><span class="mc-value">' + fmt(d.total_cost) + '</span></li>' +
+            '<li><span class="mc-label">Total Interest</span><span class="mc-value">' + fmt(d.total_interest) + '</span></li>' +
+            '<li><span class="mc-label">Stamp Duty (England)</span><span class="mc-value">' + fmt(d.stamp_duty) + '</span></li>' +
+            '</ul>';
+        resultsEl.innerHTML = html;
+    }
+
+    function fmt(n) {
+        if (n == null) return '&pound;0';
+        return '&pound;' + Number(n).toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+})();
+</script>
+{% endblock %}

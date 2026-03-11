@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Referrals - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ref-hero { background: linear-gradient(135deg, #115E66 0%, #19747E 100%); color: white; padding: 2.5rem 0; margin: -2rem 0 2rem; }
+    .ref-hero h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+    .ref-hero p { opacity: 0.85; font-size: 1rem; }
+
+    .ref-code-card { background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E2E2; padding: 2rem; text-align: center; margin-bottom: 1.5rem; }
+    .ref-code-label { font-size: 0.85rem; color: #4A5C62; margin-bottom: 0.75rem; }
+    .ref-code { font-size: 1.75rem; font-weight: 700; color: #115E66; letter-spacing: 4px; margin-bottom: 1rem; font-family: monospace; }
+    .ref-copy-btn { padding: 0.5rem 1.5rem; font-size: 0.9rem; }
+    .ref-copy-btn.copied { background: #28a745; border-color: #28a745; color: white; }
+
+    .ref-stats { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+    .ref-stat { flex: 1; background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E2E2; padding: 1.25rem; text-align: center; }
+    .ref-stat-value { font-size: 1.6rem; font-weight: 700; color: #115E66; }
+    .ref-stat-label { font-size: 0.8rem; color: #4A5C62; margin-top: 0.25rem; }
+
+    .ref-history { background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E2E2; }
+    .ref-history-header { padding: 1rem 1.25rem; border-bottom: 1px solid #E2E2E2; font-weight: 600; color: #115E66; }
+    .ref-item { display: flex; align-items: center; gap: 1rem; padding: 0.85rem 1.25rem; border-bottom: 1px solid #EDF2EF; }
+    .ref-item:last-child { border-bottom: none; }
+    .ref-avatar { width: 36px; height: 36px; border-radius: 50%; background: #D1E8E2; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 600; color: #115E66; font-size: 0.85rem; }
+    .ref-item-info { flex: 1; min-width: 0; }
+    .ref-item-name { font-size: 0.9rem; color: #1A2C33; font-weight: 500; }
+    .ref-item-date { font-size: 0.8rem; color: #8FA3A8; margin-top: 0.15rem; }
+    .ref-badge { padding: 3px 10px; border-radius: 3px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+    .ref-badge-rewarded { background: #D1E8E2; color: #115E66; }
+    .ref-badge-pending { background: #FFF3CD; color: #856404; }
+
+    .ref-empty { text-align: center; padding: 3rem 1rem; color: #8FA3A8; }
+    .ref-loading { text-align: center; padding: 3rem; color: #4A5C62; }
+    .ref-error { text-align: center; padding: 2rem; color: #B03A2E; }
+
+    @media (max-width: 768px) {
+        .ref-hero h1 { font-size: 1.4rem; }
+        .ref-stats { flex-direction: column; }
+        .ref-code { font-size: 1.4rem; letter-spacing: 3px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="ref-hero">
+    <div class="container">
+        <h1>Referral Programme</h1>
+        <p>Share your unique code with friends. When they sign up, you both benefit.</p>
+    </div>
+</section>
+
+<div class="container" id="ref-content">
+    <div class="ref-loading">Loading your referral details...</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    Auth.requireAuth();
+
+    var container = document.getElementById('ref-content');
+
+    loadReferrals();
+
+    function loadReferrals() {
+        Auth.authFetch('/api/referrals/', { headers: Auth.headers() })
+            .then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function(data) {
+                render(data);
+            })
+            .catch(function() {
+                container.innerHTML = '<div class="ref-error">Could not load referral details. Please try again later.</div>';
+            });
+    }
+
+    function render(data) {
+        var code = data.referral_code || '—';
+        var total = data.total_referrals || 0;
+        var referrals = data.referrals || [];
+        var rewarded = referrals.filter(function(r) { return r.reward_granted; }).length;
+
+        var html = '';
+
+        // Code card
+        html += '<div class="ref-code-card">' +
+            '<div class="ref-code-label">Your Referral Code</div>' +
+            '<div class="ref-code" id="ref-code-text">' + escHtml(code) + '</div>' +
+            '<button class="btn btn-primary ref-copy-btn" id="ref-copy-btn" onclick="copyCode()">Copy Code</button>' +
+            '</div>';
+
+        // Stats
+        html += '<div class="ref-stats">' +
+            '<div class="ref-stat"><div class="ref-stat-value">' + total + '</div><div class="ref-stat-label">Total Referrals</div></div>' +
+            '<div class="ref-stat"><div class="ref-stat-value">' + rewarded + '</div><div class="ref-stat-label">Rewards Earned</div></div>' +
+            '</div>';
+
+        // History
+        html += '<div class="ref-history">' +
+            '<div class="ref-history-header">Referral History</div>';
+
+        if (referrals.length === 0) {
+            html += '<div class="ref-empty">No referrals yet. Share your code to get started!</div>';
+        } else {
+            referrals.forEach(function(r) {
+                var name = r.referred_user_name || r.referred_user_email || 'Unknown';
+                var initial = name.charAt(0).toUpperCase();
+                var date = formatDate(r.created_at);
+                var badge = r.reward_granted
+                    ? '<span class="ref-badge ref-badge-rewarded">Rewarded</span>'
+                    : '<span class="ref-badge ref-badge-pending">Pending</span>';
+
+                html += '<div class="ref-item">' +
+                    '<div class="ref-avatar">' + escHtml(initial) + '</div>' +
+                    '<div class="ref-item-info">' +
+                    '<div class="ref-item-name">' + escHtml(name) + '</div>' +
+                    '<div class="ref-item-date">' + escHtml(date) + '</div>' +
+                    '</div>' +
+                    badge +
+                    '</div>';
+            });
+        }
+        html += '</div>';
+
+        container.innerHTML = html;
+    }
+
+    // Expose copy function globally
+    window.copyCode = function() {
+        var codeEl = document.getElementById('ref-code-text');
+        var btn = document.getElementById('ref-copy-btn');
+        if (!codeEl) return;
+
+        navigator.clipboard.writeText(codeEl.textContent.trim()).then(function() {
+            btn.textContent = 'Copied!';
+            btn.classList.add('copied');
+            setTimeout(function() {
+                btn.textContent = 'Copy Code';
+                btn.classList.remove('copied');
+            }, 2000);
+        });
+    };
+
+    function formatDate(d) {
+        if (!d) return '';
+        try {
+            var date = new Date(d);
+            return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        } catch(e) {
+            return String(d).substring(0, 10);
+        }
+    }
+})();
+</script>
+{% endblock %}

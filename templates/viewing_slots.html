@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block title %}Viewing Slots - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-title { color: #115E66; margin-bottom: 0.5rem; }
+    .page-subtitle { color: #4A5C62; font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .page-subtitle a { color: #19747E; }
+
+    .add-slot-form { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .add-slot-form h3 { color: #115E66; margin-bottom: 0.75rem; font-size: 1.1rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
+    .add-slot-form .form-group { margin-bottom: 0.75rem; }
+    .add-slot-form label { display: block; margin-bottom: 0.2rem; font-size: 0.85rem; font-weight: 500; color: #4A5C62; }
+    .add-slot-form input, .add-slot-form select { width: 100%; padding: 0.5rem; border: 1px solid #E2E2E2; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
+
+    .slot-list { list-style: none; }
+    .slot-card { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; }
+    .slot-info { flex: 1; }
+    .slot-date { font-weight: 600; color: #115E66; font-size: 1rem; }
+    .slot-time { color: #4A5C62; font-size: 0.9rem; margin-top: 0.15rem; }
+    .slot-meta { display: flex; gap: 0.75rem; align-items: center; margin-top: 0.25rem; }
+    .slot-bookings { font-size: 0.8rem; color: #4A5C62; }
+    .booking-bar { width: 80px; height: 6px; background: #E2E2E2; border-radius: 3px; overflow: hidden; display: inline-block; vertical-align: middle; margin-left: 0.4rem; }
+    .booking-bar-fill { height: 100%; background: #19747E; border-radius: 3px; }
+    .slot-available { font-size: 0.75rem; padding: 2px 8px; border-radius: 3px; font-weight: 600; }
+    .slot-available.yes { background: #D1E8E2; color: #115E66; }
+    .slot-available.no { background: #f8d7d4; color: #B03A2E; }
+
+    .empty-state { text-align: center; padding: 3rem 1rem; color: #4A5C62; }
+    .empty-state p { margin-bottom: 1rem; }
+
+    @media (max-width: 768px) {
+        .form-row, .form-row-3 { grid-template-columns: 1fr; }
+        .slot-card { flex-direction: column; align-items: flex-start; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 class="page-title" id="page-title">Viewing Slots</h2>
+<p class="page-subtitle" id="page-subtitle">Loading...</p>
+<div id="slots-content"><p>Loading...</p></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const propertyId = window.location.pathname.match(/\/properties\/(\d+)/)?.[1];
+    if (!propertyId) {
+        document.getElementById('slots-content').innerHTML = '<div class="alert alert-error">Invalid property URL.</div>';
+        throw new Error('No property ID');
+    }
+
+    let isOwner = false;
+
+    async function init() {
+        try {
+            // Fetch property to get title and determine ownership
+            const propRes = await Auth.authFetch(`/api/properties/${propertyId}/`, { headers: Auth.headers() });
+            if (!propRes.ok) throw new Error('Property not found');
+            const property = await propRes.json();
+
+            document.getElementById('page-subtitle').innerHTML = `<a href="/properties/${property.slug || propertyId}/">${escHtml(property.title)}</a>`;
+
+            if (Auth.isLoggedIn()) {
+                const userRes = await Auth.authFetch('/auth/users/me/');
+                const user = await userRes.json();
+                isOwner = user.id === property.owner;
+            }
+
+            loadSlots();
+        } catch (err) {
+            document.getElementById('slots-content').innerHTML = '<div class="alert alert-error">Failed to load property details.</div>';
+        }
+    }
+
+    async function loadSlots() {
+        try {
+            const res = await Auth.authFetch(`/api/properties/${propertyId}/viewing-slots/`, { headers: Auth.headers() });
+            const slots = await res.json();
+            const slotList = Array.isArray(slots) ? slots : (slots.results || []);
+
+            let html = '';
+
+            // Add slot form (owner only)
+            if (isOwner) {
+                html += `
+                    <div class="add-slot-form">
+                        <h3>Add a Viewing Slot</h3>
+                        <div id="slot-msg" class="alert" style="display:none;"></div>
+                        <form onsubmit="addSlot(event)">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Date</label>
+                                    <input type="date" id="slot-date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Day of Week (optional, for recurring)</label>
+                                    <select id="slot-day">
+                                        <option value="">-- Select if recurring --</option>
+                                        <option value="0">Monday</option>
+                                        <option value="1">Tuesday</option>
+                                        <option value="2">Wednesday</option>
+                                        <option value="3">Thursday</option>
+                                        <option value="4">Friday</option>
+                                        <option value="5">Saturday</option>
+                                        <option value="6">Sunday</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row-3">
+                                <div class="form-group">
+                                    <label>Start Time</label>
+                                    <input type="time" id="slot-start" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>End Time</label>
+                                    <input type="time" id="slot-end" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Max Bookings</label>
+                                    <input type="number" id="slot-max" value="1" min="1" max="50" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="add-slot-btn" style="width:100%;">Add Slot</button>
+                        </form>
+                    </div>
+                `;
+            }
+
+            // Slot list
+            if (!slotList.length) {
+                html += '<div class="empty-state"><p>No viewing slots have been set up yet.</p></div>';
+            } else {
+                html += '<div class="slot-list">';
+                slotList.forEach(s => {
+                    const dateStr = s.date
+                        ? new Date(s.date + 'T00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+                        : (s.day_display || 'Recurring');
+                    const bookPct = s.max_bookings > 0 ? Math.min(100, (s.current_bookings / s.max_bookings) * 100) : 0;
+                    const available = s.is_available !== false && s.current_bookings < s.max_bookings;
+
+                    html += `
+                        <div class="slot-card">
+                            <div class="slot-info">
+                                <div class="slot-date">${escHtml(dateStr)}</div>
+                                <div class="slot-time">${escHtml(s.start_time)} - ${escHtml(s.end_time)}</div>
+                                <div class="slot-meta">
+                                    <span class="slot-bookings">${s.current_bookings || 0}/${s.max_bookings} booked
+                                        <span class="booking-bar"><span class="booking-bar-fill" style="width:${bookPct}%"></span></span>
+                                    </span>
+                                    <span class="slot-available ${available ? 'yes' : 'no'}">${available ? 'Available' : 'Full'}</span>
+                                </div>
+                            </div>
+                            <div>
+                                ${isOwner ? `<button class="btn btn-danger" style="font-size:0.8rem; padding:0.3rem 0.8rem;" onclick="deleteSlot(${s.id})">Delete</button>` : ''}
+                                ${!isOwner && available ? `<button class="btn btn-primary" style="font-size:0.85rem;" onclick="bookSlot(${s.id})">Book This Slot</button>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            document.getElementById('slots-content').innerHTML = html;
+        } catch (err) {
+            document.getElementById('slots-content').innerHTML = '<div class="alert alert-error">Failed to load viewing slots.</div>';
+        }
+    }
+
+    async function addSlot(event) {
+        event.preventDefault();
+        const btn = document.getElementById('add-slot-btn');
+        btn.disabled = true;
+        btn.textContent = 'Adding...';
+
+        const msgEl = document.getElementById('slot-msg');
+        msgEl.style.display = 'none';
+
+        const body = {
+            date: document.getElementById('slot-date').value,
+            start_time: document.getElementById('slot-start').value,
+            end_time: document.getElementById('slot-end').value,
+            max_bookings: parseInt(document.getElementById('slot-max').value) || 1,
+        };
+
+        const dayVal = document.getElementById('slot-day').value;
+        if (dayVal !== '') body.day_of_week = parseInt(dayVal);
+
+        try {
+            const res = await Auth.authFetch(`/api/properties/${propertyId}/viewing-slots/`, {
+                method: 'POST',
+                headers: Auth.headers(),
+                body: JSON.stringify(body),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                const msg = data.detail || Object.values(data).flat().join(', ') || 'Failed to add slot.';
+                throw new Error(msg);
+            }
+            // Reset form
+            document.getElementById('slot-date').value = '';
+            document.getElementById('slot-start').value = '';
+            document.getElementById('slot-end').value = '';
+            document.getElementById('slot-max').value = '1';
+            document.getElementById('slot-day').value = '';
+            loadSlots();
+        } catch (err) {
+            msgEl.textContent = err.message;
+            msgEl.className = 'alert alert-error';
+            msgEl.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Add Slot';
+        }
+    }
+
+    async function deleteSlot(slotId) {
+        if (!confirm('Delete this viewing slot?')) return;
+        try {
+            await Auth.authFetch(`/api/properties/${propertyId}/viewing-slots/${slotId}/`, {
+                method: 'DELETE',
+                headers: Auth.headers(),
+            });
+            loadSlots();
+        } catch (err) {
+            alert('Failed to delete slot.');
+        }
+    }
+
+    async function bookSlot(slotId) {
+        if (!Auth.isLoggedIn()) {
+            window.location.href = '/login/';
+            return;
+        }
+
+        if (!confirm('Book this viewing slot?')) return;
+
+        try {
+            const res = await Auth.authFetch(`/api/properties/${propertyId}/viewing-slots/${slotId}/book/`, {
+                method: 'POST',
+                headers: Auth.headers(),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.detail || 'Failed to book slot.');
+            }
+            alert('Viewing slot booked successfully!');
+            loadSlots();
+        } catch (err) {
+            alert(err.message || 'Failed to book slot.');
+        }
+    }
+
+    init();
+</script>
+{% endblock %}

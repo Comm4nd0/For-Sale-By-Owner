@@ -3,7 +3,7 @@ description: For Sale By Owner - sell your property without estate agents.
 
 publish_to: 'none'
 
-version: 1.0.3+4
+version: 1.0.5+6
 
 environment:
   sdk: '>=3.1.0 <4.0.0'
@@ -30,8 +30,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
+  remove_alpha_ios: true
   image_path: "assets/images/app_icon_1024.png"
-  adaptive_icon_background: "#115E66"
+  adaptive_icon_background: "#19747E"
   adaptive_icon_foreground: "assets/images/app_icon_1024.png"
 
 flutter:
@@ -39,3 +40,4 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/hero/

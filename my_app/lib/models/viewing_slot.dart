@@ -45,4 +45,9 @@ class ViewingSlot {
     }
     return '';
   }
+
+  String get displayDate {
+    if (date != null && date!.isNotEmpty) return date!;
+    return dayOfWeekDisplay;
+  }
 }

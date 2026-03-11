@@ -808,7 +808,7 @@ class ApiService {
     final response = await http.post(
       Uri.parse(ApiConstants.chatMessages(roomId)),
       headers: _headers,
-      body: jsonEncode({'content': content}),
+      body: jsonEncode({'message': content}),
     );
     if (response.statusCode == 201) {
       return ChatMessage.fromJson(jsonDecode(response.body));
@@ -819,12 +819,10 @@ class ApiService {
   // ── Offers ──────────────────────────────────────────────────────────
 
   Future<List<Offer>> getOffers({bool? received}) async {
-    final params = <String, String>{};
-    if (received == true) params['received'] = 'true';
-
-    final uri = Uri.parse(ApiConstants.offers)
-        .replace(queryParameters: params.isNotEmpty ? params : null);
-    final response = await http.get(uri, headers: _headers);
+    final url = received == true
+        ? ApiConstants.offersReceived
+        : ApiConstants.offers;
+    final response = await http.get(Uri.parse(url), headers: _headers);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -860,12 +858,12 @@ class ApiService {
     throw Exception('Failed to submit offer');
   }
 
-  Future<Offer> respondToOffer(int id, String action, {double? counterAmount, String? message}) async {
-    final body = <String, dynamic>{'action': action};
+  Future<Offer> respondToOffer(int id, String status, {double? counterAmount, String? sellerNotes}) async {
+    final body = <String, dynamic>{'status': status};
     if (counterAmount != null) body['counter_amount'] = counterAmount.toString();
-    if (message != null) body['message'] = message;
+    if (sellerNotes != null) body['seller_notes'] = sellerNotes;
 
-    final response = await http.post(
+    final response = await http.patch(
       Uri.parse(ApiConstants.offerRespond(id)),
       headers: _headers,
       body: jsonEncode(body),
@@ -876,8 +874,33 @@ class ApiService {
     throw Exception('Failed to respond to offer');
   }
 
+  Future<Offer> updateOffer(int id, {
+    double? amount,
+    String? message,
+    bool? isCashBuyer,
+    bool? isChainFree,
+    bool? mortgageAgreed,
+  }) async {
+    final body = <String, dynamic>{};
+    if (amount != null) body['amount'] = amount.toString();
+    if (message != null) body['message'] = message;
+    if (isCashBuyer != null) body['is_cash_buyer'] = isCashBuyer;
+    if (isChainFree != null) body['is_chain_free'] = isChainFree;
+    if (mortgageAgreed != null) body['mortgage_agreed'] = mortgageAgreed;
+
+    final response = await http.patch(
+      Uri.parse(ApiConstants.offerDetail(id)),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 200) {
+      return Offer.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to update offer');
+  }
+
   Future<void> withdrawOffer(int id) async {
-    final response = await http.post(
+    final response = await http.patch(
       Uri.parse(ApiConstants.offerWithdraw(id)),
       headers: _headers,
     );

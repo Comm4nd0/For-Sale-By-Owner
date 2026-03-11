@@ -1,18 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="32" height="32">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#19747E"/>
-      <stop offset="100%" style="stop-color:#115E66"/>
-    </linearGradient>
-    <linearGradient id="rf" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#2A9DA8"/>
       <stop offset="100%" style="stop-color:#19747E"/>
     </linearGradient>
   </defs>
   <rect width="200" height="200" rx="42" fill="url(#bg)"/>
-  <rect x="58" y="102" width="84" height="60" rx="4" fill="#FFFFFF" opacity="0.92"/>
-  <polygon points="100,42 152,102 48,102" fill="url(#rf)"/>
-  <rect x="82" y="126" width="36" height="36" rx="4" fill="#19747E"/>
-  <rect x="63" y="110" width="15" height="13" rx="2" fill="#D1E8E2" opacity="0.8"/>
-  <rect x="122" y="110" width="15" height="13" rx="2" fill="#D1E8E2" opacity="0.8"/>
+  <polygon points="100,52 150,104 50,104" fill="white"/>
+  <rect x="60" y="104" width="80" height="50" fill="white"/>
+  <rect x="88" y="130" width="24" height="24" rx="3" fill="#19747E"/>
 </svg>

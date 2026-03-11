@@ -18,6 +18,14 @@ import 'edit_property_screen.dart';
 import '../widgets/service_providers_section.dart';
 import '../widgets/branded_app_bar.dart';
 import '../widgets/scroll_to_top_button.dart';
+import '../models/chat_room.dart';
+import '../models/viewing_slot.dart';
+import 'make_offer_screen.dart';
+import 'edit_offer_screen.dart';
+import 'chat_screen.dart';
+import 'viewing_slots_screen.dart';
+import 'offers_screen.dart';
+import '../models/offer.dart';
 
 class PropertyDetailScreen extends StatefulWidget {
   final int propertyId;
@@ -35,12 +43,14 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   int _currentPage = 0;
   bool _isSaved = false;
   List<Property> _similarProperties = [];
+  Offer? _existingOffer;
 
   @override
   void initState() {
     super.initState();
     _loadProperty();
     _loadSimilarProperties();
+    _loadExistingOffer();
   }
 
   void _loadProperty() {
@@ -49,6 +59,22 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     _propertyFuture.then((p) {
       if (mounted) setState(() => _isSaved = p.isSaved);
     });
+  }
+
+  void _loadExistingOffer() async {
+    try {
+      final apiService = context.read<ApiService>();
+      final authService = context.read<AuthService>();
+      if (!authService.isAuthenticated) return;
+      final userId = authService.userId;
+      final allOffers = await apiService.getOffers();
+      final myOffers = allOffers
+          .where((o) => o.propertyId == widget.propertyId && o.buyerId == userId)
+          .toList();
+      if (myOffers.isNotEmpty && mounted) {
+        setState(() => _existingOffer = myOffers.first);
+      }
+    } catch (_) {}
   }
 
   void _loadSimilarProperties() async {
@@ -403,6 +429,40 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ViewingSlotsScreen(
+                                      propertyId: property.id,
+                                      isOwner: true,
+                                    ),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.calendar_month),
+                                label: const Text('Viewing Slots'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const OffersScreen(received: true),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.local_offer_outlined),
+                                label: const Text('Offers'),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
 
                       // Contact forms (non-owners only)
@@ -417,6 +477,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           propertyId: property.id,
                           onSent: () {},
                         ),
+                        const SizedBox(height: 12),
+                        _buildBuyerActionsCard(property),
+                        _buildAvailableSlots(property.id),
                       ],
 
                       if (!isOwner && !authService.isAuthenticated) ...[
@@ -482,6 +545,357 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         },
       ),
     );
+  }
+
+  void _startChat(Property property) async {
+    try {
+      final apiService = context.read<ApiService>();
+      final room = await apiService.getOrCreateChatRoom(property.id);
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatScreen(room: room),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to start conversation')),
+        );
+      }
+    }
+  }
+
+  Color _offerStatusColor(String status) {
+    switch (status) {
+      case 'accepted': return Colors.green;
+      case 'rejected': return Colors.red;
+      case 'countered': return Colors.orange;
+      case 'withdrawn': return Colors.grey;
+      case 'expired': return Colors.grey;
+      case 'under_review': return Colors.orange;
+      default: return Colors.blue;
+    }
+  }
+
+  Widget _buildBuyerActionsCard(Property property) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              _existingOffer != null ? 'Your Offer' : 'Interested?',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            if (_existingOffer != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          _existingOffer!.formattedAmount,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _offerStatusColor(_existingOffer!.status),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            _existingOffer!.statusDisplay,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_existingOffer!.counterAmount != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Counter offer: \u00A3${_existingOffer!.counterAmount!.toStringAsFixed(0)}',
+                        style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                    if (_existingOffer!.sellerResponse != null && _existingOffer!.sellerResponse!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.reply, size: 16, color: Colors.grey[600]),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              _existingOffer!.sellerResponse!,
+                              style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (_existingOffer!.status == 'submitted') ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => EditOfferScreen(offer: _existingOffer!),
+                            ),
+                          );
+                          if (result == true) _loadExistingOffer();
+                        },
+                        icon: const Icon(Icons.edit, size: 16),
+                        label: const Text('Edit Offer'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _withdrawExistingOffer(),
+                        icon: const Icon(Icons.undo, size: 16),
+                        label: const Text('Withdraw'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: const BorderSide(color: Colors.red),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ] else if (_existingOffer!.status == 'under_review' || _existingOffer!.status == 'countered') ...[
+                OutlinedButton.icon(
+                  onPressed: () => _withdrawExistingOffer(),
+                  icon: const Icon(Icons.undo, size: 16),
+                  label: const Text('Withdraw Offer'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ] else if (_existingOffer!.status == 'rejected' || _existingOffer!.status == 'withdrawn' || _existingOffer!.status == 'expired') ...[
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MakeOfferScreen(
+                          propertyId: property.id,
+                          propertyTitle: property.title,
+                          askingPrice: property.price,
+                        ),
+                      ),
+                    );
+                    if (result == true) _loadExistingOffer();
+                  },
+                  icon: const Icon(Icons.local_offer),
+                  label: const Text('Make New Offer'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ],
+            ] else ...[
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MakeOfferScreen(
+                        propertyId: property.id,
+                        propertyTitle: property.title,
+                        askingPrice: property.price,
+                      ),
+                    ),
+                  );
+                  if (result == true) _loadExistingOffer();
+                },
+                icon: const Icon(Icons.local_offer),
+                label: const Text('Make an Offer'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () => _startChat(property),
+              icon: const Icon(Icons.chat_bubble_outline),
+              label: const Text('Message Seller'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _withdrawExistingOffer() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Withdraw Offer'),
+        content: Text('Are you sure you want to withdraw your ${_existingOffer!.formattedAmount} offer?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Withdraw'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      final api = context.read<ApiService>();
+      await api.withdrawOffer(_existingOffer!.id);
+      _loadExistingOffer();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Offer withdrawn')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to withdraw offer')),
+        );
+      }
+    }
+  }
+
+  Widget _buildAvailableSlots(int propertyId) {
+    return FutureBuilder<List<ViewingSlot>>(
+      future: context.read<ApiService>().getViewingSlots(propertyId),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        final slots = snapshot.data!
+            .where((s) => s.isAvailable)
+            .toList();
+        if (slots.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Available Viewing Times',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  ...slots.take(5).map((slot) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.calendar_today,
+                                size: 16, color: AppTheme.forestMid),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '${slot.displayDate} ${slot.startTime} - ${slot.endTime}',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => _bookSlot(propertyId, slot),
+                              child: const Text('Book'),
+                            ),
+                          ],
+                        ),
+                      )),
+                  if (slots.length > 5) ...[
+                    const SizedBox(height: 4),
+                    TextButton(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ViewingSlotsScreen(
+                            propertyId: propertyId,
+                            isOwner: false,
+                          ),
+                        ),
+                      ),
+                      child: Text('View all ${slots.length} slots'),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _bookSlot(int propertyId, ViewingSlot slot) async {
+    final authService = context.read<AuthService>();
+    final name = [authService.firstName, authService.lastName]
+        .where((s) => s != null && s.isNotEmpty)
+        .join(' ');
+    final email = authService.email ?? '';
+    try {
+      final apiService = context.read<ApiService>();
+      await apiService.bookViewingSlot(propertyId, slot.id,
+          name: name, email: email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Viewing slot booked!')),
+        );
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  e.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
+    }
   }
 
   Widget _buildImageCarousel(Property property) {

@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block title %}Messages - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-title { color: #115E66; margin-bottom: 1.5rem; }
+
+    /* Conversation List */
+    .conversation-list { list-style: none; }
+    .conversation-item { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 0.5rem; cursor: pointer; display: flex; align-items: center; gap: 1rem; transition: border-color 0.15s; }
+    .conversation-item:hover { border-color: #19747E; }
+    .conversation-item.unread { border-left: 3px solid #19747E; }
+
+    .conv-avatar { width: 44px; height: 44px; border-radius: 50%; background: #D1E8E2; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #115E66; font-size: 1.1rem; flex-shrink: 0; }
+    .conv-info { flex: 1; min-width: 0; }
+    .conv-name { font-weight: 600; color: #115E66; }
+    .conv-property { font-size: 0.8rem; color: #4A5C62; margin-top: 0.1rem; }
+    .conv-preview { font-size: 0.85rem; color: #8FA3A8; margin-top: 0.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .conv-meta { text-align: right; flex-shrink: 0; }
+    .conv-time { font-size: 0.75rem; color: #8FA3A8; }
+    .conv-unread-badge { display: inline-block; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; font-size: 0.75rem; font-weight: 700; line-height: 20px; text-align: center; background: #B03A2E; color: white; margin-top: 0.25rem; }
+
+    /* Chat View */
+    .chat-container { display: flex; flex-direction: column; height: calc(100vh - 180px); min-height: 400px; }
+    .chat-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px 8px 0 0; }
+    .chat-back { background: none; border: none; cursor: pointer; font-size: 1.2rem; color: #19747E; padding: 0.25rem; }
+    .chat-header-info h3 { margin: 0; font-size: 1rem; color: #115E66; }
+    .chat-header-info p { margin: 0; font-size: 0.8rem; color: #4A5C62; }
+
+    .chat-messages { flex: 1; overflow-y: auto; padding: 1rem; background: #F7F5F2; border-left: 1px solid #E2E2E2; border-right: 1px solid #E2E2E2; }
+    .chat-bubble { max-width: 75%; padding: 0.6rem 1rem; border-radius: 12px; margin-bottom: 0.5rem; font-size: 0.9rem; line-height: 1.4; word-break: break-word; }
+    .bubble-sent { background: #19747E; color: white; margin-left: auto; border-bottom-right-radius: 4px; }
+    .bubble-received { background: #FFFFFF; color: #1A2C33; border: 1px solid #E2E2E2; border-bottom-left-radius: 4px; }
+    .bubble-time { font-size: 0.7rem; opacity: 0.7; margin-top: 0.2rem; }
+    .bubble-sent .bubble-time { text-align: right; }
+    .bubble-sender { font-size: 0.75rem; font-weight: 600; color: #115E66; margin-bottom: 0.15rem; }
+
+    .typing-indicator { font-size: 0.8rem; color: #8FA3A8; padding: 0.25rem 0; font-style: italic; }
+    .date-separator { text-align: center; color: #8FA3A8; font-size: 0.75rem; margin: 0.75rem 0; }
+
+    .chat-input-bar { display: flex; gap: 0.5rem; padding: 0.75rem 1rem; background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 0 0 8px 8px; }
+    .chat-input-bar input { flex: 1; padding: 0.6rem 1rem; border: 1px solid #E2E2E2; border-radius: 20px; font-size: 0.9rem; font-family: inherit; outline: none; }
+    .chat-input-bar input:focus { border-color: #19747E; }
+    .chat-input-bar button { background: #19747E; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; }
+    .chat-input-bar button:hover { background: #115E66; }
+    .chat-input-bar button:disabled { opacity: 0.5; cursor: default; }
+
+    .empty-state { text-align: center; padding: 3rem 1rem; color: #4A5C62; }
+    .empty-state p { margin-bottom: 1rem; }
+
+    @media (max-width: 768px) {
+        .chat-container { height: calc(100vh - 160px); }
+        .chat-bubble { max-width: 85%; }
+        .conversation-item { padding: 0.85rem; }
+        .conv-avatar { width: 38px; height: 38px; font-size: 0.95rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="messages-content"><p>Loading...</p></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+
+    let currentUserId = null;
+    let pollInterval = null;
+    let currentRoomId = null;
+
+    // Detect room_id from URL
+    const roomMatch = window.location.pathname.match(/\/messages\/(\d+)\/?/);
+    const initialRoomId = roomMatch ? parseInt(roomMatch[1]) : null;
+
+    async function init() {
+        try {
+            const userRes = await Auth.authFetch('/auth/users/me/');
+            const user = await userRes.json();
+            currentUserId = user.id;
+
+            if (initialRoomId) {
+                showChat(initialRoomId);
+            } else {
+                loadConversations();
+            }
+        } catch (err) {
+            document.getElementById('messages-content').innerHTML = '<div class="alert alert-error">Failed to load. Please try again.</div>';
+        }
+    }
+
+    async function loadConversations() {
+        stopPolling();
+        currentRoomId = null;
+
+        try {
+            const res = await Auth.authFetch('/api/chat-rooms/', { headers: Auth.headers() });
+            const data = await res.json();
+            const rooms = Array.isArray(data) ? data : (data.results || []);
+
+            let html = '<h2 class="page-title">Messages</h2>';
+
+            if (!rooms.length) {
+                html += `
+                    <div class="empty-state">
+                        <p style="font-size:2.5rem;">&#128172;</p>
+                        <p style="font-size:1.1rem; font-weight:600; color:#115E66;">No conversations yet</p>
+                        <p>Start a conversation by messaging a seller from a property listing.</p>
+                        <a href="/" class="btn btn-primary">Browse Properties</a>
+                    </div>`;
+            } else {
+                // Sort by last message time (newest first)
+                rooms.sort((a, b) => {
+                    const aTime = a.last_message?.created_at || a.created_at || '';
+                    const bTime = b.last_message?.created_at || b.created_at || '';
+                    return bTime.localeCompare(aTime);
+                });
+
+                html += '<div class="conversation-list">';
+                rooms.forEach(room => {
+                    const otherName = room.buyer === currentUserId
+                        ? (room.seller_name || 'Seller')
+                        : (room.buyer_name || 'Buyer');
+                    const initial = otherName.charAt(0).toUpperCase();
+                    const lastMsg = room.last_message;
+                    const preview = lastMsg ? escHtml(lastMsg.message || '').substring(0, 80) : 'No messages yet';
+                    const time = lastMsg ? formatTime(lastMsg.created_at) : '';
+                    const unread = room.unread_count || 0;
+
+                    html += `
+                        <div class="conversation-item ${unread > 0 ? 'unread' : ''}" onclick="navigateToChat(${room.id})">
+                            <div class="conv-avatar">${initial}</div>
+                            <div class="conv-info">
+                                <div class="conv-name">${escHtml(otherName)}</div>
+                                <div class="conv-property">Re: ${escHtml(room.property_title || 'Property')}</div>
+                                <div class="conv-preview">${preview}</div>
+                            </div>
+                            <div class="conv-meta">
+                                <div class="conv-time">${time}</div>
+                                ${unread > 0 ? `<div class="conv-unread-badge">${unread}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+
+            document.getElementById('messages-content').innerHTML = html;
+        } catch (err) {
+            document.getElementById('messages-content').innerHTML = '<div class="alert alert-error">Failed to load conversations.</div>';
+        }
+    }
+
+    function navigateToChat(roomId) {
+        history.pushState(null, '', `/messages/${roomId}/`);
+        showChat(roomId);
+    }
+
+    async function showChat(roomId) {
+        stopPolling();
+        currentRoomId = roomId;
+
+        document.getElementById('messages-content').innerHTML = '<p>Loading chat...</p>';
+
+        try {
+            // Fetch room details and messages
+            const [roomRes, msgsRes] = await Promise.all([
+                Auth.authFetch(`/api/chat-rooms/${roomId}/`, { headers: Auth.headers() }),
+                Auth.authFetch(`/api/chat-rooms/${roomId}/messages/`, { headers: Auth.headers() }),
+            ]);
+
+            if (!roomRes.ok) throw new Error('Chat room not found');
+
+            const room = await roomRes.json();
+            const msgsData = await msgsRes.json();
+            const messages = Array.isArray(msgsData) ? msgsData : (msgsData.results || []);
+
+            const otherName = room.buyer === currentUserId
+                ? (room.seller_name || 'Seller')
+                : (room.buyer_name || 'Buyer');
+
+            document.getElementById('messages-content').innerHTML = `
+                <div class="chat-container">
+                    <div class="chat-header">
+                        <button class="chat-back" onclick="goBack()" title="Back to conversations">&larr;</button>
+                        <div class="chat-header-info">
+                            <h3>${escHtml(otherName)}</h3>
+                            <p>Re: ${escHtml(room.property_title || 'Property')}</p>
+                        </div>
+                    </div>
+                    <div class="chat-messages" id="chat-messages"></div>
+                    <div id="typing-indicator" class="typing-indicator" style="display:none; padding:0 1rem;"></div>
+                    <div class="chat-input-bar">
+                        <input type="text" id="chat-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMessage()">
+                        <button onclick="sendMessage()" id="send-btn" title="Send">&#9654;</button>
+                    </div>
+                </div>
+            `;
+
+            renderMessages(messages);
+
+            // Mark messages as read
+            Auth.authFetch(`/api/chat-rooms/${roomId}/messages/mark_read/`, {
+                method: 'POST',
+                headers: Auth.headers(),
+            }).catch(() => {});
+
+            // Start polling for new messages
+            startPolling(roomId);
+        } catch (err) {
+            document.getElementById('messages-content').innerHTML = `
+                <div class="alert alert-error">Failed to load chat. <button class="btn btn-secondary" onclick="goBack()">Back</button></div>
+            `;
+        }
+    }
+
+    function renderMessages(messages) {
+        const container = document.getElementById('chat-messages');
+        if (!messages.length) {
+            container.innerHTML = '<div class="empty-state"><p>No messages yet. Say hello!</p></div>';
+            return;
+        }
+
+        // Sort oldest first
+        messages.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+
+        let html = '';
+        let lastDate = '';
+
+        messages.forEach(msg => {
+            const msgDate = new Date(msg.created_at).toLocaleDateString();
+            if (msgDate !== lastDate) {
+                lastDate = msgDate;
+                html += `<div class="date-separator">${msgDate}</div>`;
+            }
+
+            const isSent = msg.sender === currentUserId;
+            const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            html += `
+                <div class="chat-bubble ${isSent ? 'bubble-sent' : 'bubble-received'}">
+                    ${!isSent ? `<div class="bubble-sender">${escHtml(msg.sender_name || '')}</div>` : ''}
+                    ${escHtml(msg.message)}
+                    <div class="bubble-time">${time}</div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+        container.scrollTop = container.scrollHeight;
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('chat-input');
+        const text = input.value.trim();
+        if (!text || !currentRoomId) return;
+
+        const btn = document.getElementById('send-btn');
+        btn.disabled = true;
+        input.value = '';
+
+        try {
+            const res = await Auth.authFetch(`/api/chat-rooms/${currentRoomId}/messages/`, {
+                method: 'POST',
+                headers: Auth.headers(),
+                body: JSON.stringify({ message: text }),
+            });
+            if (!res.ok) throw new Error('Failed to send');
+
+            // Immediately add to UI
+            const msg = await res.json();
+            const container = document.getElementById('chat-messages');
+            const emptyState = container.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+
+            const time = new Date(msg.created_at || new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            container.insertAdjacentHTML('beforeend', `
+                <div class="chat-bubble bubble-sent">
+                    ${escHtml(msg.message || text)}
+                    <div class="bubble-time">${time}</div>
+                </div>
+            `);
+            container.scrollTop = container.scrollHeight;
+        } catch (err) {
+            input.value = text; // Restore on failure
+            alert('Failed to send message. Please try again.');
+        } finally {
+            btn.disabled = false;
+            input.focus();
+        }
+    }
+
+    function startPolling(roomId) {
+        pollInterval = setInterval(async () => {
+            if (currentRoomId !== roomId) return;
+            try {
+                const res = await Auth.authFetch(`/api/chat-rooms/${roomId}/messages/`, { headers: Auth.headers() });
+                const data = await res.json();
+                const messages = Array.isArray(data) ? data : (data.results || []);
+                renderMessages(messages);
+            } catch (_) {}
+        }, 5000);
+    }
+
+    function stopPolling() {
+        if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+        }
+    }
+
+    function goBack() {
+        stopPolling();
+        currentRoomId = null;
+        history.pushState(null, '', '/messages/');
+        loadConversations();
+    }
+
+    // Handle browser back/forward
+    window.addEventListener('popstate', () => {
+        const match = window.location.pathname.match(/\/messages\/(\d+)\/?/);
+        if (match) {
+            showChat(parseInt(match[1]));
+        } else {
+            loadConversations();
+        }
+    });
+
+    function formatTime(dateStr) {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diff = now - date;
+
+        if (diff < 60000) return 'now';
+        if (diff < 3600000) return Math.floor(diff / 60000) + 'm';
+        if (diff < 86400000) return Math.floor(diff / 3600000) + 'h';
+        if (diff < 604800000) return date.toLocaleDateString([], { weekday: 'short' });
+        return date.toLocaleDateString();
+    }
+
+    init();
+</script>
+{% endblock %}

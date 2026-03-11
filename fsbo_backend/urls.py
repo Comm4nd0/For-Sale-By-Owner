@@ -52,6 +52,13 @@ urlpatterns = [
     path('my-service/', CSRFTemplateView.as_view(template_name='my_service.html'), name='my-service'),
     path('pricing/', CSRFTemplateView.as_view(template_name='pricing.html'), name='pricing'),
     path('house-prices/', CSRFTemplateView.as_view(template_name='house_prices.html'), name='house-prices'),
+    path('offers/', CSRFTemplateView.as_view(template_name='offers.html'), name='offers'),
+    path('messages/', CSRFTemplateView.as_view(template_name='messages.html'), name='messages'),
+    path('messages/<int:room_id>/', CSRFTemplateView.as_view(template_name='messages.html'), name='message-detail'),
+    path('properties/<int:id>/viewing-slots/', CSRFTemplateView.as_view(template_name='viewing_slots.html'), name='viewing-slots'),
+    path('mortgage-calculator/', CSRFTemplateView.as_view(template_name='mortgage_calculator.html'), name='mortgage-calculator'),
+    path('referrals/', CSRFTemplateView.as_view(template_name='referrals.html'), name='referrals'),
+    path('saved-searches/', CSRFTemplateView.as_view(template_name='saved_searches.html'), name='saved-searches'),
     path('services/<slug:slug>/', CSRFTemplateView.as_view(template_name='service_provider_detail.html'), name='service-provider-detail'),
 
     # Slug-based property URL (must come after /properties/new/ and /properties/<int:id>/)

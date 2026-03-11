@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
 import '../models/offer.dart';
+import 'edit_offer_screen.dart';
 
 class OffersScreen extends StatefulWidget {
   final bool received;
@@ -33,8 +35,11 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
   Future<void> _loadOffers() async {
     try {
       final api = context.read<ApiService>();
+      final userId = context.read<AuthService>().userId;
       final received = await api.getOffers(received: true);
-      final sent = await api.getOffers(received: false);
+      final all = await api.getOffers();
+      // Filter "sent" to only offers the current user made (not received)
+      final sent = all.where((o) => o.buyerId == userId).toList();
       if (mounted) {
         setState(() {
           _receivedOffers = received;
@@ -58,23 +63,69 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
     }
   }
 
-  Future<void> _respondToOffer(Offer offer, String action) async {
+  Future<void> _respondToOffer(Offer offer, String status) async {
     try {
       final api = context.read<ApiService>();
-      await api.respondToOffer(offer.id, action);
+      await api.respondToOffer(offer.id, status);
       _loadOffers();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Offer ${action}ed')),
+          SnackBar(content: Text('Offer $status')),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to $action offer')),
+          SnackBar(content: Text('Failed to update offer')),
         );
       }
     }
+  }
+
+  Future<void> _withdrawOffer(Offer offer) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Withdraw Offer'),
+        content: Text('Are you sure you want to withdraw your ${offer.formattedAmount} offer on ${offer.propertyTitle}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Withdraw'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      final api = context.read<ApiService>();
+      await api.withdrawOffer(offer.id);
+      _loadOffers();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Offer withdrawn')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to withdraw offer')),
+        );
+      }
+    }
+  }
+
+  void _editOffer(Offer offer) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditOfferScreen(offer: offer),
+      ),
+    ).then((result) {
+      if (result == true) _loadOffers();
+    });
   }
 
   Widget _buildOfferList(List<Offer> offers, {bool isReceived = false}) {
@@ -117,19 +168,62 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
                     const SizedBox(height: 8),
                     Text(offer.message!),
                   ],
+                  if (offer.sellerResponse != null && offer.sellerResponse!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.reply, size: 16, color: Colors.grey[600]),
+                          const SizedBox(width: 6),
+                          Expanded(child: Text(offer.sellerResponse!, style: TextStyle(color: Colors.grey[700], fontSize: 13))),
+                        ],
+                      ),
+                    ),
+                  ],
                   if (isReceived && offer.status == 'submitted') ...[
                     const SizedBox(height: 12),
                     Row(
                       children: [
                         ElevatedButton(
-                          onPressed: () => _respondToOffer(offer, 'accept'),
+                          onPressed: () => _respondToOffer(offer, 'accepted'),
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
                           child: const Text('Accept'),
                         ),
                         const SizedBox(width: 8),
                         OutlinedButton(
-                          onPressed: () => _respondToOffer(offer, 'reject'),
+                          onPressed: () => _respondToOffer(offer, 'rejected'),
                           child: const Text('Reject'),
+                        ),
+                      ],
+                    ),
+                  ],
+                  // Sent offer actions (buyer's view)
+                  if (!isReceived && (offer.status == 'submitted' || offer.status == 'under_review' || offer.status == 'countered')) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        if (offer.status == 'submitted') ...[
+                          ElevatedButton.icon(
+                            onPressed: () => _editOffer(offer),
+                            icon: const Icon(Icons.edit, size: 16),
+                            label: const Text('Edit'),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        OutlinedButton.icon(
+                          onPressed: () => _withdrawOffer(offer),
+                          icon: const Icon(Icons.undo, size: 16),
+                          label: const Text('Withdraw'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
+                          ),
                         ),
                       ],
                     ),

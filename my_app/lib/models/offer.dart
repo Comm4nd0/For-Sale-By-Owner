@@ -54,7 +54,7 @@ class Offer {
       isChainFree: json['is_chain_free'] ?? false,
       mortgageAgreed: json['mortgage_agreed'] ?? false,
       message: json['message'],
-      sellerResponse: json['seller_response'],
+      sellerResponse: json['seller_notes'] ?? json['seller_response'],
       expiresAt: json['expires_at'],
       createdAt: json['created_at'] ?? '',
       updatedAt: json['updated_at'] ?? '',

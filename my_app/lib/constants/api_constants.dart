@@ -111,6 +111,7 @@ class ApiConstants {
 
   // Offers
   static String get offers => '$apiUrl/offers/';
+  static String get offersReceived => '$apiUrl/offers/received/';
   static String offerDetail(int id) => '$apiUrl/offers/$id/';
   static String offerRespond(int id) => '$apiUrl/offers/$id/respond/';
   static String offerWithdraw(int id) => '$apiUrl/offers/$id/withdraw/';

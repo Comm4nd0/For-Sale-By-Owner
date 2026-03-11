@@ -106,6 +106,30 @@
     .similar-card-body .price { font-weight: 700; color: #19747E; }
     .similar-card-body .meta { font-size: 0.8rem; color: #4A5C62; }
 
+    /* Offer Form */
+    .offer-form-section { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .offer-form-section h3 { color: #115E66; margin-bottom: 0.75rem; font-size: 1.1rem; }
+    .offer-form-section .form-group { margin-bottom: 0.75rem; }
+    .offer-form-section label { display: block; margin-bottom: 0.2rem; font-size: 0.85rem; font-weight: 500; color: #4A5C62; }
+    .offer-form-section input[type="number"], .offer-form-section textarea { width: 100%; padding: 0.5rem; border: 1px solid #E2E2E2; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
+    .offer-form-section textarea { min-height: 60px; resize: vertical; }
+    .offer-checkbox { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.35rem; font-size: 0.9rem; color: #1A2C33; cursor: pointer; }
+    .offer-checkbox input[type="checkbox"] { width: 16px; height: 16px; accent-color: #19747E; }
+
+    /* Quick Actions */
+    .quick-actions { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .quick-actions h3 { color: #115E66; margin-bottom: 0.75rem; font-size: 1.1rem; }
+    .quick-actions .btn { width: 100%; margin-bottom: 0.5rem; text-align: center; display: block; }
+    .quick-actions .btn:last-child { margin-bottom: 0; }
+
+    /* Available Slots */
+    .avail-slots-section { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .avail-slots-section h3 { color: #115E66; margin-bottom: 0.75rem; font-size: 1.1rem; }
+    .avail-slot-item { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #F0F0F0; }
+    .avail-slot-item:last-child { border-bottom: none; }
+    .avail-slot-date { font-weight: 600; color: #115E66; font-size: 0.9rem; }
+    .avail-slot-time { font-size: 0.85rem; color: #4A5C62; }
+
     /* Recently Viewed */
     .recently-viewed { margin-top: 2rem; }
     .recently-viewed h3 { color: #115E66; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #E2E2E2; }
@@ -166,7 +190,55 @@
     .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
 
     .owner-actions { margin-top: 1rem; display: flex; gap: 0.75rem; }
-    @media (max-width: 768px) { .detail-grid { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } .property-header { flex-direction: column; } }
+    /* Neighbourhood Info */
+    .neighbourhood-section { margin-bottom: 1.5rem; }
+    .neighbourhood-section h3 { color: #115E66; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid #E2E2E2; }
+    .neighbourhood-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem; }
+    .neighbourhood-item { display: flex; justify-content: space-between; padding: 0.4rem 0; }
+    .neighbourhood-item .nb-label { color: #4A5C62; font-size: 0.9rem; }
+    .neighbourhood-item .nb-value { font-weight: 500; font-size: 0.9rem; }
+    .crime-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .crime-table td { padding: 0.35rem 0; border-bottom: 1px solid #EDF2EF; }
+    .crime-table td:first-child { color: #4A5C62; text-transform: capitalize; }
+    .crime-table td:last-child { font-weight: 600; text-align: right; color: #115E66; }
+    .crime-bar-wrap { height: 6px; background: #EDF2EF; border-radius: 3px; flex: 1; margin-left: 0.75rem; max-width: 120px; }
+    .crime-bar-fill { height: 100%; background: #19747E; border-radius: 3px; }
+    .nb-loading { text-align: center; padding: 1.5rem; color: #8FA3A8; font-size: 0.85rem; }
+
+    /* Property Documents */
+    .documents-section { margin-bottom: 1.5rem; }
+    .documents-section h3 { color: #115E66; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid #E2E2E2; }
+    .doc-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0; border-bottom: 1px solid #EDF2EF; }
+    .doc-item:last-child { border-bottom: none; }
+    .doc-icon { width: 36px; height: 36px; border-radius: 6px; background: #D1E8E2; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .doc-info { flex: 1; min-width: 0; }
+    .doc-title { font-size: 0.9rem; font-weight: 500; color: #1A2C33; }
+    .doc-type { font-size: 0.78rem; color: #8FA3A8; }
+    .doc-actions a { color: #19747E; font-size: 0.85rem; text-decoration: none; }
+    .doc-actions a:hover { text-decoration: underline; }
+    .doc-actions button { background: none; border: none; cursor: pointer; color: #B03A2E; font-size: 0.8rem; padding: 0.2rem; margin-left: 0.5rem; }
+    .doc-upload-form { margin-top: 0.75rem; padding: 0.75rem; background: #F5F8F9; border-radius: 6px; }
+    .doc-upload-form .form-group { margin-bottom: 0.5rem; }
+    .doc-upload-form label { display: block; font-size: 0.8rem; font-weight: 500; color: #4A5C62; margin-bottom: 0.15rem; }
+    .doc-upload-form input, .doc-upload-form select { width: 100%; padding: 0.4rem; border: 1px solid #E2E2E2; border-radius: 4px; font-size: 0.85rem; font-family: inherit; }
+    .doc-upload-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+    .doc-upload-row label { font-size: 0.8rem; color: #4A5C62; display: flex; align-items: center; gap: 0.3rem; margin: 0; }
+
+    /* Report/Flag Modal */
+    .report-btn { background: none; border: 1px solid #E2E2E2; color: #B03A2E; padding: 0.5rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-family: inherit; }
+    .report-btn:hover { background: #fef2f2; border-color: #B03A2E; }
+    .report-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center; }
+    .report-modal.active { display: flex; }
+    .report-modal-content { background: white; border-radius: 8px; padding: 1.5rem; width: 90%; max-width: 420px; }
+    .report-modal-content h3 { color: #115E66; margin-bottom: 1rem; }
+    .report-modal-content .form-group { margin-bottom: 0.75rem; }
+    .report-modal-content label { display: block; font-size: 0.85rem; font-weight: 500; color: #4A5C62; margin-bottom: 0.2rem; }
+    .report-modal-content select, .report-modal-content textarea { width: 100%; padding: 0.5rem; border: 1px solid #E2E2E2; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
+    .report-modal-content textarea { min-height: 80px; resize: vertical; }
+    .report-modal-actions { display: flex; gap: 0.75rem; margin-top: 1rem; }
+    .report-modal-actions .btn { flex: 1; text-align: center; }
+
+    @media (max-width: 768px) { .detail-grid { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } .property-header { flex-direction: column; } .neighbourhood-grid { grid-template-columns: 1fr; } }
 </style>
 {% endblock %}
 
@@ -408,6 +480,273 @@
         btn.textContent = 'Send Enquiry';
     }
 
+    async function submitOffer(e, propertyId) {
+        e.preventDefault();
+        const btn = document.getElementById('offer-submit-btn');
+        const msgEl = document.getElementById('offer-msg');
+        btn.disabled = true;
+        btn.textContent = 'Submitting...';
+        msgEl.style.display = 'none';
+
+        try {
+            const res = await fetch('/api/offers/', {
+                method: 'POST',
+                headers: Auth.headers(),
+                body: JSON.stringify({
+                    property: propertyId,
+                    amount: document.getElementById('offer-amount').value,
+                    message: document.getElementById('offer-message').value,
+                    is_cash_buyer: document.getElementById('offer-cash-buyer').checked,
+                    is_chain_free: document.getElementById('offer-chain-free').checked,
+                    mortgage_agreed: document.getElementById('offer-mortgage-agreed').checked,
+                }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.detail || Object.values(data).flat().join(', '));
+            }
+            msgEl.className = 'alert alert-success';
+            msgEl.textContent = 'Offer submitted successfully! The seller will review it.';
+            msgEl.style.display = 'block';
+            e.target.reset();
+        } catch (err) {
+            msgEl.className = 'alert alert-error';
+            msgEl.textContent = err.message || 'Failed to submit offer.';
+            msgEl.style.display = 'block';
+        }
+        btn.disabled = false;
+        btn.textContent = 'Submit Offer';
+    }
+
+    async function submitReport(e, propertyId) {
+        e.preventDefault();
+        const btn = document.getElementById('report-submit-btn');
+        const msgEl = document.getElementById('report-msg');
+        btn.disabled = true;
+        btn.textContent = 'Submitting...';
+        msgEl.style.display = 'none';
+
+        try {
+            const res = await fetch(`/api/properties/${propertyId}/flag/`, {
+                method: 'POST',
+                headers: Auth.headers(),
+                body: JSON.stringify({
+                    reason: document.getElementById('report-reason').value,
+                    description: document.getElementById('report-description').value,
+                }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.detail || Object.values(data).flat().join(', '));
+            }
+            msgEl.className = 'alert alert-success';
+            msgEl.textContent = 'Report submitted. Thank you for helping keep our platform safe.';
+            msgEl.style.display = 'block';
+            e.target.reset();
+            setTimeout(() => {
+                document.getElementById('report-modal').classList.remove('active');
+            }, 2000);
+        } catch (err) {
+            msgEl.className = 'alert alert-error';
+            msgEl.textContent = err.message || 'Failed to submit report.';
+            msgEl.style.display = 'block';
+        }
+        btn.disabled = false;
+        btn.textContent = 'Submit Report';
+    }
+
+    async function loadNeighbourhoodInfo(propertyId) {
+        const el = document.getElementById('neighbourhood-info');
+        if (!el) return;
+        el.innerHTML = '<div class="nb-loading">Loading neighbourhood info...</div>';
+
+        try {
+            const res = await Auth.authFetch(`/api/properties/${propertyId}/neighbourhood/`, { headers: Auth.headers() });
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+
+            let areaHtml = '';
+            if (data.region || data.admin_district || data.parliamentary_constituency) {
+                areaHtml = '<div class="neighbourhood-grid">';
+                if (data.region) areaHtml += `<div class="neighbourhood-item"><span class="nb-label">Region</span><span class="nb-value">${escHtml(data.region)}</span></div>`;
+                if (data.admin_district) areaHtml += `<div class="neighbourhood-item"><span class="nb-label">District</span><span class="nb-value">${escHtml(data.admin_district)}</span></div>`;
+                if (data.parliamentary_constituency) areaHtml += `<div class="neighbourhood-item"><span class="nb-label">Constituency</span><span class="nb-value">${escHtml(data.parliamentary_constituency)}</span></div>`;
+                if (data.ward) areaHtml += `<div class="neighbourhood-item"><span class="nb-label">Ward</span><span class="nb-value">${escHtml(data.ward)}</span></div>`;
+                areaHtml += '</div>';
+            }
+
+            let crimeHtml = '';
+            const crimes = data.crime_summary || data.crimes || [];
+            if (crimes.length) {
+                const maxCount = Math.max(...crimes.map(c => c.count || 0), 1);
+                crimeHtml = '<h4 style="font-size:0.9rem;color:#4A5C62;margin:0.75rem 0 0.5rem;">Crime Summary</h4>' +
+                    '<table class="crime-table">' +
+                    crimes.map(c => {
+                        const pct = Math.round(((c.count || 0) / maxCount) * 100);
+                        return `<tr><td>${escHtml(c.category || c.type || '')}</td><td style="display:flex;align-items:center;justify-content:flex-end;gap:0.5rem;"><span>${c.count || 0}</span><div class="crime-bar-wrap"><div class="crime-bar-fill" style="width:${pct}%"></div></div></td></tr>`;
+                    }).join('') +
+                    '</table>';
+            }
+
+            if (areaHtml || crimeHtml) {
+                el.innerHTML = `<div class="neighbourhood-section"><h3>Neighbourhood</h3>${areaHtml}${crimeHtml}</div>`;
+            } else {
+                el.innerHTML = '';
+            }
+        } catch {
+            el.innerHTML = '';
+        }
+    }
+
+    async function loadDocuments(propertyId, isOwner) {
+        const el = document.getElementById('documents-section');
+        if (!el) return;
+
+        try {
+            const res = await Auth.authFetch(`/api/properties/${propertyId}/documents/`, { headers: Auth.headers() });
+            if (!res.ok) throw new Error();
+            const docs = await res.json();
+            const docList = Array.isArray(docs) ? docs : (docs.results || []);
+
+            if (!docList.length && !isOwner) {
+                el.innerHTML = '';
+                return;
+            }
+
+            const typeLabels = { epc: 'EPC Certificate', title_deeds: 'Title Deeds', searches: 'Searches', ta6: 'TA6 Form', ta10: 'TA10 Form', survey: 'Survey', floor_plan: 'Floor Plan', other: 'Other' };
+
+            let html = '<div class="documents-section"><h3>Documents</h3>';
+
+            if (docList.length) {
+                html += docList.map(d => {
+                    const typeLabel = typeLabels[d.document_type] || d.document_type || 'Document';
+                    const deleteBtn = isOwner ? `<button onclick="deleteDocument(${propertyId}, ${d.id})" title="Delete">&times;</button>` : '';
+                    return `<div class="doc-item" id="doc-${d.id}">
+                        <div class="doc-icon"><svg width="18" height="18" fill="#19747E" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg></div>
+                        <div class="doc-info"><div class="doc-title">${escHtml(d.title || typeLabel)}</div><div class="doc-type">${escHtml(typeLabel)}${d.is_public === false ? ' &bull; Private' : ''}</div></div>
+                        <div class="doc-actions"><a href="${d.file}" target="_blank" rel="noopener">Download</a>${deleteBtn}</div>
+                    </div>`;
+                }).join('');
+            } else {
+                html += '<p style="color:#8FA3A8;font-size:0.9rem;">No documents uploaded yet.</p>';
+            }
+
+            if (isOwner) {
+                html += `<div class="doc-upload-form">
+                    <div class="form-group"><label>File</label><input type="file" id="doc-file" required></div>
+                    <div class="form-group"><label>Document Type</label>
+                        <select id="doc-type">
+                            <option value="epc">EPC Certificate</option>
+                            <option value="title_deeds">Title Deeds</option>
+                            <option value="searches">Searches</option>
+                            <option value="ta6">TA6 Form</option>
+                            <option value="ta10">TA10 Form</option>
+                            <option value="survey">Survey</option>
+                            <option value="floor_plan">Floor Plan</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Title (optional)</label><input type="text" id="doc-title" placeholder="Document title"></div>
+                    <div class="doc-upload-row">
+                        <label><input type="checkbox" id="doc-public" checked> Public</label>
+                        <button class="btn btn-primary" style="font-size:0.85rem;padding:0.4rem 1rem;margin-left:auto;" onclick="uploadDocument(${propertyId})">Upload</button>
+                    </div>
+                    <div id="doc-upload-msg" class="alert" style="display:none;margin-top:0.5rem;"></div>
+                </div>`;
+            }
+
+            html += '</div>';
+            el.innerHTML = html;
+        } catch {
+            el.innerHTML = '';
+        }
+    }
+
+    async function uploadDocument(propertyId) {
+        const fileInput = document.getElementById('doc-file');
+        const msgEl = document.getElementById('doc-upload-msg');
+        if (!fileInput.files.length) {
+            msgEl.className = 'alert alert-error';
+            msgEl.textContent = 'Please select a file.';
+            msgEl.style.display = 'block';
+            return;
+        }
+        msgEl.style.display = 'none';
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('document_type', document.getElementById('doc-type').value);
+        formData.append('is_public', document.getElementById('doc-public').checked);
+        const title = document.getElementById('doc-title').value;
+        if (title) formData.append('title', title);
+
+        try {
+            const token = Auth.getToken ? Auth.getToken() : localStorage.getItem('authToken');
+            const res = await fetch(`/api/properties/${propertyId}/documents/`, {
+                method: 'POST',
+                headers: { 'Authorization': 'Token ' + token },
+                body: formData,
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.detail || Object.values(data).flat().join(', '));
+            }
+            loadDocuments(propertyId, true);
+        } catch (err) {
+            msgEl.className = 'alert alert-error';
+            msgEl.textContent = err.message || 'Failed to upload document.';
+            msgEl.style.display = 'block';
+        }
+    }
+
+    async function deleteDocument(propertyId, docId) {
+        if (!confirm('Delete this document?')) return;
+        try {
+            const res = await Auth.authFetch(`/api/properties/${propertyId}/documents/${docId}/`, {
+                method: 'DELETE',
+                headers: Auth.headers(false),
+            });
+            if (!res.ok) throw new Error();
+            const docEl = document.getElementById('doc-' + docId);
+            if (docEl) docEl.remove();
+        } catch {
+            alert('Failed to delete document.');
+        }
+    }
+
+    async function startChat(propertyId) {
+        try {
+            const res = await Auth.authFetch('/api/chat-rooms/', {
+                method: 'POST',
+                headers: Auth.headers(),
+                body: JSON.stringify({ property: propertyId }),
+            });
+            if (!res.ok) throw new Error('Failed to start conversation');
+            const room = await res.json();
+            window.location.href = '/messages/' + room.id + '/';
+        } catch (err) {
+            alert(err.message || 'Failed to start conversation. Please try again.');
+        }
+    }
+
+    async function bookViewingSlot(propertyId, slotId) {
+        if (!confirm('Book this viewing slot?')) return;
+        try {
+            const res = await Auth.authFetch('/api/properties/' + propertyId + '/viewing-slots/' + slotId + '/book/', {
+                method: 'POST',
+                headers: Auth.headers(),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.detail || 'Failed to book slot.');
+            }
+            alert('Viewing slot booked successfully!');
+            location.reload();
+        } catch (err) {
+            alert(err.message || 'Failed to book slot.');
+        }
+    }
+
     Auth.authFetch(`/api/properties/${propertyIdOrSlug}/`, { headers: Auth.headers() })
         .then(r => { if (!r.ok) throw new Error(); return r.json(); })
         .then(p => {
@@ -501,6 +840,7 @@
                         ${saveBtn}
                         ${shareBtn}
                         ${printBtn}
+                        ${Auth.isLoggedIn() ? '<button class="report-btn" id="report-btn" style="display:none;" onclick="document.getElementById(\'report-modal\').classList.add(\'active\')">Report</button>' : ''}
                     </div>
                 </div>
                 <div class="stats-grid">
@@ -554,6 +894,8 @@
                             </ul>
                         </div>` : ''}
                         ${mapHtml}
+                        <div id="neighbourhood-info"></div>
+                        <div id="documents-section"></div>
                     </div>
                     <div>
                         <div class="detail-section">
@@ -586,6 +928,9 @@
                                 <button type="submit" class="btn btn-primary" style="width:100%;">Request Viewing</button>
                             </form>
                         </div>` : ''}
+                        <div id="offer-section"></div>
+                        <div id="quick-actions-section"></div>
+                        <div id="available-slots-section"></div>
                         ${mortgageHtml}
                         <div class="stamp-duty-section">
                             <h3>Stamp Duty Calculator</h3>
@@ -596,6 +941,34 @@
                             </div>
                             <div class="stamp-result" id="stamp-result"></div>
                         </div>
+                    </div>
+                </div>
+                <div id="report-modal" class="report-modal" onclick="if(event.target===this)this.classList.remove('active')">
+                    <div class="report-modal-content">
+                        <h3>Report This Property</h3>
+                        <div id="report-msg" class="alert" style="display:none;"></div>
+                        <form onsubmit="submitReport(event, ${p.id})">
+                            <div class="form-group">
+                                <label>Reason</label>
+                                <select id="report-reason" required>
+                                    <option value="">Select a reason...</option>
+                                    <option value="spam">Spam / Scam</option>
+                                    <option value="inappropriate">Inappropriate Content</option>
+                                    <option value="inaccurate">Inaccurate Information</option>
+                                    <option value="duplicate">Duplicate Listing</option>
+                                    <option value="sold">Already Sold</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Additional Details (optional)</label>
+                                <textarea id="report-description" placeholder="Provide more context..."></textarea>
+                            </div>
+                            <div class="report-modal-actions">
+                                <button type="button" class="btn btn-secondary" onclick="document.getElementById('report-modal').classList.remove('active')">Cancel</button>
+                                <button type="submit" class="btn btn-danger" id="report-submit-btn">Submit Report</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
                 <div id="floorplan-modal" class="floorplan-modal" onclick="this.classList.remove('active')"><img src="" alt="Floorplan"></div>
@@ -617,17 +990,78 @@
             calculateMortgage();
             calculateStampDuty();
 
-            // Show edit button if owner
+            // Show edit button if owner + offer/chat/slots for buyers
             if (Auth.isLoggedIn()) {
-                fetch('/auth/users/me/', { headers: Auth.headers() })
+                Auth.authFetch('/auth/users/me/')
                     .then(r => r.json())
                     .then(user => {
-                        if (user.id === p.owner) {
+                        const isOwner = user.id === p.owner;
+
+                        if (isOwner) {
+                            // Hide report button for owners
+                            const reportBtn = document.getElementById('report-btn');
+                            if (reportBtn) reportBtn.style.display = 'none';
                             document.getElementById('owner-actions').innerHTML = `
                                 <div class="owner-actions">
                                     <a href="/properties/${p.id}/edit/" class="btn btn-secondary">Edit Property</a>
+                                    <a href="/properties/${p.id}/viewing-slots/" class="btn btn-secondary" style="margin-left:0.5rem;">Manage Viewing Slots</a>
+                                    <a href="/offers/" class="btn btn-secondary" style="margin-left:0.5rem;">View Offers</a>
                                 </div>`;
+                        } else {
+                            // Show report button for non-owners
+                            const reportBtn = document.getElementById('report-btn');
+                            if (reportBtn) reportBtn.style.display = '';
+
+                            // Make an Offer form for non-owners
+                            document.getElementById('offer-section').innerHTML = `
+                                <div class="offer-form-section">
+                                    <h3>Make an Offer</h3>
+                                    <div id="offer-msg" class="alert" style="display:none;"></div>
+                                    <form onsubmit="submitOffer(event, ${p.id})">
+                                        <div class="form-group">
+                                            <label>Offer Amount (&pound;)</label>
+                                            <input type="number" id="offer-amount" min="1" step="1" placeholder="Enter your offer" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Message (optional)</label>
+                                            <textarea id="offer-message" placeholder="Add a message to the seller..."></textarea>
+                                        </div>
+                                        <div class="form-group" style="margin-bottom:0.5rem;">
+                                            <label class="offer-checkbox"><input type="checkbox" id="offer-cash-buyer"> Cash buyer</label>
+                                            <label class="offer-checkbox"><input type="checkbox" id="offer-chain-free"> Chain free</label>
+                                            <label class="offer-checkbox"><input type="checkbox" id="offer-mortgage-agreed"> Mortgage agreed in principle</label>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary" id="offer-submit-btn" style="width:100%;">Submit Offer</button>
+                                    </form>
+                                </div>`;
+
+                            // Quick actions for non-owners
+                            document.getElementById('quick-actions-section').innerHTML = `
+                                <div class="quick-actions">
+                                    <h3>Quick Actions</h3>
+                                    <button class="btn btn-primary" onclick="startChat(${p.id})">Message Seller</button>
+                                    <a href="/offers/" class="btn btn-secondary">View My Offers</a>
+                                </div>`;
+
+                            // Load available viewing slots for buyers
+                            Auth.authFetch('/api/properties/' + p.id + '/viewing-slots/', { headers: Auth.headers() })
+                                .then(r => r.json())
+                                .then(slots => {
+                                    const slotList = Array.isArray(slots) ? slots : (slots.results || []);
+                                    const available = slotList.filter(s => s.is_available !== false && (s.current_bookings || 0) < s.max_bookings);
+                                    if (!available.length) return;
+                                    const el = document.getElementById('available-slots-section');
+                                    el.innerHTML = '<div class="avail-slots-section"><h3>Available Viewing Times</h3>' +
+                                        available.map(s => {
+                                            const dateStr = s.date
+                                                ? new Date(s.date + 'T00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+                                                : (s.day_display || 'Recurring');
+                                            return '<div class="avail-slot-item"><div><div class="avail-slot-date">' + escHtml(dateStr) + '</div><div class="avail-slot-time">' + escHtml(s.start_time) + ' - ' + escHtml(s.end_time) + '</div></div><button class="btn btn-primary" style="font-size:0.8rem;padding:0.3rem 0.75rem;" onclick="bookViewingSlot(' + p.id + ',' + s.id + ')">Book</button></div>';
+                                        }).join('') +
+                                        '<a href="/properties/' + p.id + '/viewing-slots/" style="display:inline-block;margin-top:0.5rem;color:#19747E;font-size:0.85rem;">View all slots &rarr;</a></div>';
+                                }).catch(() => {});
                         }
+
                         // Pre-fill enquiry and viewing forms
                         const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ');
                         const nameEl = document.getElementById('enq-name');
@@ -638,8 +1072,20 @@
                         const viewEmailEl = document.getElementById('view-email');
                         if (viewNameEl && !viewNameEl.value) viewNameEl.value = fullName;
                         if (viewEmailEl && !viewEmailEl.value) viewEmailEl.value = user.email;
-                    }).catch(() => {});
+
+                        // Load documents (owner gets upload form)
+                        loadDocuments(p.id, isOwner);
+                    }).catch(() => {
+                        // Not logged in or error — load public documents only
+                        loadDocuments(p.id, false);
+                    });
+            } else {
+                // Not logged in — load public documents only
+                loadDocuments(p.id, false);
             }
+
+            // Load neighbourhood info (public, no auth needed)
+            loadNeighbourhoodInfo(p.id);
 
             // Load local services for this property
             Auth.authFetch(`/api/properties/${p.id}/services/`, { headers: Auth.headers() })

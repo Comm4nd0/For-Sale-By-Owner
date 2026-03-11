@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Saved Searches - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ss-hero { background: linear-gradient(135deg, #115E66 0%, #19747E 100%); color: white; padding: 2.5rem 0; margin: -2rem 0 2rem; }
+    .ss-hero h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+    .ss-hero p { opacity: 0.85; font-size: 1rem; }
+
+    .ss-card { background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E2E2; padding: 1.25rem; margin-bottom: 0.75rem; }
+    .ss-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.75rem; }
+    .ss-card-name { font-size: 1.05rem; font-weight: 600; color: #115E66; }
+    .ss-card-actions { display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0; }
+
+    .ss-criteria { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .ss-tag { padding: 3px 10px; background: #F5F8F9; border: 1px solid #E2E2E2; border-radius: 4px; font-size: 0.8rem; color: #4A5C62; }
+
+    .ss-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 0.75rem; border-top: 1px solid #EDF2EF; }
+    .ss-alerts { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #4A5C62; }
+
+    .ss-toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+    .ss-toggle input { opacity: 0; width: 0; height: 0; }
+    .ss-toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ccc; border-radius: 22px; transition: 0.2s; }
+    .ss-toggle-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+    .ss-toggle input:checked + .ss-toggle-slider { background: #19747E; }
+    .ss-toggle input:checked + .ss-toggle-slider:before { transform: translateX(18px); }
+
+    .ss-run-link { font-size: 0.85rem; font-weight: 600; color: #19747E; text-decoration: none; }
+    .ss-run-link:hover { text-decoration: underline; }
+
+    .ss-delete-btn { background: none; border: none; cursor: pointer; color: #B03A2E; padding: 0.25rem; font-size: 0.85rem; opacity: 0.7; }
+    .ss-delete-btn:hover { opacity: 1; }
+
+    .ss-empty { text-align: center; padding: 3rem 1rem; color: #8FA3A8; }
+    .ss-empty h3 { color: #115E66; margin-bottom: 0.5rem; }
+    .ss-loading { text-align: center; padding: 3rem; color: #4A5C62; }
+    .ss-error { text-align: center; padding: 2rem; color: #B03A2E; }
+
+    @media (max-width: 768px) {
+        .ss-hero h1 { font-size: 1.4rem; }
+        .ss-card-header { flex-direction: column; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="ss-hero">
+    <div class="container">
+        <h1>Saved Searches</h1>
+        <p>Manage your saved property searches and email alerts.</p>
+    </div>
+</section>
+
+<div class="container" id="ss-content">
+    <div class="ss-loading">Loading your saved searches...</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    Auth.requireAuth();
+
+    var container = document.getElementById('ss-content');
+
+    loadSearches();
+
+    function loadSearches() {
+        Auth.authFetch('/api/saved-searches/', { headers: Auth.headers() })
+            .then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function(data) {
+                var searches = data.results || data;
+                render(Array.isArray(searches) ? searches : []);
+            })
+            .catch(function() {
+                container.innerHTML = '<div class="ss-error">Could not load saved searches. Please try again later.</div>';
+            });
+    }
+
+    function render(searches) {
+        if (!searches.length) {
+            container.innerHTML = '<div class="ss-empty">' +
+                '<h3>No Saved Searches</h3>' +
+                '<p>When you save a search from the property listings, it will appear here.</p>' +
+                '<a href="/search/" class="btn btn-primary" style="margin-top:1rem;">Browse Properties</a>' +
+                '</div>';
+            return;
+        }
+
+        var html = '';
+        searches.forEach(function(s) {
+            html += renderCard(s);
+        });
+        container.innerHTML = html;
+    }
+
+    function renderCard(s) {
+        var tags = buildTags(s);
+        var searchUrl = buildSearchUrl(s);
+        var name = s.name || s.location || 'Saved Search';
+
+        return '<div class="ss-card" id="ss-' + s.id + '">' +
+            '<div class="ss-card-header">' +
+            '<div class="ss-card-name">' + escHtml(name) + '</div>' +
+            '<div class="ss-card-actions">' +
+            '<button class="ss-delete-btn" title="Delete" onclick="deleteSearch(' + s.id + ')">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/></svg>' +
+            '</button>' +
+            '</div>' +
+            '</div>' +
+            (tags ? '<div class="ss-criteria">' + tags + '</div>' : '') +
+            '<div class="ss-footer">' +
+            '<div class="ss-alerts">' +
+            '<label class="ss-toggle">' +
+            '<input type="checkbox" ' + (s.email_alerts ? 'checked' : '') + ' onchange="toggleAlerts(' + s.id + ', this.checked)">' +
+            '<span class="ss-toggle-slider"></span>' +
+            '</label>' +
+            '<span>Email alerts</span>' +
+            '</div>' +
+            '<a href="' + escHtml(searchUrl) + '" class="ss-run-link">Run search &rarr;</a>' +
+            '</div>' +
+            '</div>';
+    }
+
+    function buildTags(s) {
+        var tags = [];
+        if (s.location) tags.push(s.location);
+        if (s.property_type) tags.push(s.property_type.replace(/_/g, ' '));
+        if (s.min_price) tags.push('Min &pound;' + Number(s.min_price).toLocaleString());
+        if (s.max_price) tags.push('Max &pound;' + Number(s.max_price).toLocaleString());
+        if (s.min_bedrooms) tags.push(s.min_bedrooms + '+ beds');
+        if (s.min_bathrooms) tags.push(s.min_bathrooms + '+ baths');
+        if (s.epc_rating) tags.push('EPC ' + s.epc_rating);
+        return tags.map(function(t) { return '<span class="ss-tag">' + t + '</span>'; }).join('');
+    }
+
+    function buildSearchUrl(s) {
+        var p = new URLSearchParams();
+        if (s.location) p.set('location', s.location);
+        if (s.property_type) p.set('property_type', s.property_type);
+        if (s.min_price) p.set('min_price', s.min_price);
+        if (s.max_price) p.set('max_price', s.max_price);
+        if (s.min_bedrooms) p.set('min_bedrooms', s.min_bedrooms);
+        if (s.min_bathrooms) p.set('min_bathrooms', s.min_bathrooms);
+        if (s.epc_rating) p.set('epc_rating', s.epc_rating);
+        return '/search/?' + p.toString();
+    }
+
+    window.toggleAlerts = function(id, enabled) {
+        Auth.authFetch('/api/saved-searches/' + id + '/', {
+            method: 'PATCH',
+            headers: Auth.headers(),
+            body: JSON.stringify({ email_alerts: enabled })
+        }).catch(function() {
+            alert('Failed to update alerts. Please try again.');
+            loadSearches();
+        });
+    };
+
+    window.deleteSearch = function(id) {
+        if (!confirm('Delete this saved search?')) return;
+
+        Auth.authFetch('/api/saved-searches/' + id + '/', {
+            method: 'DELETE',
+            headers: Auth.headers()
+        })
+        .then(function(r) {
+            if (r.ok || r.status === 204) {
+                var el = document.getElementById('ss-' + id);
+                if (el) el.remove();
+                // Check if empty
+                if (!container.querySelector('.ss-card')) {
+                    render([]);
+                }
+            } else {
+                throw new Error('Failed');
+            }
+        })
+        .catch(function() {
+            alert('Failed to delete. Please try again.');
+        });
+    };
+})();
+</script>
+{% endblock %}

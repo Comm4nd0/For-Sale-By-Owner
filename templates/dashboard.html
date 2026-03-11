@@ -53,6 +53,34 @@
     .empty-state { text-align: center; padding: 3rem 1rem; color: #4A5C62; }
     .empty-state p { margin-bottom: 1rem; }
 
+    /* Offers tab */
+    .offer-item { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; }
+    .offer-item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.25rem; }
+    .offer-item-amount { font-size: 1.2rem; font-weight: 700; color: #19747E; }
+    .offer-item-attrs { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+    .offer-attr { font-size: 0.7rem; padding: 1px 6px; border-radius: 3px; font-weight: 600; background: #D1E8E2; color: #115E66; }
+    .offer-status { font-size: 0.75rem; padding: 2px 8px; border-radius: 3px; font-weight: 600; }
+    .offer-status.submitted { background: #D6EAF8; color: #1A5276; }
+    .offer-status.under_review { background: #FFF3CD; color: #856404; }
+    .offer-status.accepted { background: #D1E8E2; color: #115E66; }
+    .offer-status.rejected { background: #f8d7d4; color: #B03A2E; }
+    .offer-status.countered { background: #FFF3CD; color: #7D6608; }
+    .offer-status.withdrawn, .offer-status.expired { background: #E2E2E2; color: #4A5C62; }
+    .offer-item-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
+
+    /* Messages tab */
+    .msg-item { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 0.5rem; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; transition: border-color 0.15s; }
+    .msg-item:hover { border-color: #19747E; }
+    .msg-item.unread { border-left: 3px solid #19747E; }
+    .msg-avatar { width: 38px; height: 38px; border-radius: 50%; background: #D1E8E2; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #115E66; font-size: 0.95rem; flex-shrink: 0; }
+    .msg-info { flex: 1; min-width: 0; }
+    .msg-name { font-weight: 600; color: #115E66; font-size: 0.9rem; }
+    .msg-property { font-size: 0.8rem; color: #4A5C62; }
+    .msg-preview { font-size: 0.82rem; color: #8FA3A8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .msg-meta { text-align: right; flex-shrink: 0; }
+    .msg-time { font-size: 0.75rem; color: #8FA3A8; }
+    .msg-unread-badge { display: inline-block; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; font-size: 0.7rem; font-weight: 700; line-height: 18px; text-align: center; background: #B03A2E; color: white; margin-top: 0.2rem; }
+
     /* Reply threads */
     .reply-thread { margin-top: 0.75rem; padding-left: 1rem; border-left: 3px solid #D1E8E2; }
     .reply-item { padding: 0.5rem 0; border-bottom: 1px solid #eee; }
@@ -118,8 +146,26 @@
 
     async function loadDashboard() {
         try {
-            const statsRes = await fetch('/api/dashboard/stats/', { headers: Auth.headers() });
+            const [statsRes, offersRes, roomsRes] = await Promise.all([
+                fetch('/api/dashboard/stats/', { headers: Auth.headers() }),
+                Auth.authFetch('/api/offers/received/', { headers: Auth.headers() }).catch(() => null),
+                Auth.authFetch('/api/chat-rooms/', { headers: Auth.headers() }).catch(() => null),
+            ]);
             const stats = await statsRes.json();
+
+            // Count pending offers and unread messages
+            let pendingOffers = 0;
+            let unreadMessages = 0;
+            if (offersRes && offersRes.ok) {
+                const offersData = await offersRes.json();
+                const offers = offersData.results || offersData;
+                pendingOffers = (Array.isArray(offers) ? offers : []).filter(o => o.status === 'submitted' || o.status === 'under_review').length;
+            }
+            if (roomsRes && roomsRes.ok) {
+                const roomsData = await roomsRes.json();
+                const rooms = roomsData.results || roomsData;
+                unreadMessages = (Array.isArray(rooms) ? rooms : []).reduce((sum, r) => sum + (r.unread_count || 0), 0);
+            }
 
             document.getElementById('dashboard-content').innerHTML = `
                 <div class="stats-grid">
@@ -134,6 +180,8 @@
                 <div class="tab-nav">
                     <button class="tab-btn active" onclick="switchTab('enquiries', this)">Enquiries ${stats.unread_enquiries > 0 ? `<span class="tab-badge unread">${stats.unread_enquiries}</span>` : ''}</button>
                     <button class="tab-btn" onclick="switchTab('viewings', this)">Viewing Requests ${stats.pending_viewings > 0 ? `<span class="tab-badge pending">${stats.pending_viewings}</span>` : ''}</button>
+                    <button class="tab-btn" onclick="switchTab('offers', this)">Offers ${pendingOffers > 0 ? `<span class="tab-badge pending">${pendingOffers}</span>` : ''}</button>
+                    <button class="tab-btn" onclick="switchTab('messages', this)">Messages ${unreadMessages > 0 ? `<span class="tab-badge unread">${unreadMessages}</span>` : ''}</button>
                 </div>
 
                 <div class="tab-content active" id="tab-enquiries">
@@ -144,10 +192,18 @@
                     <div id="viewing-list"></div>
                     <div id="viewing-pagination" class="pagination"></div>
                 </div>
+                <div class="tab-content" id="tab-offers">
+                    <div id="offers-list"></div>
+                </div>
+                <div class="tab-content" id="tab-messages">
+                    <div id="messages-list"></div>
+                </div>
             `;
 
             loadEnquiries();
             loadViewings();
+            loadDashboardOffers();
+            loadDashboardMessages();
         } catch (err) {
             document.getElementById('dashboard-content').innerHTML = '<div class="alert alert-error">Failed to load dashboard.</div>';
         }
@@ -324,6 +380,128 @@
         } catch (err) {
             alert(err.message || 'Failed to send reply.');
         }
+    }
+
+    async function loadDashboardOffers() {
+        try {
+            const res = await Auth.authFetch('/api/offers/received/', { headers: Auth.headers() });
+            const data = await res.json();
+            const offers = data.results || data;
+            const listEl = document.getElementById('offers-list');
+
+            if (!offers.length) {
+                listEl.innerHTML = '<div class="empty-state"><p>No offers received yet.</p></div>';
+                return;
+            }
+
+            listEl.innerHTML = offers.map(o => `
+                <div class="offer-item">
+                    <div class="offer-item-header">
+                        <div>
+                            <span class="enquiry-from">${escHtml(o.buyer_name)}</span>
+                            <div class="enquiry-property">Re: ${escHtml(o.property_title)}</div>
+                        </div>
+                        <div>
+                            <span class="offer-status ${escHtml(o.status)}">${escHtml(o.status_display)}</span>
+                        </div>
+                    </div>
+                    <div class="offer-item-amount">&pound;${Number(o.amount).toLocaleString()}</div>
+                    <div class="offer-item-attrs">
+                        ${o.is_cash_buyer ? '<span class="offer-attr">Cash</span>' : ''}
+                        ${o.is_chain_free ? '<span class="offer-attr">No Chain</span>' : ''}
+                        ${o.mortgage_agreed ? '<span class="offer-attr">Mortgage</span>' : ''}
+                    </div>
+                    ${o.message ? `<div class="enquiry-message">${escHtml(o.message)}</div>` : ''}
+                    ${o.status === 'submitted' || o.status === 'under_review' ? `
+                    <div class="offer-item-actions">
+                        <button class="btn btn-primary" style="font-size:0.8rem; padding:0.3rem 0.8rem;" onclick="dashRespondOffer(${o.id}, 'accepted')">Accept</button>
+                        <button class="btn btn-danger" style="font-size:0.8rem; padding:0.3rem 0.8rem;" onclick="dashRespondOffer(${o.id}, 'rejected')">Reject</button>
+                    </div>` : ''}
+                </div>
+            `).join('') + '<div style="margin-top:0.75rem;"><a href="/offers/" class="btn btn-secondary" style="font-size:0.85rem;">View all offers &rarr;</a></div>';
+        } catch (err) {
+            document.getElementById('offers-list').innerHTML = '<div class="empty-state"><p>Failed to load offers.</p></div>';
+        }
+    }
+
+    async function dashRespondOffer(id, status) {
+        const action = status === 'accepted' ? 'accept' : 'reject';
+        if (!confirm('Are you sure you want to ' + action + ' this offer?')) return;
+        try {
+            const res = await Auth.authFetch('/api/offers/' + id + '/respond/', {
+                method: 'PATCH',
+                headers: Auth.headers(),
+                body: JSON.stringify({ status: status }),
+            });
+            if (!res.ok) throw new Error('Failed');
+            loadDashboardOffers();
+        } catch (err) {
+            alert('Failed to ' + action + ' offer.');
+        }
+    }
+
+    async function loadDashboardMessages() {
+        try {
+            const res = await Auth.authFetch('/api/chat-rooms/', { headers: Auth.headers() });
+            const data = await res.json();
+            const rooms = Array.isArray(data) ? data : (data.results || []);
+            const listEl = document.getElementById('messages-list');
+
+            if (!rooms.length) {
+                listEl.innerHTML = '<div class="empty-state"><p>No conversations yet.</p></div>';
+                return;
+            }
+
+            // Fetch current user to determine "other" party
+            const userRes = await Auth.authFetch('/auth/users/me/');
+            const user = await userRes.json();
+
+            // Sort by last message time
+            rooms.sort((a, b) => {
+                const aTime = a.last_message?.created_at || a.created_at || '';
+                const bTime = b.last_message?.created_at || b.created_at || '';
+                return bTime.localeCompare(aTime);
+            });
+
+            listEl.innerHTML = rooms.map(room => {
+                const otherName = room.buyer === user.id
+                    ? (room.seller_name || 'Seller')
+                    : (room.buyer_name || 'Buyer');
+                const initial = otherName.charAt(0).toUpperCase();
+                const lastMsg = room.last_message;
+                const preview = lastMsg ? escHtml(lastMsg.message || '').substring(0, 60) : 'No messages yet';
+                const unread = room.unread_count || 0;
+                const time = lastMsg ? formatMsgTime(lastMsg.created_at) : '';
+
+                return `
+                    <div class="msg-item ${unread > 0 ? 'unread' : ''}" onclick="window.location.href='/messages/${room.id}/'">
+                        <div class="msg-avatar">${initial}</div>
+                        <div class="msg-info">
+                            <div class="msg-name">${escHtml(otherName)}</div>
+                            <div class="msg-property">Re: ${escHtml(room.property_title || 'Property')}</div>
+                            <div class="msg-preview">${preview}</div>
+                        </div>
+                        <div class="msg-meta">
+                            <div class="msg-time">${time}</div>
+                            ${unread > 0 ? `<div class="msg-unread-badge">${unread}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('') + '<div style="margin-top:0.75rem;"><a href="/messages/" class="btn btn-secondary" style="font-size:0.85rem;">View all messages &rarr;</a></div>';
+        } catch (err) {
+            document.getElementById('messages-list').innerHTML = '<div class="empty-state"><p>Failed to load messages.</p></div>';
+        }
+    }
+
+    function formatMsgTime(dateStr) {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diff = now - date;
+        if (diff < 60000) return 'now';
+        if (diff < 3600000) return Math.floor(diff / 60000) + 'm';
+        if (diff < 86400000) return Math.floor(diff / 3600000) + 'h';
+        return date.toLocaleDateString();
     }
 
     loadDashboard();

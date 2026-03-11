@@ -182,7 +182,7 @@
 
     // Get current user
     if (Auth.isLoggedIn()) {
-        fetch('/auth/users/me/', { headers: Auth.headers() })
+        Auth.authFetch('/auth/users/me/')
             .then(r => r.json())
             .then(u => { currentUserId = u.id; })
             .catch(() => {});
