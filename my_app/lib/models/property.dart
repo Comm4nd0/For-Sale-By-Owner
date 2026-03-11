@@ -33,8 +33,13 @@ class Property {
   final String ownerName;
   final bool ownerIsVerified;
   final bool isSaved;
+  final double? latitude;
+  final double? longitude;
+  final String? videoUrl;
+  final String? videoThumbnail;
   final int? viewCount;
   final int? enquiryCount;
+  final int? offerCount;
   final String createdAt;
   final String updatedAt;
 
@@ -68,8 +73,13 @@ class Property {
     required this.ownerName,
     required this.ownerIsVerified,
     required this.isSaved,
+    this.latitude,
+    this.longitude,
+    this.videoUrl,
+    this.videoThumbnail,
     this.viewCount,
     this.enquiryCount,
+    this.offerCount,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -113,8 +123,17 @@ class Property {
       ownerName: json['owner_name'] ?? '',
       ownerIsVerified: json['owner_is_verified'] ?? false,
       isSaved: json['is_saved'] ?? false,
+      latitude: json['latitude'] != null
+          ? double.tryParse(json['latitude'].toString())
+          : null,
+      longitude: json['longitude'] != null
+          ? double.tryParse(json['longitude'].toString())
+          : null,
+      videoUrl: json['video_url'],
+      videoThumbnail: json['video_thumbnail'],
       viewCount: json['view_count'],
       enquiryCount: json['enquiry_count'],
+      offerCount: json['offer_count'],
       createdAt: json['created_at'] ?? '',
       updatedAt: json['updated_at'] ?? '',
     );
@@ -137,6 +156,9 @@ class Property {
         'square_feet': squareFeet,
         'epc_rating': epcRating,
         'features': features.map((f) => f.id).toList(),
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+        if (videoUrl != null) 'video_url': videoUrl,
       };
 
   String get formattedPrice {

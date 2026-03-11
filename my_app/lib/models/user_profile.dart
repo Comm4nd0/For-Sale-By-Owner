@@ -4,6 +4,12 @@ class UserProfile {
   final String firstName;
   final String lastName;
   final String phone;
+  final String? referralCode;
+  final bool darkMode;
+  final bool notificationEnquiries;
+  final bool notificationViewings;
+  final bool notificationPriceDrops;
+  final bool notificationSavedSearches;
 
   UserProfile({
     required this.id,
@@ -11,6 +17,12 @@ class UserProfile {
     required this.firstName,
     required this.lastName,
     required this.phone,
+    this.referralCode,
+    required this.darkMode,
+    required this.notificationEnquiries,
+    required this.notificationViewings,
+    required this.notificationPriceDrops,
+    required this.notificationSavedSearches,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -20,6 +32,12 @@ class UserProfile {
       firstName: json['first_name'] ?? '',
       lastName: json['last_name'] ?? '',
       phone: json['phone'] ?? '',
+      referralCode: json['referral_code'],
+      darkMode: json['dark_mode'] ?? false,
+      notificationEnquiries: json['notification_enquiries'] ?? true,
+      notificationViewings: json['notification_viewings'] ?? true,
+      notificationPriceDrops: json['notification_price_drops'] ?? true,
+      notificationSavedSearches: json['notification_saved_searches'] ?? true,
     );
   }
 }

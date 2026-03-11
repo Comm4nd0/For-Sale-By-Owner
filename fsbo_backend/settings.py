@@ -23,14 +23,29 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sitemaps',
     # Third party
     'rest_framework',
     'rest_framework.authtoken',
     'djoser',
     'corsheaders',
+    'django_celery_beat',
     # Local
     'api',
 ]
+
+# Add daphne and channels if available (requires native dependencies)
+try:
+    import daphne  # noqa: F401
+    INSTALLED_APPS.insert(0, 'daphne')
+except ImportError:
+    pass
+
+try:
+    import channels  # noqa: F401
+    INSTALLED_APPS.insert(-1, 'channels')  # Before 'api'
+except ImportError:
+    pass
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -63,6 +78,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'fsbo_backend.wsgi.application'
+ASGI_APPLICATION = 'fsbo_backend.asgi.application'
 
 # Database
 USE_SQLITE = os.getenv('USE_SQLITE', 'False').lower() in ('true', '1', 'yes')
@@ -134,9 +150,11 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 20,
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.AnonRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
         'user': '1000/hour',
+        'anon': '200/hour',
     },
 }
 
@@ -159,8 +177,8 @@ CSRF_TRUSTED_ORIGINS = [
     if origin.strip()
 ]
 
-# CORS
-CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'True').lower() in ('true', '1', 'yes')
+# CORS — restricted in production
+CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'True' if DEBUG else 'False').lower() in ('true', '1', 'yes')
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
@@ -182,3 +200,107 @@ SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000')
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
 STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+
+# ── Redis ────────────────────────────────────────────────────────
+REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+
+# ── Celery ───────────────────────────────────────────────────────
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', REDIS_URL)
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', REDIS_URL)
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# ── Caching (Redis) ─────────────────────────────────────────────
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': os.getenv('CACHE_REDIS_URL', REDIS_URL),
+        'TIMEOUT': 300,
+        'KEY_PREFIX': 'fsbo',
+    }
+}
+
+# ── Django Channels (WebSocket) ──────────────────────────────────
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [os.getenv('CHANNELS_REDIS_URL', REDIS_URL)],
+        },
+    },
+}
+
+# ── Firebase Cloud Messaging (Push Notifications) ────────────────
+FCM_CREDENTIALS_FILE = os.getenv('FCM_CREDENTIALS_FILE', '')
+
+# ── Image Processing ────────────────────────────────────────────
+PROPERTY_IMAGE_MAX_WIDTH = 1920
+PROPERTY_IMAGE_MAX_HEIGHT = 1080
+PROPERTY_IMAGE_THUMBNAIL_SIZE = (400, 300)
+PROPERTY_IMAGE_QUALITY = 85
+
+# ── Security hardening (production) ─────────────────────────────
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+# ── Logging ──────────────────────────────────────────────────────
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': os.getenv('LOG_LEVEL', 'INFO'),
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'api': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+        'celery': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
+# ── Sentry (optional, production only) ──────────────────────────
+SENTRY_DSN = os.getenv('SENTRY_DSN', '')
+if SENTRY_DSN and not DEBUG:
+    try:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            traces_sample_rate=0.1,
+            profiles_sample_rate=0.1,
+        )
+    except ImportError:
+        pass

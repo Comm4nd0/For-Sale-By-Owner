@@ -7,3 +7,8 @@ python-dotenv
 Pillow
 stripe
 requests
+celery[redis]
+django-celery-beat
+redis
+channels[daphne]
+firebase-admin

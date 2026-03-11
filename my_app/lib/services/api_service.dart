@@ -19,6 +19,15 @@ import '../models/user_profile.dart';
 import '../models/service_category.dart';
 import '../models/service_provider.dart';
 import '../models/service_provider_review.dart';
+import '../models/chat_room.dart';
+import '../models/chat_message.dart';
+import '../models/offer.dart';
+import '../models/property_document.dart';
+import '../models/property_flag.dart';
+import '../models/viewing_slot.dart';
+import '../models/referral.dart';
+import '../models/mortgage_calculation.dart';
+import '../models/neighbourhood_info.dart';
 
 class ApiService {
   final String? Function() _getToken;
@@ -56,6 +65,9 @@ class ApiService {
     int? minBathrooms,
     String? epcRating,
     bool? mine,
+    double? lat,
+    double? lon,
+    double? radius,
     int page = 1,
   }) async {
     final params = <String, String>{'page': page.toString()};
@@ -71,6 +83,9 @@ class ApiService {
       params['epc_rating'] = epcRating;
     }
     if (mine == true) params['mine'] = 'true';
+    if (lat != null) params['lat'] = lat.toString();
+    if (lon != null) params['lon'] = lon.toString();
+    if (radius != null) params['radius'] = radius.toString();
 
     final uri =
         Uri.parse(ApiConstants.properties).replace(queryParameters: params);
@@ -726,5 +741,376 @@ class ApiService {
     }
     final data = jsonDecode(response.body);
     throw Exception(data['detail'] ?? 'Failed to create billing portal');
+  }
+
+  // ── Chat Rooms ──────────────────────────────────────────────────────
+
+  Future<List<ChatRoom>> getChatRooms() async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.chatRooms),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final results = data is List ? data : (data['results'] as List? ?? []);
+      return results.map((json) => ChatRoom.fromJson(json)).toList();
+    }
+    throw Exception('Failed to load chat rooms');
+  }
+
+  Future<ChatRoom> getOrCreateChatRoom(int propertyId) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.chatRooms),
+      headers: _headers,
+      body: jsonEncode({'property': propertyId}),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return ChatRoom.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to create chat room');
+  }
+
+  Future<List<ChatMessage>> getChatMessages(int roomId) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.chatMessages(roomId)),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as List;
+      return data.map((json) => ChatMessage.fromJson(json)).toList();
+    }
+    throw Exception('Failed to load messages');
+  }
+
+  Future<ChatMessage> sendChatMessage(int roomId, String content) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.chatMessages(roomId)),
+      headers: _headers,
+      body: jsonEncode({'content': content}),
+    );
+    if (response.statusCode == 201) {
+      return ChatMessage.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to send message');
+  }
+
+  // ── Offers ──────────────────────────────────────────────────────────
+
+  Future<List<Offer>> getOffers({bool? received}) async {
+    final params = <String, String>{};
+    if (received == true) params['received'] = 'true';
+
+    final uri = Uri.parse(ApiConstants.offers)
+        .replace(queryParameters: params.isNotEmpty ? params : null);
+    final response = await http.get(uri, headers: _headers);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final results = data is List ? data : (data['results'] as List? ?? []);
+      return results.map((json) => Offer.fromJson(json)).toList();
+    }
+    throw Exception('Failed to load offers');
+  }
+
+  Future<Offer> createOffer({
+    required int propertyId,
+    required double amount,
+    String? message,
+    bool isCashBuyer = false,
+    bool isChainFree = false,
+    bool mortgageAgreed = false,
+  }) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.offers),
+      headers: _headers,
+      body: jsonEncode({
+        'property': propertyId,
+        'amount': amount.toString(),
+        'message': message ?? '',
+        'is_cash_buyer': isCashBuyer,
+        'is_chain_free': isChainFree,
+        'mortgage_agreed': mortgageAgreed,
+      }),
+    );
+    if (response.statusCode == 201) {
+      return Offer.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to submit offer');
+  }
+
+  Future<Offer> respondToOffer(int id, String action, {double? counterAmount, String? message}) async {
+    final body = <String, dynamic>{'action': action};
+    if (counterAmount != null) body['counter_amount'] = counterAmount.toString();
+    if (message != null) body['message'] = message;
+
+    final response = await http.post(
+      Uri.parse(ApiConstants.offerRespond(id)),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 200) {
+      return Offer.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to respond to offer');
+  }
+
+  Future<void> withdrawOffer(int id) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.offerWithdraw(id)),
+      headers: _headers,
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to withdraw offer');
+    }
+  }
+
+  // ── Property Documents ─────────────────────────────────────────────
+
+  Future<List<PropertyDocument>> getPropertyDocuments(int propertyId) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.propertyDocuments(propertyId)),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as List;
+      return data.map((json) => PropertyDocument.fromJson(json)).toList();
+    }
+    throw Exception('Failed to load documents');
+  }
+
+  Future<PropertyDocument> uploadPropertyDocument(
+    int propertyId,
+    XFile file, {
+    required String documentType,
+    String? title,
+    bool isPublic = false,
+  }) async {
+    final uri = Uri.parse(ApiConstants.propertyDocuments(propertyId));
+    final request = http.MultipartRequest('POST', uri)
+      ..headers.addAll(_authHeaders)
+      ..files.add(await http.MultipartFile.fromPath('file', file.path))
+      ..fields['document_type'] = documentType
+      ..fields['is_public'] = isPublic.toString();
+    if (title != null && title.isNotEmpty) {
+      request.fields['title'] = title;
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 201) {
+      return PropertyDocument.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to upload document');
+  }
+
+  Future<void> deletePropertyDocument(int propertyId, int docId) async {
+    final response = await http.delete(
+      Uri.parse(ApiConstants.propertyDocument(propertyId, docId)),
+      headers: _headers,
+    );
+    if (response.statusCode != 204) {
+      throw Exception('Failed to delete document');
+    }
+  }
+
+  // ── Property Flagging ──────────────────────────────────────────────
+
+  Future<PropertyFlag> flagProperty(int propertyId, String reason, {String? description}) async {
+    final body = <String, dynamic>{'reason': reason};
+    if (description != null) body['description'] = description;
+
+    final response = await http.post(
+      Uri.parse(ApiConstants.propertyFlag(propertyId)),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 201) {
+      return PropertyFlag.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to flag property');
+  }
+
+  // ── Neighbourhood Info ─────────────────────────────────────────────
+
+  Future<NeighbourhoodInfo> getNeighbourhoodInfo(int propertyId) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.propertyNeighbourhood(propertyId)),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return NeighbourhoodInfo.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to load neighbourhood info');
+  }
+
+  // ── Viewing Slots ─────────────────────────────────────────────────
+
+  Future<List<ViewingSlot>> getViewingSlots(int propertyId) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.viewingSlots(propertyId)),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as List;
+      return data.map((json) => ViewingSlot.fromJson(json)).toList();
+    }
+    throw Exception('Failed to load viewing slots');
+  }
+
+  Future<ViewingSlot> createViewingSlot(int propertyId, Map<String, dynamic> body) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.viewingSlots(propertyId)),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 201) {
+      return ViewingSlot.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to create viewing slot');
+  }
+
+  Future<void> deleteViewingSlot(int propertyId, int slotId) async {
+    final response = await http.delete(
+      Uri.parse(ApiConstants.viewingSlot(propertyId, slotId)),
+      headers: _headers,
+    );
+    if (response.statusCode != 204) {
+      throw Exception('Failed to delete viewing slot');
+    }
+  }
+
+  Future<void> bookViewingSlot(int propertyId, int slotId, {
+    required String name,
+    required String email,
+    String? phone,
+    String? message,
+  }) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.bookViewingSlot(propertyId, slotId)),
+      headers: _headers,
+      body: jsonEncode({
+        'name': name,
+        'email': email,
+        'phone': phone ?? '',
+        'message': message ?? '',
+      }),
+    );
+    if (response.statusCode != 201) {
+      throw Exception('Failed to book viewing slot');
+    }
+  }
+
+  // ── Mortgage Calculator ───────────────────────────────────────────
+
+  Future<MortgageCalculation> calculateMortgage({
+    required double propertyPrice,
+    required double deposit,
+    required double interestRate,
+    required int termYears,
+  }) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.mortgageCalculator),
+      headers: _headers,
+      body: jsonEncode({
+        'property_price': propertyPrice,
+        'deposit': deposit,
+        'interest_rate': interestRate,
+        'term_years': termYears,
+      }),
+    );
+    if (response.statusCode == 200) {
+      return MortgageCalculation.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to calculate mortgage');
+  }
+
+  // ── Referrals ─────────────────────────────────────────────────────
+
+  Future<ReferralInfo> getReferrals() async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.referrals),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return ReferralInfo.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to load referrals');
+  }
+
+  Future<Map<String, dynamic>> applyReferralCode(String code) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.applyReferral),
+      headers: _headers,
+      body: jsonEncode({'referral_code': code}),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to apply referral code');
+  }
+
+  // ── Bulk Import/Export ────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> bulkImportProperties(List<Map<String, dynamic>> properties) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.bulkImport),
+      headers: _headers,
+      body: jsonEncode({'properties': properties}),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to import properties');
+  }
+
+  Future<List<Map<String, dynamic>>> exportProperties() async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.exportProperties),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return (data['properties'] as List).cast<Map<String, dynamic>>();
+    }
+    throw Exception('Failed to export properties');
+  }
+
+  // ── Push Notifications ────────────────────────────────────────────
+
+  Future<void> registerPushDevice(String token, {String platform = 'android'}) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.pushRegister),
+      headers: _headers,
+      body: jsonEncode({'token': token, 'platform': platform}),
+    );
+    if (response.statusCode != 201 && response.statusCode != 200) {
+      throw Exception('Failed to register push device');
+    }
+  }
+
+  // ── House Prices ──────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getHousePrices(String postcode) async {
+    final uri = Uri.parse(ApiConstants.housePrices)
+        .replace(queryParameters: {'postcode': postcode});
+    final response = await http.get(uri, headers: _headers);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to load house prices');
+  }
+
+  // ── Health Check ──────────────────────────────────────────────────
+
+  Future<bool> healthCheck() async {
+    try {
+      final response = await http.get(
+        Uri.parse(ApiConstants.healthCheck),
+      ).timeout(_timeout);
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
   }
 }
