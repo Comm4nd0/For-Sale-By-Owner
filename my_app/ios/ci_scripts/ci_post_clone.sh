@@ -6,12 +6,17 @@ echo "=== Xcode Cloud Post-Clone Script ==="
 # Navigate to the Flutter project root
 cd "$CI_PRIMARY_REPOSITORY_PATH/my_app"
 
-# Install Flutter SDK if not present
-if ! command -v flutter &> /dev/null; then
-    echo "Installing Flutter SDK..."
-    git clone https://github.com/flutter/flutter.git --depth 1 -b stable "$HOME/flutter"
-    export PATH="$HOME/flutter/bin:$PATH"
+# Install Flutter SDK
+echo "Installing Flutter SDK..."
+FLUTTER_HOME="$HOME/flutter"
+if [ ! -d "$FLUTTER_HOME" ]; then
+    git clone https://github.com/flutter/flutter.git --depth 1 -b stable "$FLUTTER_HOME"
 fi
+export PATH="$FLUTTER_HOME/bin:$PATH"
+
+# Disable analytics and first-run experience
+flutter config --no-analytics
+flutter precache --ios
 
 echo "Flutter version:"
 flutter --version
