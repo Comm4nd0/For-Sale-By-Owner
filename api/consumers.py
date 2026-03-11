@@ -2,12 +2,12 @@
 import json
 import logging
 from channels.db import database_sync_to_async
-from channels.generic.websocket import AsyncJsonWebSocketConsumer
+from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
 logger = logging.getLogger(__name__)
 
 
-class ChatConsumer(AsyncJsonWebSocketConsumer):
+class ChatConsumer(AsyncJsonWebsocketConsumer):
     """WebSocket consumer for property chat rooms."""
 
     async def connect(self):

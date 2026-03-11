@@ -39,6 +39,8 @@
     .mc-placeholder svg { margin-bottom: 0.75rem; }
 
     .mc-error { text-align: center; padding: 1rem; color: #B03A2E; font-size: 0.9rem; }
+    .mc-field-error { color: #B03A2E; font-size: 0.8rem; margin-top: 0.25rem; }
+    .mc-field input.mc-invalid { border-color: #B03A2E; }
 
     @media (max-width: 768px) {
         .mc-hero h1 { font-size: 1.4rem; }
@@ -60,12 +62,12 @@
     <div class="mc-grid">
         <div class="mc-form-card">
             <h2>Your Details</h2>
-            <form id="mc-form" onsubmit="return false;">
+            <form id="mc-form" novalidate onsubmit="return false;">
                 <div class="mc-field">
                     <label for="mc-price">Property Price</label>
                     <div class="mc-input-wrap">
                         <span class="mc-prefix">&pound;</span>
-                        <input type="number" id="mc-price" class="has-prefix" value="250000" min="1" step="1000" required>
+                        <input type="number" id="mc-price" class="has-prefix" value="250000" min="1" step="1" required>
                     </div>
                 </div>
                 <div class="mc-field">
@@ -124,16 +126,53 @@
     // Auto-calculate if price was provided via URL
     if (params.get('price')) doCalculate();
 
-    function doCalculate() {
-        var price = parseFloat(document.getElementById('mc-price').value);
-        var depositPct = parseFloat(document.getElementById('mc-deposit').value);
-        var rate = parseFloat(document.getElementById('mc-rate').value);
-        var term = parseInt(document.getElementById('mc-term').value);
+    function clearFieldErrors() {
+        form.querySelectorAll('.mc-field-error').forEach(function(el) { el.remove(); });
+        form.querySelectorAll('.mc-invalid').forEach(function(el) { el.classList.remove('mc-invalid'); });
+    }
 
-        if (!price || price <= 0 || isNaN(depositPct) || isNaN(rate) || !term || term <= 0) {
-            resultsEl.innerHTML = '<div class="mc-error">Please fill in all fields with valid values.</div>';
-            return;
+    function showFieldError(inputId, message) {
+        var input = document.getElementById(inputId);
+        input.classList.add('mc-invalid');
+        var err = document.createElement('div');
+        err.className = 'mc-field-error';
+        err.textContent = message;
+        input.closest('.mc-field').appendChild(err);
+    }
+
+    function doCalculate() {
+        clearFieldErrors();
+        var hasError = false;
+
+        var priceVal = document.getElementById('mc-price').value.trim();
+        var price = parseFloat(priceVal);
+        if (!priceVal || isNaN(price) || price <= 0) {
+            showFieldError('mc-price', 'Enter a valid price greater than 0.');
+            hasError = true;
         }
+
+        var depositVal = document.getElementById('mc-deposit').value.trim();
+        var depositPct = parseFloat(depositVal);
+        if (!depositVal || isNaN(depositPct) || depositPct < 0 || depositPct > 100) {
+            showFieldError('mc-deposit', 'Enter a deposit between 0 and 100%.');
+            hasError = true;
+        }
+
+        var rateVal = document.getElementById('mc-rate').value.trim();
+        var rate = parseFloat(rateVal);
+        if (!rateVal || isNaN(rate) || rate < 0 || rate > 30) {
+            showFieldError('mc-rate', 'Enter an interest rate between 0 and 30%.');
+            hasError = true;
+        }
+
+        var termVal = document.getElementById('mc-term').value.trim();
+        var term = parseInt(termVal);
+        if (!termVal || isNaN(term) || term <= 0 || term > 40) {
+            showFieldError('mc-term', 'Enter a term between 1 and 40 years.');
+            hasError = true;
+        }
+
+        if (hasError) return;
 
         btn.disabled = true;
         btn.textContent = 'Calculating...';
