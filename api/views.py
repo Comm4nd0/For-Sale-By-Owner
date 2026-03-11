@@ -13,7 +13,7 @@ from rest_framework import viewsets, permissions, status, generics
 from rest_framework.decorators import api_view, permission_classes, action
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from django.conf import settings
@@ -1167,7 +1167,7 @@ class ServiceProviderViewSet(viewsets.ModelViewSet):
 
     def get_parsers(self):
         if self.action in ['create', 'update', 'partial_update']:
-            return [MultiPartParser(), FormParser()]
+            return [MultiPartParser(), FormParser(), JSONParser()]
         return super().get_parsers()
 
     def get_serializer_class(self):

@@ -45,6 +45,26 @@ class ApiService {
 
   static const _timeout = Duration(seconds: 15);
 
+  String _extractError(http.Response response) {
+    try {
+      final body = jsonDecode(response.body);
+      if (body is Map) {
+        if (body.containsKey('detail')) return body['detail'].toString();
+        // Collect field-level errors (e.g. {"business_name": ["This field is required."]})
+        final messages = <String>[];
+        body.forEach((key, value) {
+          if (value is List) {
+            messages.add('$key: ${value.join(', ')}');
+          } else {
+            messages.add('$key: $value');
+          }
+        });
+        if (messages.isNotEmpty) return messages.join('; ');
+      }
+    } catch (_) {}
+    return 'Request failed (${response.statusCode})';
+  }
+
   Map<String, String> get _authHeaders {
     final headers = <String, String>{};
     final token = _getToken();
@@ -622,7 +642,8 @@ class ApiService {
     if (response.statusCode == 201) {
       return ServiceProvider.fromJson(jsonDecode(response.body));
     }
-    throw Exception('Failed to create service provider');
+    final detail = _extractError(response);
+    throw Exception(detail);
   }
 
   Future<ServiceProvider> updateServiceProvider(
@@ -635,7 +656,8 @@ class ApiService {
     if (response.statusCode == 200) {
       return ServiceProvider.fromJson(jsonDecode(response.body));
     }
-    throw Exception('Failed to update service provider');
+    final detail = _extractError(response);
+    throw Exception(detail);
   }
 
   Future<List<ServiceProviderReview>> getServiceProviderReviews(
