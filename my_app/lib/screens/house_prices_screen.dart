@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../constants/app_theme.dart';
 import '../widgets/branded_app_bar.dart';
 import '../widgets/skeleton_loading.dart';
+import '../widgets/scroll_to_top_button.dart';
 
 class HousePricesScreen extends StatefulWidget {
   const HousePricesScreen({super.key});
@@ -15,6 +16,7 @@ class HousePricesScreen extends StatefulWidget {
 
 class _HousePricesScreenState extends State<HousePricesScreen> {
   final _postcodeController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   List<SoldPrice> _results = [];
   bool _isLoading = false;
   bool _hasSearched = false;
@@ -24,6 +26,7 @@ class _HousePricesScreenState extends State<HousePricesScreen> {
   @override
   void dispose() {
     _postcodeController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -125,6 +128,7 @@ class _HousePricesScreenState extends State<HousePricesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: BrandedAppBar.build(context: context, showHomeButton: true),
+      floatingActionButton: ScrollToTopButton(scrollController: _scrollController),
       body: Column(
         children: [
           // Search header
@@ -330,6 +334,7 @@ class _HousePricesScreenState extends State<HousePricesScreen> {
         // List
         Expanded(
           child: ListView.builder(
+            controller: _scrollController,
             padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: _results.length,
             itemBuilder: (context, index) {

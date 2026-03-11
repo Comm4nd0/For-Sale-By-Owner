@@ -9,6 +9,7 @@ import '../models/viewing_request.dart';
 import '../services/api_service.dart';
 import 'enquiry_detail_screen.dart';
 import 'viewing_detail_screen.dart';
+import '../widgets/scroll_to_top_button.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -26,11 +27,16 @@ class _DashboardScreenState extends State<DashboardScreen>
   late Future<List<Enquiry>> _enquiriesFuture;
   late Future<List<ViewingRequest>> _viewingsFuture;
   late TabController _tabController;
+  final ScrollController _enquiriesScrollController = ScrollController();
+  final ScrollController _viewingsScrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) setState(() {});
+    });
     _loadStats();
     _loadEnquiries();
     _loadViewings();
@@ -39,6 +45,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _enquiriesScrollController.dispose();
+    _viewingsScrollController.dispose();
     super.dispose();
   }
 
@@ -90,6 +98,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: ScrollToTopButton(
+        scrollController: _tabController.index == 0
+            ? _enquiriesScrollController
+            : _viewingsScrollController,
+      ),
       appBar: BrandedAppBar.build(
         context: context,
         bottom: TabBar(
@@ -298,6 +311,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           }
 
           return ListView.builder(
+            controller: _enquiriesScrollController,
             padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: enquiries.length,
             itemBuilder: (context, index) {
@@ -443,6 +457,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           }
 
           return ListView.builder(
+            controller: _viewingsScrollController,
             padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: viewings.length,
             itemBuilder: (context, index) {

@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../constants/app_theme.dart';
 import '../widgets/branded_app_bar.dart';
 import '../widgets/skeleton_loading.dart';
+import '../widgets/scroll_to_top_button.dart';
 import '../constants/api_constants.dart';
 import '../models/property.dart';
 import '../services/api_service.dart';
@@ -19,6 +20,7 @@ class MyListingsScreen extends StatefulWidget {
 }
 
 class _MyListingsScreenState extends State<MyListingsScreen> {
+  final ScrollController _scrollController = ScrollController();
   List<Property> _properties = [];
   bool _isLoading = true;
   String? _error;
@@ -27,6 +29,12 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   void initState() {
     super.initState();
     _loadListings();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadListings() async {
@@ -176,9 +184,18 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _navigateToCreate,
-        child: const Icon(Icons.add),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          ScrollToTopButton(scrollController: _scrollController),
+          const SizedBox(height: 12),
+          FloatingActionButton(
+            heroTag: 'createListing',
+            onPressed: _navigateToCreate,
+            child: const Icon(Icons.add),
+          ),
+        ],
       ),
       body: _buildBody(),
     );
@@ -270,6 +287,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     return RefreshIndicator(
       onRefresh: _loadListings,
       child: ListView.builder(
+        controller: _scrollController,
         padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: _properties.length,
         itemBuilder: (context, index) {

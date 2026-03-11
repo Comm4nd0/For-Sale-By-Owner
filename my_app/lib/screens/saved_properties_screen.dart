@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../constants/app_theme.dart';
 import '../widgets/branded_app_bar.dart';
 import '../widgets/skeleton_loading.dart';
+import '../widgets/scroll_to_top_button.dart';
 import '../constants/api_constants.dart';
 import '../models/saved_property.dart';
 import '../services/api_service.dart';
@@ -17,6 +18,7 @@ class SavedPropertiesScreen extends StatefulWidget {
 }
 
 class _SavedPropertiesScreenState extends State<SavedPropertiesScreen> {
+  final ScrollController _scrollController = ScrollController();
   List<SavedProperty> _savedProperties = [];
   bool _isLoading = true;
   String? _error;
@@ -25,6 +27,12 @@ class _SavedPropertiesScreenState extends State<SavedPropertiesScreen> {
   void initState() {
     super.initState();
     _loadSavedProperties();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadSavedProperties() async {
@@ -77,6 +85,7 @@ class _SavedPropertiesScreenState extends State<SavedPropertiesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: BrandedAppBar.build(context: context),
+      floatingActionButton: ScrollToTopButton(scrollController: _scrollController),
       body: _buildBody(),
     );
   }
@@ -170,6 +179,7 @@ class _SavedPropertiesScreenState extends State<SavedPropertiesScreen> {
     return RefreshIndicator(
       onRefresh: _loadSavedProperties,
       child: ListView.builder(
+        controller: _scrollController,
         padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: _savedProperties.length,
         itemBuilder: (context, index) {

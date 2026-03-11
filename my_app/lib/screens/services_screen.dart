@@ -11,6 +11,7 @@ import 'service_provider_form_screen.dart';
 import 'pricing_screen.dart';
 import '../widgets/tier_badge.dart';
 import '../widgets/branded_app_bar.dart';
+import '../widgets/scroll_to_top_button.dart';
 
 class ServicesScreen extends StatefulWidget {
   const ServicesScreen({super.key});
@@ -159,6 +160,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
             ),
         ],
       ),
+      floatingActionButton: ScrollToTopButton(scrollController: _scrollController),
       body: Column(
         children: [
           // Search bar

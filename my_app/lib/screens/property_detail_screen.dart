@@ -17,6 +17,7 @@ import 'image_management_screen.dart';
 import 'edit_property_screen.dart';
 import '../widgets/service_providers_section.dart';
 import '../widgets/branded_app_bar.dart';
+import '../widgets/scroll_to_top_button.dart';
 
 class PropertyDetailScreen extends StatefulWidget {
   final int propertyId;
@@ -30,6 +31,7 @@ class PropertyDetailScreen extends StatefulWidget {
 class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   late Future<Property> _propertyFuture;
   final PageController _pageController = PageController();
+  final ScrollController _scrollController = ScrollController();
   int _currentPage = 0;
   bool _isSaved = false;
   List<Property> _similarProperties = [];
@@ -60,6 +62,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   @override
   void dispose() {
     _pageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -88,6 +91,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: ScrollToTopButton(scrollController: _scrollController),
       body: FutureBuilder<Property>(
         future: _propertyFuture,
         builder: (context, snapshot) {
@@ -125,6 +129,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           final isOwner = authService.userId == property.ownerId;
 
           return CustomScrollView(
+            controller: _scrollController,
             slivers: [
               SliverAppBar(
                 expandedHeight: 300,

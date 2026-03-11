@@ -106,11 +106,34 @@
         .skip-link { position: absolute; top: -40px; left: 0; background: #19747E; color: white; padding: 8px 16px; z-index: 10000; font-size: 0.9rem; text-decoration: none; border-radius: 0 0 4px 0; }
         .skip-link:focus { top: 0; }
         @media print {
-            header, footer, .cookie-banner, nav, .btn, .owner-actions, .enquiry-form-section, .mortgage-section, .nav-overlay, .hamburger { display: none !important; }
+            header, footer, .cookie-banner, nav, .btn, .owner-actions, .enquiry-form-section, .mortgage-section, .nav-overlay, .hamburger, .scroll-to-top { display: none !important; }
             main { padding: 0; }
             .container { max-width: 100%; }
             .carousel-btn, .carousel-dots { display: none !important; }
         }
+        .scroll-to-top {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 44px;
+            height: 44px;
+            border-radius: 6px;
+            background: #19747E;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s, bottom 0.2s, background 0.2s;
+            z-index: 5000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .scroll-to-top:hover { background: #2A9DA8; }
+        .scroll-to-top:focus-visible { outline: 2px solid #2A9DA8; outline-offset: 2px; }
+        .scroll-to-top.visible { opacity: 1; visibility: visible; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -220,6 +243,11 @@
             </div>
         </div>
     </div>
+    <button id="scroll-to-top" class="scroll-to-top" aria-label="Scroll to top" title="Back to top">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+    </button>
     <script>
         // HTML escaping helper to prevent XSS
         function escHtml(str) {
@@ -481,6 +509,44 @@
                 }
             });
         }
+
+        // Scroll-to-top button
+        (function() {
+            var btn = document.getElementById('scroll-to-top');
+            var banner = document.getElementById('cookie-banner');
+            var scrollThreshold = 300;
+
+            function updatePosition() {
+                var bannerVisible = banner && banner.style.display === 'block';
+                var bannerHeight = bannerVisible ? banner.offsetHeight : 0;
+                btn.style.bottom = (24 + bannerHeight) + 'px';
+            }
+
+            function onScroll() {
+                if (window.scrollY > scrollThreshold) {
+                    btn.classList.add('visible');
+                } else {
+                    btn.classList.remove('visible');
+                }
+            }
+
+            btn.addEventListener('click', function() {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            window.addEventListener('scroll', onScroll, { passive: true });
+
+            // Observe cookie banner display changes to adjust position
+            if (banner) {
+                var observer = new MutationObserver(function() {
+                    updatePosition();
+                });
+                observer.observe(banner, { attributes: true, attributeFilter: ['style'] });
+            }
+
+            updatePosition();
+            onScroll();
+        })();
     </script>
     {% block extra_js %}{% endblock %}
 </body>

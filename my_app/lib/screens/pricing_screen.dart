@@ -7,6 +7,7 @@ import '../models/subscription_addon.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/branded_app_bar.dart';
+import '../widgets/scroll_to_top_button.dart';
 
 class PricingScreen extends StatefulWidget {
   const PricingScreen({super.key});
@@ -16,6 +17,7 @@ class PricingScreen extends StatefulWidget {
 }
 
 class _PricingScreenState extends State<PricingScreen> {
+  final ScrollController _scrollController = ScrollController();
   bool _isAnnual = false;
   bool _isLoading = true;
   String? _error;
@@ -41,6 +43,12 @@ class _PricingScreenState extends State<PricingScreen> {
   void initState() {
     super.initState();
     _loadPricing();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadPricing() async {
@@ -94,6 +102,7 @@ class _PricingScreenState extends State<PricingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: BrandedAppBar.build(context: context, showHomeButton: true),
+      floatingActionButton: ScrollToTopButton(scrollController: _scrollController),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -122,6 +131,7 @@ class _PricingScreenState extends State<PricingScreen> {
 
   Widget _buildContent() {
     return SingleChildScrollView(
+      controller: _scrollController,
       child: Column(
         children: [
           // Hero

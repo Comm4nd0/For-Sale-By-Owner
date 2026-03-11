@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../constants/api_constants.dart';
 import '../constants/app_theme.dart';
 import '../widgets/branded_app_bar.dart';
+import '../widgets/scroll_to_top_button.dart';
 import '../models/service_provider.dart';
 import '../models/service_provider_review.dart';
 import '../services/api_service.dart';
@@ -20,6 +21,7 @@ class ServiceProviderDetailScreen extends StatefulWidget {
 
 class _ServiceProviderDetailScreenState
     extends State<ServiceProviderDetailScreen> {
+  final ScrollController _scrollController = ScrollController();
   ServiceProvider? _provider;
   List<ServiceProviderReview> _reviews = [];
   bool _isLoading = true;
@@ -35,6 +37,7 @@ class _ServiceProviderDetailScreenState
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _commentController.dispose();
     super.dispose();
   }
@@ -116,7 +119,9 @@ class _ServiceProviderDetailScreenState
     final authService = context.read<AuthService>();
 
     return Scaffold(
+      floatingActionButton: ScrollToTopButton(scrollController: _scrollController),
       body: CustomScrollView(
+        controller: _scrollController,
         slivers: [
           SliverAppBar(
             expandedHeight: 140,

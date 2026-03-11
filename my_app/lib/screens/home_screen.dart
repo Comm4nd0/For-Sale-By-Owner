@@ -6,6 +6,7 @@ import '../constants/api_constants.dart';
 import '../constants/app_theme.dart';
 import '../widgets/branded_app_bar.dart';
 import '../widgets/skeleton_loading.dart';
+import '../widgets/scroll_to_top_button.dart';
 import '../models/property.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -38,11 +39,11 @@ class _HomeScreenState extends State<HomeScreen> {
   int _heroImageIndex = 0;
   Timer? _heroTimer;
   static const _heroImages = [
-    'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1200&q=70',
-    'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=70',
-    'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=70',
-    'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=70',
-    'https://images.unsplash.com/photo-1605146769289-440113cc3d00?w=1200&q=70',
+    'assets/images/hero/hero_1.jpg',
+    'assets/images/hero/hero_2.jpg',
+    'assets/images/hero/hero_3.jpg',
+    'assets/images/hero/hero_4.jpg',
+    'assets/images/hero/hero_5.jpg',
   ];
 
   @override
@@ -220,14 +221,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 Positioned.fill(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 1500),
-                    child: CachedNetworkImage(
+                    child: Image.asset(
+                      _heroImages[_heroImageIndex],
                       key: ValueKey<int>(_heroImageIndex),
-                      imageUrl: _heroImages[_heroImageIndex],
                       fit: BoxFit.cover,
                       width: double.infinity,
                       height: double.infinity,
-                      placeholder: (_, __) => Container(color: AppTheme.forestDeep),
-                      errorWidget: (_, __, ___) => Container(color: AppTheme.forestDeep),
                     ),
                   ),
                 ),
@@ -680,6 +679,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+      floatingActionButton: ScrollToTopButton(scrollController: _scrollController),
       body: Column(
         children: [
           if (_filters.isNotEmpty) _buildFilterChips(),

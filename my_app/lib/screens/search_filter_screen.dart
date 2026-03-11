@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/branded_app_bar.dart';
+import '../widgets/scroll_to_top_button.dart';
 
 class SearchFilterScreen extends StatefulWidget {
   final String? location;
@@ -26,6 +27,7 @@ class SearchFilterScreen extends StatefulWidget {
 }
 
 class _SearchFilterScreenState extends State<SearchFilterScreen> {
+  final ScrollController _scrollController = ScrollController();
   late final TextEditingController _locationController;
   late final TextEditingController _minPriceController;
   late final TextEditingController _maxPriceController;
@@ -48,6 +50,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _locationController.dispose();
     _minPriceController.dispose();
     _maxPriceController.dispose();
@@ -98,7 +101,9 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: BrandedAppBar.build(context: context, showHomeButton: true),
+      floatingActionButton: ScrollToTopButton(scrollController: _scrollController),
       body: SingleChildScrollView(
+        controller: _scrollController,
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
