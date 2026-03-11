@@ -11,4 +11,5 @@ celery[redis]
 django-celery-beat
 redis
 channels[daphne]
+channels-redis
 firebase-admin

@@ -213,25 +213,44 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
-# ── Caching (Redis) ─────────────────────────────────────────────
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': os.getenv('CACHE_REDIS_URL', REDIS_URL),
-        'TIMEOUT': 300,
-        'KEY_PREFIX': 'fsbo',
+# In CI/test mode, run Celery tasks synchronously (no broker needed)
+if USE_SQLITE:
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
+
+# ── Caching ─────────────────────────────────────────────────────
+if USE_SQLITE:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': os.getenv('CACHE_REDIS_URL', REDIS_URL),
+            'TIMEOUT': 300,
+            'KEY_PREFIX': 'fsbo',
+        }
+    }
 
 # ── Django Channels (WebSocket) ──────────────────────────────────
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': [os.getenv('CHANNELS_REDIS_URL', REDIS_URL)],
+if USE_SQLITE:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
         },
-    },
-}
+    }
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [os.getenv('CHANNELS_REDIS_URL', REDIS_URL)],
+            },
+        },
+    }
 
 # ── Firebase Cloud Messaging (Push Notifications) ────────────────
 FCM_CREDENTIALS_FILE = os.getenv('FCM_CREDENTIALS_FILE', '')
