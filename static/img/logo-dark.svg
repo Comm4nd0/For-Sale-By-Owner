@@ -1,19 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 100" width="460" height="88">
   <defs>
     <linearGradient id="rg2" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#2A9DA8"/>
-      <stop offset="100%" style="stop-color:#19747E"/>
+      <stop offset="0%" style="stop-color:#D8943B"/>
+      <stop offset="100%" style="stop-color:#D59137"/>
     </linearGradient>
   </defs>
   <rect x="18" y="52" width="54" height="38" rx="3" fill="#FFFFFF" opacity="0.15"/>
   <polygon points="45,14 80,52 10,52" fill="url(#rg2)"/>
-  <rect x="35" y="68" width="20" height="22" rx="2.5" fill="#D1E8E2" opacity="0.9"/>
-  <circle cx="51" cy="80" r="2" fill="#19747E"/>
+  <rect x="35" y="68" width="20" height="22" rx="2.5" fill="#E0F5E3" opacity="0.9"/>
+  <circle cx="51" cy="80" r="2" fill="#296148"/>
   <rect x="22" y="58" width="10" height="9" rx="1.5" fill="#FFFFFF" opacity="0.4"/>
   <rect x="58" y="58" width="10" height="9" rx="1.5" fill="#FFFFFF" opacity="0.4"/>
-  <rect x="62" y="24" width="8" height="18" rx="1.5" fill="#115E66"/>
+  <rect x="62" y="24" width="8" height="18" rx="1.5" fill="#1E4635"/>
   <text x="105" y="52" font-family="Georgia, 'Times New Roman', serif" font-size="30" font-weight="700" fill="#FFFFFF" letter-spacing="-0.5">For Sale</text>
   <line x1="105" y1="60" x2="398" y2="60" stroke="#FFFFFF" stroke-width="1" opacity="0.25"/>
-  <text x="107" y="80" font-family="Georgia, 'Times New Roman', serif" font-size="18" font-weight="400" fill="#D1E8E2" letter-spacing="3">BY OWNER</text>
-  <text x="400" y="76" font-family="Arial, sans-serif" font-size="9.5" fill="#D1E8E2" letter-spacing="1.5" text-anchor="end" opacity="0.6">SELL DIRECT. KEEP MORE.</text>
+  <text x="107" y="80" font-family="Georgia, 'Times New Roman', serif" font-size="18" font-weight="400" fill="#E0F5E3" letter-spacing="3">BY OWNER</text>
+  <text x="400" y="76" font-family="Arial, sans-serif" font-size="9.5" fill="#E0F5E3" letter-spacing="1.5" text-anchor="end" opacity="0.6">SELL DIRECT. KEEP MORE.</text>
 </svg>
