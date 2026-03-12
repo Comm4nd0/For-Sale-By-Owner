@@ -141,7 +141,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
         showHomeButton: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.monetization_on_outlined),
+            icon: const Icon(Icons.sell_outlined),
             tooltip: 'Pricing',
             onPressed: () => Navigator.push(
               context,
