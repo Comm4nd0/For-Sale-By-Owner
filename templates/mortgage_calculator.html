@@ -23,6 +23,11 @@
     .mc-field input.has-prefix { padding-left: 1.75rem; }
     .mc-field input.has-suffix { padding-right: 2rem; }
 
+    .mc-deposit-label { display: flex; align-items: center; justify-content: space-between; }
+    .mc-unit-toggle { display: flex; background: #EDF2EF; border-radius: 4px; overflow: hidden; gap: 0; }
+    .mc-unit-toggle button { border: none; background: none; padding: 0.2rem 0.6rem; font-size: 0.75rem; font-weight: 600; color: #8FA3A8; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+    .mc-unit-toggle button.active { background: #115E66; color: white; }
+
     .mc-advanced-toggle { display: flex; align-items: center; gap: 0.5rem; background: none; border: none; color: #19747E; font-size: 0.85rem; font-weight: 600; cursor: pointer; padding: 0.5rem 0; margin-top: 0.25rem; font-family: inherit; }
     .mc-advanced-toggle svg { transition: transform 0.2s; }
     .mc-advanced-toggle.open svg { transform: rotate(90deg); }
@@ -81,10 +86,17 @@
                     </div>
                 </div>
                 <div class="mc-field">
-                    <label for="mc-deposit">Deposit</label>
+                    <div class="mc-deposit-label">
+                        <label for="mc-deposit">Deposit</label>
+                        <div class="mc-unit-toggle" id="mc-deposit-toggle">
+                            <button type="button" class="active" data-unit="pct">%</button>
+                            <button type="button" data-unit="gbp">&pound;</button>
+                        </div>
+                    </div>
                     <div class="mc-input-wrap">
+                        <span class="mc-prefix" id="mc-deposit-prefix" style="display:none;">&pound;</span>
                         <input type="number" id="mc-deposit" class="has-suffix" value="10" min="0" max="100" step="1" required>
-                        <span class="mc-suffix">%</span>
+                        <span class="mc-suffix" id="mc-deposit-suffix">%</span>
                     </div>
                 </div>
                 <div class="mc-field">
@@ -154,10 +166,49 @@ function toggleAdvanced() {
     var form = document.getElementById('mc-form');
     var resultsEl = document.getElementById('mc-results');
     var debounceTimer = null;
+    var depositUnit = 'pct'; // 'pct' or 'gbp'
 
     // Pre-fill from URL params
     var params = new URLSearchParams(window.location.search);
     if (params.get('price')) document.getElementById('mc-price').value = params.get('price');
+
+    // Deposit unit toggle
+    var toggleBtns = document.querySelectorAll('#mc-deposit-toggle button');
+    toggleBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var newUnit = btn.getAttribute('data-unit');
+            if (newUnit === depositUnit) return;
+
+            var depositInput = document.getElementById('mc-deposit');
+            var price = parseFloat(document.getElementById('mc-price').value) || 0;
+            var currentVal = parseFloat(depositInput.value) || 0;
+
+            // Convert the current value to the new unit
+            if (newUnit === 'gbp' && depositUnit === 'pct') {
+                depositInput.value = price > 0 ? Math.round(price * (currentVal / 100)) : '';
+                depositInput.min = '0';
+                depositInput.max = '';
+                depositInput.step = '1000';
+                depositInput.classList.remove('has-suffix');
+                depositInput.classList.add('has-prefix');
+            } else if (newUnit === 'pct' && depositUnit === 'gbp') {
+                depositInput.value = price > 0 ? Math.round((currentVal / price) * 100) : '10';
+                depositInput.min = '0';
+                depositInput.max = '100';
+                depositInput.step = '1';
+                depositInput.classList.remove('has-prefix');
+                depositInput.classList.add('has-suffix');
+            }
+
+            depositUnit = newUnit;
+            document.getElementById('mc-deposit-suffix').style.display = newUnit === 'pct' ? '' : 'none';
+            document.getElementById('mc-deposit-prefix').style.display = newUnit === 'gbp' ? '' : 'none';
+
+            toggleBtns.forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            scheduleCalc();
+        });
+    });
 
     // Live-calculate on every input/change (debounced)
     form.addEventListener('input', scheduleCalc);
@@ -180,14 +231,23 @@ function toggleAdvanced() {
         return document.getElementById('mc-buyer-type').value;
     }
 
+    function getDepositPct() {
+        var val = parseFloat(document.getElementById('mc-deposit').value);
+        if (isNaN(val) || val < 0) return -1;
+        if (depositUnit === 'gbp') {
+            var price = parseFloat(document.getElementById('mc-price').value) || 0;
+            return price > 0 ? (val / price) * 100 : -1;
+        }
+        return val;
+    }
+
     function doCalculate() {
         var priceVal = document.getElementById('mc-price').value.trim();
         var price = parseFloat(priceVal);
         if (!priceVal || isNaN(price) || price <= 0) return;
 
-        var depositVal = document.getElementById('mc-deposit').value.trim();
-        var depositPct = parseFloat(depositVal);
-        if (!depositVal || isNaN(depositPct) || depositPct < 0 || depositPct > 100) return;
+        var depositPct = getDepositPct();
+        if (depositPct < 0 || depositPct > 100) return;
 
         var rateVal = document.getElementById('mc-rate').value.trim();
         var rate = parseFloat(rateVal);
@@ -235,7 +295,7 @@ function toggleAdvanced() {
             '</div>' +
             '<ul class="mc-breakdown">' +
             '<li><span class="mc-label">Property Price</span><span class="mc-value">' + fmt(d.price) + '</span></li>' +
-            '<li><span class="mc-label">Deposit</span><span class="mc-value">' + fmt(d.deposit) + '</span></li>' +
+            '<li><span class="mc-label">Deposit (' + Math.round((d.deposit / d.price) * 100) + '%)</span><span class="mc-value">' + fmt(d.deposit) + '</span></li>' +
             '<li><span class="mc-label">Loan Amount</span><span class="mc-value">' + fmt(d.loan_amount) + '</span></li>' +
             '<li><span class="mc-label">Interest Rate</span><span class="mc-value">' + Number(d.interest_rate).toFixed(1) + '%</span></li>' +
             '<li><span class="mc-label">Term</span><span class="mc-value">' + d.term_years + ' years</span></li>';
