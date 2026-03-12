@@ -32,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentPage = 1;
   bool _initialLoad = true;
   bool _hasSearched = false;
+  String? _error;
   String _selectedPropertyType = '';
   int? _selectedBedrooms;
 
@@ -101,6 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _currentPage = 1;
       _properties.clear();
       _hasMore = true;
+      _error = null;
     });
 
     try {
@@ -132,6 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _isLoading = false;
         _initialLoad = false;
+        _error = 'Failed to load properties';
       });
     }
   }
@@ -737,6 +740,49 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildBody() {
     if (_initialLoad && _isLoading) {
       return const SkeletonList(count: 3, useCards: true);
+    }
+
+    if (_error != null && _properties.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Icon(Icons.error_outline, size: 44, color: Colors.red[300]),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Something Went Wrong',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.charcoal,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'We couldn\'t load properties right now. Please try again.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppTheme.slate, height: 1.5),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: _loadProperties,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     if (_properties.isEmpty && !_isLoading) {

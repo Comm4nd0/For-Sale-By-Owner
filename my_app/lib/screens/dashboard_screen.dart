@@ -49,12 +49,21 @@ class _DashboardScreenState extends State<DashboardScreen>
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) setState(() {});
     });
-    _loadStats();
-    _loadCounts();
-    _loadEnquiries();
-    _loadViewings();
-    _loadOffers();
-    _loadMessages();
+    final authService = context.read<AuthService>();
+    if (authService.isAuthenticated) {
+      _loadStats();
+      _loadCounts();
+      _loadEnquiries();
+      _loadViewings();
+      _loadOffers();
+      _loadMessages();
+    } else {
+      _statsLoading = false;
+      _enquiriesFuture = Future.value([]);
+      _viewingsFuture = Future.value([]);
+      _offersFuture = Future.value([]);
+      _messagesFuture = Future.value([]);
+    }
   }
 
   @override
@@ -151,6 +160,47 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
+    final authService = context.watch<AuthService>();
+    if (!authService.isAuthenticated) {
+      return Scaffold(
+        appBar: BrandedAppBar.build(context: context),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 88,
+                  height: 88,
+                  decoration: BoxDecoration(
+                    color: AppTheme.forestMist,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Icon(Icons.login, size: 44, color: AppTheme.forestMid),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Login Required',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.charcoal,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Please log in to view your dashboard.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppTheme.slate, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       floatingActionButton: ScrollToTopButton(
         scrollController: [
@@ -324,7 +374,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         color: Colors.red[50],
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Icon(Icons.wifi_off, size: 32, color: Colors.red[300]),
+                      child: Icon(Icons.error_outline, size: 32, color: Colors.red[300]),
                     ),
                     const SizedBox(height: 16),
                     const Text('Failed to load enquiries'),
@@ -470,7 +520,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         color: Colors.red[50],
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Icon(Icons.wifi_off, size: 32, color: Colors.red[300]),
+                      child: Icon(Icons.error_outline, size: 32, color: Colors.red[300]),
                     ),
                     const SizedBox(height: 16),
                     const Text('Failed to load viewings'),
@@ -595,7 +645,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         color: Colors.red[50],
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Icon(Icons.wifi_off, size: 32, color: Colors.red[300]),
+                      child: Icon(Icons.error_outline, size: 32, color: Colors.red[300]),
                     ),
                     const SizedBox(height: 16),
                     const Text('Failed to load offers'),
@@ -825,7 +875,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         color: Colors.red[50],
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Icon(Icons.wifi_off, size: 32, color: Colors.red[300]),
+                      child: Icon(Icons.error_outline, size: 32, color: Colors.red[300]),
                     ),
                     const SizedBox(height: 16),
                     const Text('Failed to load messages'),
