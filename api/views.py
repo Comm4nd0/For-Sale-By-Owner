@@ -1163,10 +1163,7 @@ class ServiceCategoryViewSet(viewsets.ReadOnlyModelViewSet):
 class ServiceProviderViewSet(viewsets.ModelViewSet):
     serializer_class = ServiceProviderDetailSerializer
 
-    def get_parsers(self):
-        if self.action in ['create', 'update', 'partial_update']:
-            return [MultiPartParser(), FormParser(), JSONParser()]
-        return super().get_parsers()
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_serializer_class(self):
         if self.action == 'list':
