@@ -33,13 +33,12 @@ class _MainShellState extends State<MainShell> {
     AccountScreen(),
   ];
 
-  // Unauthenticated tabs: Home, Tools, Services, Login, Register
+  // Unauthenticated tabs: Home, Tools, Services, Login
   final List<Widget> _guestTabs = const [
     HomeScreen(),
     ToolsScreen(),
     ServicesScreen(),
     LoginScreen(embedded: true),
-    RegisterScreen(embedded: true),
   ];
 
   @override
@@ -163,11 +162,6 @@ class _MainShellState extends State<MainShell> {
                   icon: Icon(Icons.login_outlined),
                   activeIcon: Icon(Icons.login),
                   label: 'Login',
-                ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.person_add_outlined),
-                  activeIcon: Icon(Icons.person_add),
-                  label: 'Register',
                 ),
               ],
       ),
