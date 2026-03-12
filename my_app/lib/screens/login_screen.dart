@@ -5,7 +5,8 @@ import '../widgets/branded_app_bar.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final bool embedded;
+  const LoginScreen({super.key, this.embedded = false});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -37,7 +38,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (mounted) {
       if (success) {
-        Navigator.pop(context);
+        if (!widget.embedded) {
+          Navigator.pop(context);
+        }
+        // When embedded, auth state change will rebuild MainShell
       } else {
         setState(() => _error = 'Invalid email or password');
       }
@@ -48,67 +52,85 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
 
-    return Scaffold(
-      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (_error != null)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.red[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(_error!, style: TextStyle(color: Colors.red[700])),
+    final body = SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_error != null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.emailAddress,
-                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                child: Text(_error!, style: TextStyle(color: Colors.red[700])),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
-                ),
-                obscureText: true,
-                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+            TextFormField(
+              controller: _emailController,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: authService.isLoading ? null : _login,
-                child: authService.isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Login'),
+              keyboardType: TextInputType.emailAddress,
+              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _passwordController,
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () => Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                ),
-                child: const Text("Don't have an account? Register"),
-              ),
-            ],
-          ),
+              obscureText: true,
+              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: authService.isLoading ? null : _login,
+              child: authService.isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Login'),
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () {
+                if (widget.embedded) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                  );
+                } else {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                  );
+                }
+              },
+              child: const Text("Don't have an account? Register"),
+            ),
+          ],
         ),
       ),
+    );
+
+    if (widget.embedded) {
+      return Scaffold(
+        appBar: BrandedAppBar.build(context: context),
+        body: body,
+      );
+    }
+
+    return Scaffold(
+      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
+      body: body,
     );
   }
 }

@@ -7,7 +7,8 @@ import '../widgets/branded_app_bar.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  final bool embedded;
+  const RegisterScreen({super.key, this.embedded = false});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -68,10 +69,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Account created! Please login.')),
         );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-        );
+        if (widget.embedded) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
+        }
       } else {
         setState(() => _error = 'Registration failed. Please try again.');
       }
@@ -152,178 +160,196 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
 
-    return Scaffold(
-      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (_error != null)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.red[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(_error!, style: TextStyle(color: Colors.red[700])),
+    final body = SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_error != null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              TextFormField(
-                controller: _firstNameController,
-                decoration: const InputDecoration(
-                  labelText: 'First Name',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                child: Text(_error!, style: TextStyle(color: Colors.red[700])),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _lastNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Last Name',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+            TextFormField(
+              controller: _firstNameController,
+              decoration: const InputDecoration(
+                labelText: 'First Name',
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.emailAddress,
-                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _lastNameController,
+              decoration: const InputDecoration(
+                labelText: 'Last Name',
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
-                ),
-                obscureText: true,
-                validator: (v) => v == null || v.length < 8 ? 'Min 8 characters' : null,
+              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _emailController,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _rePasswordController,
-                decoration: const InputDecoration(
-                  labelText: 'Confirm Password',
-                  border: OutlineInputBorder(),
-                ),
-                obscureText: true,
-                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+              keyboardType: TextInputType.emailAddress,
+              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _passwordController,
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(height: 20),
+              obscureText: true,
+              validator: (v) => v == null || v.length < 8 ? 'Min 8 characters' : null,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _rePasswordController,
+              decoration: const InputDecoration(
+                labelText: 'Confirm Password',
+                border: OutlineInputBorder(),
+              ),
+              obscureText: true,
+              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 20),
 
-              // Terms & Conditions checkbox
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Checkbox(
-                    value: _agreedToTerms,
-                    onChanged: (value) {
-                      setState(() => _agreedToTerms = value ?? false);
+            // Terms & Conditions checkbox
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Checkbox(
+                  value: _agreedToTerms,
+                  onChanged: (value) {
+                    setState(() => _agreedToTerms = value ?? false);
+                  },
+                  activeColor: AppTheme.forestMid,
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() => _agreedToTerms = !_agreedToTerms);
                     },
-                    activeColor: AppTheme.forestMid,
+                    child: const Padding(
+                      padding: EdgeInsets.only(top: 12),
+                      child: Text(
+                        'I agree to the Terms & Conditions and Privacy Policy.',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                    ),
                   ),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() => _agreedToTerms = !_agreedToTerms);
-                      },
-                      child: const Padding(
-                        padding: EdgeInsets.only(top: 12),
-                        child: Text(
-                          'I agree to the Terms & Conditions and Privacy Policy.',
-                          style: TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+
+            // User Agreement checkbox
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Checkbox(
+                  value: _agreedToUserAgreement,
+                  onChanged: (value) {
+                    setState(() => _agreedToUserAgreement = value ?? false);
+                  },
+                  activeColor: AppTheme.forestMid,
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Wrap(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            setState(() => _agreedToUserAgreement = !_agreedToUserAgreement);
+                          },
+                          child: const Text(
+                            'I have read and agree to the ',
+                            style: TextStyle(fontSize: 14),
+                          ),
                         ),
-                      ),
+                        GestureDetector(
+                          onTap: _showUserAgreement,
+                          child: const Text(
+                            'User Agreement and Code of Conduct',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppTheme.forestMid,
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() => _agreedToUserAgreement = !_agreedToUserAgreement);
+                          },
+                          child: const Text(
+                            '.',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-
-              // User Agreement checkbox
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Checkbox(
-                    value: _agreedToUserAgreement,
-                    onChanged: (value) {
-                      setState(() => _agreedToUserAgreement = value ?? false);
-                    },
-                    activeColor: AppTheme.forestMid,
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Wrap(
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              setState(() => _agreedToUserAgreement = !_agreedToUserAgreement);
-                            },
-                            child: const Text(
-                              'I have read and agree to the ',
-                              style: TextStyle(fontSize: 14),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: _showUserAgreement,
-                            child: const Text(
-                              'User Agreement and Code of Conduct',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppTheme.forestMid,
-                                fontWeight: FontWeight.w600,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              setState(() => _agreedToUserAgreement = !_agreedToUserAgreement);
-                            },
-                            child: const Text(
-                              '.',
-                              style: TextStyle(fontSize: 14),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: authService.isLoading ? null : _register,
-                child: authService.isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Register'),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () => Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
                 ),
-                child: const Text('Already have an account? Login'),
-              ),
-            ],
-          ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: authService.isLoading ? null : _register,
+              child: authService.isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Register'),
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () {
+                if (widget.embedded) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                } else {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                }
+              },
+              child: const Text('Already have an account? Login'),
+            ),
+          ],
         ),
       ),
+    );
+
+    if (widget.embedded) {
+      return Scaffold(
+        appBar: BrandedAppBar.build(context: context),
+        body: body,
+      );
+    }
+
+    return Scaffold(
+      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
+      body: body,
     );
   }
 }

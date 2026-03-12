@@ -25,6 +25,8 @@ import 'edit_offer_screen.dart';
 import 'chat_screen.dart';
 import 'viewing_slots_screen.dart';
 import 'offers_screen.dart';
+import 'login_screen.dart';
+import 'register_screen.dart';
 import '../models/offer.dart';
 
 class PropertyDetailScreen extends StatefulWidget {
@@ -486,16 +488,60 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                         const SizedBox(height: 24),
                         Card(
                           child: Padding(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(20),
                             child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                const Text(
-                                    'Log in to contact the seller or request a viewing'),
+                                Text(
+                                  'Interested in this property?',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 12),
+                                _buildLoginFeatureRow(
+                                  Icons.chat_bubble_outline,
+                                  'Message the seller',
+                                ),
                                 const SizedBox(height: 8),
-                                ElevatedButton(
-                                  onPressed: () => Navigator.pushNamed(
-                                      context, '/login'),
-                                  child: const Text('Log In'),
+                                _buildLoginFeatureRow(
+                                  Icons.calendar_today_outlined,
+                                  'Book a viewing',
+                                ),
+                                const SizedBox(height: 8),
+                                _buildLoginFeatureRow(
+                                  Icons.local_offer_outlined,
+                                  'Make an offer',
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton.icon(
+                                  onPressed: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => const LoginScreen()),
+                                  ),
+                                  icon: const Icon(Icons.login),
+                                  label: const Text('Log in'),
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                OutlinedButton.icon(
+                                  onPressed: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                            const RegisterScreen()),
+                                  ),
+                                  icon: const Icon(Icons.person_add_outlined),
+                                  label: const Text('Create a free account'),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                  ),
                                 ),
                               ],
                             ),
@@ -578,6 +624,16 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       case 'under_review': return Colors.orange;
       default: return Colors.blue;
     }
+  }
+
+  Widget _buildLoginFeatureRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: AppTheme.forestMid),
+        const SizedBox(width: 12),
+        Text(text, style: const TextStyle(fontSize: 14)),
+      ],
+    );
   }
 
   Widget _buildBuyerActionsCard(Property property) {
