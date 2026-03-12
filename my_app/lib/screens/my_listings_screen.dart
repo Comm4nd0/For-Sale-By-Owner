@@ -220,7 +220,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                   color: Colors.red[50],
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Icon(Icons.wifi_off, size: 36, color: Colors.red[300]),
+                child: Icon(Icons.error_outline, size: 36, color: Colors.red[300]),
               ),
               const SizedBox(height: 20),
               Text(_error!, style: Theme.of(context).textTheme.titleMedium),

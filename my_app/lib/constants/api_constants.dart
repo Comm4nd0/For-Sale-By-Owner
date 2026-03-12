@@ -15,6 +15,9 @@ class ApiConstants {
   static String get apiUrl => '$baseUrl/api';
   static String get authUrl => '$baseUrl/auth';
 
+  // Public-facing website URL for share links
+  static const String websiteUrl = 'https://for-sale-by-owner.co.uk';
+
   /// Prepend baseUrl to relative image/file URLs from the API.
   static String fullUrl(String relativeUrl) {
     if (relativeUrl.startsWith('http')) return relativeUrl;

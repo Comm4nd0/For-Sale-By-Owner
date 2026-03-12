@@ -1,8 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../constants/app_theme.dart';
+import '../services/api_service.dart';
 import '../widgets/branded_app_bar.dart';
 import '../widgets/skeleton_loading.dart';
 import '../widgets/scroll_to_top_button.dart';
@@ -42,53 +42,36 @@ class _HousePricesScreenState extends State<HousePricesScreen> {
     });
 
     try {
-      final uri = Uri.https(
-        'landregistry.data.gov.uk',
-        '/data/ppi/transaction-record.json',
-        {
-          'propertyAddress.postcode': postcode.toUpperCase(),
-          '_pageSize': '50',
-          '_sort': '-transactionDate',
-        },
-      );
-
-      final response = await http.get(uri).timeout(const Duration(seconds: 30));
+      final apiService = context.read<ApiService>();
+      final data = await apiService.getHousePrices(postcode);
 
       if (!mounted) return;
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final items = data['result']?['items'] as List<dynamic>? ?? [];
+      final items = data['result']?['items'] as List<dynamic>? ?? [];
 
-        final results = items.map((item) {
-          final address = item['propertyAddress'] ?? {};
-          return SoldPrice(
-            price: (item['pricePaid'] as num?)?.toInt() ?? 0,
-            date: item['transactionDate'] as String? ?? '',
-            paon: address['paon'] as String? ?? '',
-            saon: address['saon'] as String? ?? '',
-            street: address['street'] as String? ?? '',
-            town: address['town'] as String? ?? '',
-            postcode: address['postcode'] as String? ?? '',
-            propertyType: _mapPropertyType(item['propertyType'] as String? ?? ''),
-            newBuild: item['newBuild'] == true,
-          );
-        }).toList();
+      final results = items.map((item) {
+        final address = item['propertyAddress'] ?? {};
+        return SoldPrice(
+          price: (item['pricePaid'] as num?)?.toInt() ?? 0,
+          date: item['transactionDate'] as String? ?? '',
+          paon: address['paon'] as String? ?? '',
+          saon: address['saon'] as String? ?? '',
+          street: address['street'] as String? ?? '',
+          town: address['town'] as String? ?? '',
+          postcode: address['postcode'] as String? ?? '',
+          propertyType: _mapPropertyType(item['propertyType'] as String? ?? ''),
+          newBuild: item['newBuild'] == true,
+        );
+      }).toList();
 
-        setState(() {
-          _results = results;
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _error = 'Failed to load data (${response.statusCode}). Please check the postcode and try again.';
-          _isLoading = false;
-        });
-      }
+      setState(() {
+        _results = results;
+        _isLoading = false;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not connect to Land Registry. Please try again.\n($e)';
+        _error = 'Could not load house prices. Please check the postcode and try again.';
         _isLoading = false;
       });
     }

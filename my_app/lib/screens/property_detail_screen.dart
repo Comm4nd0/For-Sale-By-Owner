@@ -107,7 +107,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   }
 
   void _shareProperty(Property property) {
-    final url = '${ApiConstants.baseUrl}/properties/${property.slug}/';
+    final url = '${ApiConstants.websiteUrl}/properties/${property.slug}/';
     Clipboard.setData(ClipboardData(text: url));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Link copied to clipboard')),

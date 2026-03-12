@@ -24,7 +24,12 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   void initState() {
     super.initState();
-    _loadProfile();
+    final authService = context.read<AuthService>();
+    if (authService.isAuthenticated) {
+      _loadProfile();
+    } else {
+      _loading = false;
+    }
   }
 
   Future<void> _loadProfile() async {
@@ -55,6 +60,46 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
+
+    if (!authService.isAuthenticated) {
+      return Scaffold(
+        appBar: BrandedAppBar.build(context: context),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 88,
+                  height: 88,
+                  decoration: BoxDecoration(
+                    color: AppTheme.forestMist,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Icon(Icons.person_outline, size: 44, color: AppTheme.forestMid),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Login Required',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.charcoal,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Please log in to access your account.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppTheme.slate, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: BrandedAppBar.build(context: context),

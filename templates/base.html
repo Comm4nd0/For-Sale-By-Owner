@@ -371,7 +371,6 @@
                         </div>
                     </div>
                     <a href="/dashboard/" id="nav-dashboard-link">Dashboard</a>
-                    <a href="/messages/" id="nav-messages-link">Messages</a>
                     <div class="nav-dropdown nav-dropdown-end">
                         <button class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true">Account</button>
                         <div class="nav-dropdown-menu" role="menu">
@@ -479,25 +478,6 @@
                     if (data && data.total > 0) {
                         const count = data.total > 99 ? '99+' : data.total;
                         link.innerHTML = `Dashboard <span class="nav-badge">${count}</span>`;
-                    }
-                })
-                .catch(() => {});
-        })();
-
-        // Messages unread badge
-        (function() {
-            if (!Auth.isLoggedIn()) return;
-            const link = document.getElementById('nav-messages-link');
-            if (!link) return;
-            Auth.authFetch('/api/chat-rooms/', { headers: Auth.headers() })
-                .then(r => r.ok ? r.json() : null)
-                .then(data => {
-                    if (!data) return;
-                    const rooms = Array.isArray(data) ? data : (data.results || []);
-                    const unread = rooms.reduce((sum, r) => sum + (r.unread_count || 0), 0);
-                    if (unread > 0) {
-                        const count = unread > 99 ? '99+' : unread;
-                        link.innerHTML = `Messages <span class="nav-badge">${count}</span>`;
                     }
                 })
                 .catch(() => {});
