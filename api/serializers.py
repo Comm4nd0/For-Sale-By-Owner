@@ -9,7 +9,7 @@ from .models import (
     ServiceProviderPhoto,
     ChatRoom, ChatMessage,
     ViewingSlot, ViewingSlotBooking,
-    Offer, PropertyDocument, PropertyFlag, Referral,
+    Offer, PropertyDocument, PropertyFlag,
 )
 
 User = get_user_model()
@@ -23,17 +23,15 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    referral_code = serializers.CharField(read_only=True)
-
     class Meta:
         model = User
         fields = [
             'id', 'email', 'first_name', 'last_name', 'phone',
-            'dark_mode', 'referral_code',
+            'dark_mode',
             'notification_enquiries', 'notification_viewings',
             'notification_price_drops', 'notification_saved_searches',
         ]
-        read_only_fields = ['id', 'email', 'referral_code']
+        read_only_fields = ['id', 'email']
 
 
 class RelativeImageField(serializers.ImageField):
@@ -335,7 +333,7 @@ class ViewingSlotSerializer(serializers.ModelSerializer):
             'start_time', 'end_time', 'max_bookings', 'current_bookings',
             'is_available', 'is_active',
         ]
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'property']
 
 
 # ── Offer Serializers ────────────────────────────────────────────
@@ -398,16 +396,6 @@ class PropertyFlagSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'reporter', 'status', 'created_at']
 
-
-# ── Referral Serializers ─────────────────────────────────────────
-
-class ReferralSerializer(serializers.ModelSerializer):
-    referred_email = serializers.CharField(source='referred_user.email', read_only=True)
-
-    class Meta:
-        model = Referral
-        fields = ['id', 'referrer', 'referred_user', 'referred_email', 'reward_granted', 'created_at']
-        read_only_fields = ['id', 'referrer', 'referred_user', 'created_at']
 
 
 # ── Service Provider serializers ─────────────────────────────────

@@ -57,7 +57,6 @@ urlpatterns = [
     path('messages/<int:room_id>/', CSRFTemplateView.as_view(template_name='messages.html'), name='message-detail'),
     path('properties/<int:id>/viewing-slots/', CSRFTemplateView.as_view(template_name='viewing_slots.html'), name='viewing-slots'),
     path('mortgage-calculator/', CSRFTemplateView.as_view(template_name='mortgage_calculator.html'), name='mortgage-calculator'),
-    path('referrals/', CSRFTemplateView.as_view(template_name='referrals.html'), name='referrals'),
     path('saved-searches/', CSRFTemplateView.as_view(template_name='saved_searches.html'), name='saved-searches'),
     path('services/<slug:slug>/', CSRFTemplateView.as_view(template_name='service_provider_detail.html'), name='service-provider-detail'),
 

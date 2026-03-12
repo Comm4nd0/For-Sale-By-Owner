@@ -29,7 +29,7 @@ from .models import (
     ServiceProviderPhoto,
     ChatRoom, ChatMessage,
     ViewingSlot, ViewingSlotBooking,
-    Offer, PropertyDocument, PropertyFlag, Referral,
+    Offer, PropertyDocument, PropertyFlag,
 )
 from .serializers import (
     PropertySerializer, PropertyListSerializer, PropertyImageSerializer,
@@ -44,7 +44,7 @@ from .serializers import (
     ChatRoomSerializer, ChatMessageSerializer,
     ViewingSlotSerializer,
     OfferSerializer, PropertyDocumentSerializer,
-    PropertyFlagSerializer, ReferralSerializer,
+    PropertyFlagSerializer,
 )
 
 
@@ -924,47 +924,6 @@ def flag_property(request, property_pk):
     )
     return Response(PropertyFlagSerializer(flag).data, status=status.HTTP_201_CREATED)
 
-
-# ── Referrals ────────────────────────────────────────────────────
-
-@api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
-def my_referrals(request):
-    """Get the user's referral code and referral history."""
-    user = request.user
-    referrals = Referral.objects.filter(referrer=user).select_related('referred_user')
-    return Response({
-        'referral_code': user.referral_code,
-        'total_referrals': referrals.count(),
-        'referrals': ReferralSerializer(referrals, many=True).data,
-    })
-
-
-@api_view(['POST'])
-@permission_classes([permissions.AllowAny])
-def apply_referral(request):
-    """Apply a referral code during registration."""
-    code = request.data.get('referral_code', '').strip().upper()
-    user_id = request.data.get('user_id')
-
-    if not code or not user_id:
-        return Response({'detail': 'referral_code and user_id are required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
-    try:
-        referrer = User.objects.get(referral_code=code)
-        referred = User.objects.get(pk=user_id)
-    except User.DoesNotExist:
-        return Response({'detail': 'Invalid referral code or user.'}, status=status.HTTP_404_NOT_FOUND)
-
-    if referrer == referred:
-        return Response({'detail': 'Cannot refer yourself.'}, status=status.HTTP_400_BAD_REQUEST)
-    if Referral.objects.filter(referred_user=referred).exists():
-        return Response({'detail': 'This user was already referred.'}, status=status.HTTP_400_BAD_REQUEST)
-
-    Referral.objects.create(referrer=referrer, referred_user=referred)
-    return Response({'status': 'ok', 'referrer': referrer.email})
 
 
 # ── Mortgage Calculator ─────────────────────────────────────────

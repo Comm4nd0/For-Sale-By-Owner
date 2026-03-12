@@ -12,7 +12,7 @@ from .models import (
     ServiceProviderAddOn, ServiceProviderPhoto,
     ChatRoom, ChatMessage,
     ViewingSlot, ViewingSlotBooking,
-    Offer, PropertyDocument, PropertyFlag, Referral,
+    Offer, PropertyDocument, PropertyFlag,
 )
 from .notifications import notify_listing_approved, notify_listing_rejected
 
@@ -22,15 +22,14 @@ User = get_user_model()
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     ordering = ['email']
-    list_display = ['email', 'first_name', 'last_name', 'is_verified_seller', 'is_staff', 'referral_code', 'date_joined']
+    list_display = ['email', 'first_name', 'last_name', 'is_verified_seller', 'is_staff', 'date_joined']
     list_filter = ['is_verified_seller', 'is_staff', 'is_active', 'dark_mode']
-    search_fields = ['email', 'first_name', 'last_name', 'referral_code']
+    search_fields = ['email', 'first_name', 'last_name']
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
         ('Personal info', {'fields': ('first_name', 'last_name', 'phone')}),
         ('Seller', {'fields': ('is_verified_seller',)}),
         ('Preferences', {'fields': ('dark_mode', 'notification_enquiries', 'notification_viewings', 'notification_price_drops', 'notification_saved_searches')}),
-        ('Referral', {'fields': ('referral_code',)}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
@@ -40,7 +39,6 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('email', 'first_name', 'last_name', 'password1', 'password2'),
         }),
     )
-    readonly_fields = ['referral_code']
     actions = ['verify_sellers', 'unverify_sellers']
 
     @admin.action(description='Mark selected users as verified sellers')
@@ -219,14 +217,6 @@ class PropertyFlagAdmin(admin.ModelAdmin):
     def mark_reviewed(self, request, qs): qs.update(status='reviewed', resolved_at=timezone.now())
     @admin.action(description='Dismiss flags')
     def dismiss_flags(self, request, qs): qs.update(status='dismissed', resolved_at=timezone.now())
-
-@admin.register(Referral)
-class ReferralAdmin(admin.ModelAdmin):
-    list_display = ['referrer', 'referred_user', 'reward_granted', 'created_at']
-    list_filter = ['reward_granted']
-    actions = ['grant_rewards']
-    @admin.action(description='Grant referral rewards')
-    def grant_rewards(self, request, qs): qs.update(reward_granted=True)
 
 # ── Service Provider ──────────────────────────────────────────────
 

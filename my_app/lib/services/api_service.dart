@@ -25,7 +25,6 @@ import '../models/offer.dart';
 import '../models/property_document.dart';
 import '../models/property_flag.dart';
 import '../models/viewing_slot.dart';
-import '../models/referral.dart';
 import '../models/mortgage_calculation.dart';
 import '../models/neighbourhood_info.dart';
 
@@ -1068,31 +1067,6 @@ class ApiService {
       return MortgageCalculation.fromJson(jsonDecode(response.body));
     }
     throw Exception('Failed to calculate mortgage');
-  }
-
-  // ── Referrals ─────────────────────────────────────────────────────
-
-  Future<ReferralInfo> getReferrals() async {
-    final response = await http.get(
-      Uri.parse(ApiConstants.referrals),
-      headers: _headers,
-    );
-    if (response.statusCode == 200) {
-      return ReferralInfo.fromJson(jsonDecode(response.body));
-    }
-    throw Exception('Failed to load referrals');
-  }
-
-  Future<Map<String, dynamic>> applyReferralCode(String code) async {
-    final response = await http.post(
-      Uri.parse(ApiConstants.applyReferral),
-      headers: _headers,
-      body: jsonEncode({'referral_code': code}),
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
-    }
-    throw Exception('Failed to apply referral code');
   }
 
   // ── Bulk Import/Export ────────────────────────────────────────────

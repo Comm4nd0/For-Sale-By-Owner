@@ -144,10 +144,6 @@ class ApiConstants {
   // Mortgage calculator
   static String get mortgageCalculator => '$apiUrl/mortgage-calculator/';
 
-  // Referrals
-  static String get referrals => '$apiUrl/referrals/';
-  static String get applyReferral => '$apiUrl/referrals/apply/';
-
   // Bulk import/export
   static String get bulkImport => '$apiUrl/properties/bulk-import/';
   static String get exportProperties => '$apiUrl/properties/export/';

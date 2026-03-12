@@ -36,7 +36,6 @@ class User(AbstractUser):
     notification_viewings = models.BooleanField(default=True)
     notification_price_drops = models.BooleanField(default=True)
     notification_saved_searches = models.BooleanField(default=True)
-    referral_code = models.CharField(max_length=20, unique=True, blank=True, null=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name']
@@ -45,15 +44,6 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
-
-    def save(self, *args, **kwargs):
-        if not self.referral_code:
-            import secrets
-            code = secrets.token_urlsafe(8)[:10].upper()
-            while User.objects.filter(referral_code=code).exists():
-                code = secrets.token_urlsafe(8)[:10].upper()
-            self.referral_code = code
-        super().save(*args, **kwargs)
 
 
 class PropertyFeature(models.Model):
@@ -633,22 +623,6 @@ class PropertyFlag(models.Model):
     def __str__(self):
         return f"Flag on {self.property.title} by {self.reporter.email}: {self.reason}"
 
-
-# ── Referral Programme ──────────────────────────────────────────
-
-class Referral(models.Model):
-    """Tracks referrals between users."""
-    referrer = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='referrals_made'
-    )
-    referred_user = models.OneToOneField(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='referral'
-    )
-    reward_granted = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.referrer.email} referred {self.referred_user.email}"
 
 
 # ── Service Provider Models ─────────────────────────────────────

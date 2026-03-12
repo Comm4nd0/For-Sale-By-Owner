@@ -146,9 +146,6 @@ urlpatterns = [
     ),
     # Mortgage calculator
     path('mortgage-calculator/', views.mortgage_calculator, name='mortgage-calculator'),
-    # Referrals
-    path('referrals/', views.my_referrals, name='my-referrals'),
-    path('referrals/apply/', views.apply_referral, name='apply-referral'),
     # Bulk import/export
     path('properties/bulk-import/', views.bulk_import_properties, name='bulk-import'),
     path('properties/export/', views.export_properties, name='export-properties'),

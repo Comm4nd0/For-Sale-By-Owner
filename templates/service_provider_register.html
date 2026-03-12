@@ -219,10 +219,15 @@
             const token = Auth.getToken();
             if (token) headers['Authorization'] = 'Token ' + token;
 
+            headers['Accept'] = 'application/json';
             const res = await fetch(url, { method, headers, body: formData });
             if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.detail || Object.values(data).flat().join(', '));
+                const ct = res.headers.get('content-type') || '';
+                if (ct.includes('application/json')) {
+                    const data = await res.json();
+                    throw new Error(data.detail || Object.values(data).flat().join(', '));
+                }
+                throw new Error('Server error (' + res.status + '). Please try again.');
             }
 
             const result = await res.json();
