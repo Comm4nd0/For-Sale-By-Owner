@@ -810,8 +810,8 @@
                         <li style="padding:0.35rem 0; color:#1E4635;">&#128176; Make an offer</li>
                     </ul>
                     <div>
-                        <a href="/login/?next=${encodeURIComponent(window.location.pathname)}" class="btn btn-primary" style="width:100%; margin-bottom:0.5rem;">Log in</a>
-                        <a href="/register/" class="btn btn-secondary" style="width:100%;">Create a free account</a>
+                        <button onclick="AuthModal.open('login')" class="btn btn-primary" style="width:100%; margin-bottom:0.5rem;">Log in</button>
+                        <button onclick="AuthModal.open('register')" class="btn btn-secondary" style="width:100%;">Create a free account</button>
                     </div>
                 </div>`;
 

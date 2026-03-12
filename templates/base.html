@@ -134,6 +134,31 @@
         .scroll-to-top:hover { background: #2A9DA8; }
         .scroll-to-top:focus-visible { outline: 2px solid #2A9DA8; outline-offset: 2px; }
         .scroll-to-top.visible { opacity: 1; visibility: visible; }
+
+        /* Auth Modal */
+        .auth-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center; padding: 1rem; }
+        .auth-modal-overlay.active { display: flex; }
+        .auth-modal { background: #fff; border-radius: 12px; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); position: relative; animation: authModalIn 0.25s ease-out; }
+        @keyframes authModalIn { from { opacity: 0; transform: translateY(20px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .auth-modal-header { background: #115E66; color: white; padding: 1.25rem 1.5rem; border-radius: 12px 12px 0 0; display: flex; align-items: center; justify-content: space-between; }
+        .auth-modal-header h2 { font-size: 1.25rem; margin: 0; font-weight: 600; }
+        .auth-modal-close { background: none; border: none; color: rgba(255,255,255,0.7); font-size: 1.5rem; cursor: pointer; padding: 0 0.25rem; line-height: 1; }
+        .auth-modal-close:hover { color: white; }
+        .auth-modal-body { padding: 1.5rem; }
+        .auth-modal-body .form-group { margin-bottom: 0.875rem; }
+        .auth-modal-body .form-group label { display: block; margin-bottom: 0.25rem; font-weight: 500; color: #4A5C62; font-size: 0.9rem; }
+        .auth-modal-body .form-group input { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #E2E2E2; border-radius: 6px; font-size: 0.95rem; font-family: inherit; transition: border-color 0.2s, box-shadow 0.2s; }
+        .auth-modal-body .form-group input:focus { outline: none; border-color: #19747E; box-shadow: 0 0 0 2px rgba(25,116,126,0.15); }
+        .auth-modal-body .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .auth-modal-body .btn { width: 100%; padding: 0.7rem; font-size: 0.95rem; margin-top: 0.25rem; }
+        .auth-modal-body .form-check { display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.75rem; }
+        .auth-modal-body .form-check input[type="checkbox"] { margin-top: 0.25rem; width: 16px; height: 16px; accent-color: #19747E; flex-shrink: 0; }
+        .auth-modal-body .form-check label { font-size: 0.85rem; color: #4A5C62; line-height: 1.4; }
+        .auth-modal-body .form-check a { color: #19747E; }
+        .auth-modal-footer { text-align: center; padding: 0 1.5rem 1.25rem; }
+        .auth-modal-footer a { color: #19747E; font-size: 0.9rem; }
+        .auth-modal-divider { display: flex; align-items: center; gap: 0.75rem; margin: 1rem 0; color: #8FA3A8; font-size: 0.85rem; }
+        .auth-modal-divider::before, .auth-modal-divider::after { content: ''; flex: 1; height: 1px; background: #E2E2E2; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -248,6 +273,152 @@
             <polyline points="18 15 12 9 6 15"></polyline>
         </svg>
     </button>
+    <!-- Auth Modal -->
+    <div class="auth-modal-overlay" id="auth-modal-overlay" onclick="if(event.target===this)AuthModal.close()">
+        <div class="auth-modal" role="dialog" aria-modal="true">
+            <div class="auth-modal-header">
+                <h2 id="auth-modal-title">Login</h2>
+                <button class="auth-modal-close" onclick="AuthModal.close()" aria-label="Close">&times;</button>
+            </div>
+            <div class="auth-modal-body" id="auth-modal-body"></div>
+            <div class="auth-modal-footer" id="auth-modal-footer"></div>
+        </div>
+    </div>
+
+    <script>
+        // Auth Modal controller
+        const AuthModal = {
+            overlay: null,
+            init() { this.overlay = document.getElementById('auth-modal-overlay'); },
+            open(mode) {
+                if (!this.overlay) this.init();
+                if (mode === 'register') this.showRegister(); else this.showLogin();
+                this.overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+                // Focus first input after render
+                setTimeout(() => {
+                    const first = this.overlay.querySelector('input:not([type=checkbox]):not([type=hidden])');
+                    if (first) first.focus();
+                }, 100);
+            },
+            close() {
+                if (!this.overlay) return;
+                this.overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            },
+            showLogin() {
+                document.getElementById('auth-modal-title').textContent = 'Login';
+                document.getElementById('auth-modal-body').innerHTML = `
+                    <div id="auth-modal-msg" class="alert" style="display:none;"></div>
+                    <form id="auth-modal-form" onsubmit="AuthModal.handleLogin(event)">
+                        <div class="form-group"><label for="am-email">Email</label><input type="email" id="am-email" required autocomplete="email"></div>
+                        <div class="form-group"><label for="am-password">Password</label><input type="password" id="am-password" required autocomplete="current-password"></div>
+                        <button type="submit" class="btn btn-primary" id="am-submit">Login</button>
+                    </form>
+                    <p style="text-align:center; margin-top:0.75rem;"><a href="/forgot-password/" style="color:#19747E; font-size:0.9rem;">Forgot your password?</a></p>`;
+                document.getElementById('auth-modal-footer').innerHTML = `
+                    <div class="auth-modal-divider">or</div>
+                    <p>Don&rsquo;t have an account? <a href="#" onclick="AuthModal.showRegister(); return false;">Register</a></p>`;
+            },
+            showRegister() {
+                document.getElementById('auth-modal-title').textContent = 'Create Account';
+                document.getElementById('auth-modal-body').innerHTML = `
+                    <div id="auth-modal-msg" class="alert" style="display:none;"></div>
+                    <form id="auth-modal-form" onsubmit="AuthModal.handleRegister(event)">
+                        <div class="form-row">
+                            <div class="form-group"><label for="am-first">First Name</label><input type="text" id="am-first" required autocomplete="given-name"></div>
+                            <div class="form-group"><label for="am-last">Last Name</label><input type="text" id="am-last" required autocomplete="family-name"></div>
+                        </div>
+                        <div class="form-group"><label for="am-reg-email">Email</label><input type="email" id="am-reg-email" required autocomplete="email"></div>
+                        <div class="form-group"><label for="am-reg-pass">Password</label><input type="password" id="am-reg-pass" required minlength="8" autocomplete="new-password"></div>
+                        <div class="form-group"><label for="am-reg-pass2">Confirm Password</label><input type="password" id="am-reg-pass2" required minlength="8" autocomplete="new-password"></div>
+                        <div class="form-check">
+                            <input type="checkbox" id="am-terms" required>
+                            <label for="am-terms">I agree to the <a href="/terms/" target="_blank">Terms &amp; Conditions</a> and <a href="/privacy/" target="_blank">Privacy Policy</a>.</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="am-submit">Create Account</button>
+                    </form>`;
+                document.getElementById('auth-modal-footer').innerHTML = `
+                    <div class="auth-modal-divider">or</div>
+                    <p>Already have an account? <a href="#" onclick="AuthModal.showLogin(); return false;">Login</a></p>`;
+            },
+            showMsg(text, isError) {
+                const el = document.getElementById('auth-modal-msg');
+                el.textContent = text;
+                el.className = 'alert ' + (isError ? 'alert-error' : 'alert-success');
+                el.style.display = 'block';
+            },
+            async handleLogin(e) {
+                e.preventDefault();
+                const btn = document.getElementById('am-submit');
+                const msgEl = document.getElementById('auth-modal-msg');
+                msgEl.style.display = 'none';
+                btn.disabled = true;
+                btn.textContent = 'Logging in...';
+                try {
+                    const res = await fetch('/auth/token/login/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': Auth.getCSRFToken() },
+                        body: JSON.stringify({ email: document.getElementById('am-email').value, password: document.getElementById('am-password').value }),
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        Auth.setToken(data.auth_token);
+                        this.close();
+                        window.location.reload();
+                    } else {
+                        this.showMsg('Invalid email or password.', true);
+                    }
+                } catch { this.showMsg('Network error. Please try again.', true); }
+                btn.disabled = false;
+                btn.textContent = 'Login';
+            },
+            async handleRegister(e) {
+                e.preventDefault();
+                const btn = document.getElementById('am-submit');
+                const msgEl = document.getElementById('auth-modal-msg');
+                msgEl.style.display = 'none';
+                if (!document.getElementById('am-terms').checked) {
+                    this.showMsg('You must agree to the Terms & Conditions.', true);
+                    return;
+                }
+                const pass = document.getElementById('am-reg-pass').value;
+                if (pass !== document.getElementById('am-reg-pass2').value) {
+                    this.showMsg('Passwords do not match.', true);
+                    return;
+                }
+                btn.disabled = true;
+                btn.textContent = 'Creating account...';
+                try {
+                    const res = await fetch('/auth/users/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': Auth.getCSRFToken() },
+                        body: JSON.stringify({
+                            email: document.getElementById('am-reg-email').value,
+                            first_name: document.getElementById('am-first').value,
+                            last_name: document.getElementById('am-last').value,
+                            password: pass,
+                            re_password: document.getElementById('am-reg-pass2').value,
+                        }),
+                    });
+                    if (res.ok || res.status === 201) {
+                        this.showLogin();
+                        this.showMsg('Account created! Please log in.', false);
+                    } else {
+                        const data = await res.json();
+                        const msgs = [];
+                        for (const [key, val] of Object.entries(data)) msgs.push(Array.isArray(val) ? val.join(', ') : val);
+                        this.showMsg(msgs.join(' | ') || 'Registration failed.', true);
+                    }
+                } catch { this.showMsg('Network error. Please try again.', true); }
+                btn.disabled = false;
+                btn.textContent = 'Create Account';
+            }
+        };
+        // Close on Escape key
+        document.addEventListener('keydown', function(e) { if (e.key === 'Escape') AuthModal.close(); });
+    </script>
+
     <script>
         // HTML escaping helper to prevent XSS
         function escHtml(str) {
@@ -390,8 +561,8 @@
                         </div>
                     </div>
                     <a href="/services/">Services</a>
-                    <a href="/login/">Login</a>
-                    <a href="/register/">Register</a>
+                    <a href="#" onclick="AuthModal.open('login'); return false;">Login</a>
+                    <a href="#" onclick="AuthModal.open('register'); return false;">Register</a>
                 `;
             }
             initNavDropdowns();
