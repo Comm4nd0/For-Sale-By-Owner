@@ -981,6 +981,9 @@ def mortgage_calculator(request):
     except (ValueError, TypeError):
         return Response({'detail': 'Invalid parameters.'}, status=status.HTTP_400_BAD_REQUEST)
 
+    buyer_type = request.query_params.get('buyer_type', 'standard')  # standard | first_time | additional
+    repayment_type = request.query_params.get('repayment_type', 'repayment')  # repayment | interest_only
+
     if price <= 0 or term_years <= 0:
         return Response({'detail': 'Price and term must be positive.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -989,24 +992,23 @@ def mortgage_calculator(request):
     monthly_rate = (interest_rate / 100) / 12
     num_payments = term_years * 12
 
-    if monthly_rate > 0:
-        monthly_payment = loan * (monthly_rate * (1 + monthly_rate) ** num_payments) / \
-                          ((1 + monthly_rate) ** num_payments - 1)
+    if repayment_type == 'interest_only':
+        # Interest-only: pay only interest each month, loan repaid at end
+        monthly_payment = loan * monthly_rate if monthly_rate > 0 else 0
+        total_cost = (monthly_payment * num_payments) + loan
+        total_interest = monthly_payment * num_payments
     else:
-        monthly_payment = loan / num_payments
+        # Standard repayment mortgage
+        if monthly_rate > 0:
+            monthly_payment = loan * (monthly_rate * (1 + monthly_rate) ** num_payments) / \
+                              ((1 + monthly_rate) ** num_payments - 1)
+        else:
+            monthly_payment = loan / num_payments
+        total_cost = monthly_payment * num_payments
+        total_interest = total_cost - loan
 
-    total_cost = monthly_payment * num_payments
-    total_interest = total_cost - loan
-
-    # Stamp duty (England/NI rates as of 2024)
-    if price <= 250000:
-        stamp_duty = 0
-    elif price <= 925000:
-        stamp_duty = (price - 250000) * 0.05
-    elif price <= 1500000:
-        stamp_duty = (925000 - 250000) * 0.05 + (price - 925000) * 0.10
-    else:
-        stamp_duty = (925000 - 250000) * 0.05 + (1500000 - 925000) * 0.10 + (price - 1500000) * 0.12
+    # Stamp duty (England/NI rates as of 2025)
+    stamp_duty = _calculate_stamp_duty(price, buyer_type)
 
     return Response({
         'price': price,
@@ -1018,7 +1020,44 @@ def mortgage_calculator(request):
         'stamp_duty': round(stamp_duty, 2),
         'term_years': term_years,
         'interest_rate': interest_rate,
+        'buyer_type': buyer_type,
+        'repayment_type': repayment_type,
     })
+
+
+def _calculate_stamp_duty(price, buyer_type='standard'):
+    """Calculate stamp duty based on buyer type (England/NI rates)."""
+    # First-time buyer relief
+    if buyer_type == 'first_time':
+        if price <= 625000:
+            if price <= 425000:
+                return 0
+            return (price - 425000) * 0.05
+        # Falls through to standard rates if price > £625k
+
+    # Standard bands
+    duty = 0
+    bands = [
+        (250000, 0),
+        (925000, 0.05),
+        (1500000, 0.10),
+        (float('inf'), 0.12),
+    ]
+    remaining = price
+    prev = 0
+    for limit, rate in bands:
+        taxable = min(remaining, limit - prev)
+        duty += taxable * rate
+        remaining -= taxable
+        prev = limit
+        if remaining <= 0:
+            break
+
+    # Additional property surcharge: 5% of entire price
+    if buyer_type == 'additional':
+        duty += price * 0.05
+
+    return duty
 
 
 # ── Neighbourhood Data ──────────────────────────────────────────

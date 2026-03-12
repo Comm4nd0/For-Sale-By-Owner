@@ -23,7 +23,19 @@
     .mc-field input.has-prefix { padding-left: 1.75rem; }
     .mc-field input.has-suffix { padding-right: 2rem; }
 
-    .mc-calculate-btn { width: 100%; padding: 0.75rem; font-size: 1rem; font-weight: 600; margin-top: 0.5rem; }
+    .mc-advanced-toggle { display: flex; align-items: center; gap: 0.5rem; background: none; border: none; color: #19747E; font-size: 0.85rem; font-weight: 600; cursor: pointer; padding: 0.5rem 0; margin-top: 0.25rem; font-family: inherit; }
+    .mc-advanced-toggle svg { transition: transform 0.2s; }
+    .mc-advanced-toggle.open svg { transform: rotate(90deg); }
+    .mc-advanced-fields { display: none; padding-top: 0.5rem; border-top: 1px solid #EDF2EF; margin-top: 0.5rem; }
+    .mc-advanced-fields.open { display: block; }
+
+    .mc-field select { width: 100%; padding: 0.65rem 0.75rem; border: 1px solid #D1E8E2; border-radius: 6px; font-size: 1rem; font-family: inherit; box-sizing: border-box; background: #fff; appearance: auto; color: #1A2C33; }
+    .mc-field select:focus { outline: none; border-color: #19747E; box-shadow: 0 0 0 2px rgba(25,116,126,0.15); }
+
+    .mc-radio-group { display: flex; gap: 0.5rem; }
+    .mc-radio-group label { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0.5rem 0.75rem; border: 1px solid #D1E8E2; border-radius: 6px; font-size: 0.85rem; color: #4A5C62; cursor: pointer; transition: all 0.15s; text-align: center; }
+    .mc-radio-group input { display: none; }
+    .mc-radio-group input:checked + label { background: #115E66; color: white; border-color: #115E66; }
 
     .mc-monthly { text-align: center; padding: 1.25rem 0; margin-bottom: 1rem; border-bottom: 1px solid #EDF2EF; }
     .mc-monthly-label { font-size: 0.85rem; color: #4A5C62; margin-bottom: 0.25rem; }
@@ -39,8 +51,6 @@
     .mc-placeholder svg { margin-bottom: 0.75rem; }
 
     .mc-error { text-align: center; padding: 1rem; color: #B03A2E; font-size: 0.9rem; }
-    .mc-field-error { color: #B03A2E; font-size: 0.8rem; margin-top: 0.25rem; }
-    .mc-field input.mc-invalid { border-color: #B03A2E; }
 
     @media (max-width: 768px) {
         .mc-hero h1 { font-size: 1.4rem; }
@@ -91,7 +101,30 @@
                         <span class="mc-suffix">years</span>
                     </div>
                 </div>
-                <button class="btn btn-primary mc-calculate-btn" id="mc-btn" type="submit">Calculate</button>
+
+                <button type="button" class="mc-advanced-toggle" id="mc-adv-toggle" onclick="toggleAdvanced()">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M4 2l4 4-4 4"/></svg>
+                    Advanced Options
+                </button>
+                <div class="mc-advanced-fields" id="mc-adv-fields">
+                    <div class="mc-field">
+                        <label>Repayment Type</label>
+                        <div class="mc-radio-group">
+                            <input type="radio" name="mc-repayment" id="mc-repay-capital" value="repayment" checked>
+                            <label for="mc-repay-capital">Repayment</label>
+                            <input type="radio" name="mc-repayment" id="mc-repay-interest" value="interest_only">
+                            <label for="mc-repay-interest">Interest Only</label>
+                        </div>
+                    </div>
+                    <div class="mc-field">
+                        <label for="mc-buyer-type">Buyer Type <span style="font-weight:400; color:#8FA3A8;">(affects stamp duty)</span></label>
+                        <select id="mc-buyer-type">
+                            <option value="standard">Standard</option>
+                            <option value="first_time">First-time Buyer</option>
+                            <option value="additional">Additional Property</option>
+                        </select>
+                    </div>
+                </div>
             </form>
         </div>
 
@@ -100,7 +133,7 @@
             <div id="mc-results">
                 <div class="mc-placeholder">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H9l4-7v4h2l-4 7z" fill="#D1E8E2"/></svg>
-                    <p>Enter your details and click Calculate to see your estimated mortgage repayments.</p>
+                    <p>Enter your details to see your estimated mortgage repayments.</p>
                 </div>
             </div>
         </div>
@@ -110,78 +143,67 @@
 
 {% block extra_js %}
 <script>
+function toggleAdvanced() {
+    var btn = document.getElementById('mc-adv-toggle');
+    var fields = document.getElementById('mc-adv-fields');
+    btn.classList.toggle('open');
+    fields.classList.toggle('open');
+}
+
 (function() {
     var form = document.getElementById('mc-form');
-    var btn = document.getElementById('mc-btn');
     var resultsEl = document.getElementById('mc-results');
+    var debounceTimer = null;
 
     // Pre-fill from URL params
     var params = new URLSearchParams(window.location.search);
-    if (params.get('price')) {
-        document.getElementById('mc-price').value = params.get('price');
+    if (params.get('price')) document.getElementById('mc-price').value = params.get('price');
+
+    // Live-calculate on every input/change (debounced)
+    form.addEventListener('input', scheduleCalc);
+    form.addEventListener('change', scheduleCalc);
+
+    function scheduleCalc() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(doCalculate, 300);
     }
 
-    form.addEventListener('submit', doCalculate);
+    // Calculate on load with default values
+    doCalculate();
 
-    // Auto-calculate if price was provided via URL
-    if (params.get('price')) doCalculate();
-
-    function clearFieldErrors() {
-        form.querySelectorAll('.mc-field-error').forEach(function(el) { el.remove(); });
-        form.querySelectorAll('.mc-invalid').forEach(function(el) { el.classList.remove('mc-invalid'); });
+    function getRepaymentType() {
+        var el = document.querySelector('input[name="mc-repayment"]:checked');
+        return el ? el.value : 'repayment';
     }
 
-    function showFieldError(inputId, message) {
-        var input = document.getElementById(inputId);
-        input.classList.add('mc-invalid');
-        var err = document.createElement('div');
-        err.className = 'mc-field-error';
-        err.textContent = message;
-        input.closest('.mc-field').appendChild(err);
+    function getBuyerType() {
+        return document.getElementById('mc-buyer-type').value;
     }
 
     function doCalculate() {
-        clearFieldErrors();
-        var hasError = false;
-
         var priceVal = document.getElementById('mc-price').value.trim();
         var price = parseFloat(priceVal);
-        if (!priceVal || isNaN(price) || price <= 0) {
-            showFieldError('mc-price', 'Enter a valid price greater than 0.');
-            hasError = true;
-        }
+        if (!priceVal || isNaN(price) || price <= 0) return;
 
         var depositVal = document.getElementById('mc-deposit').value.trim();
         var depositPct = parseFloat(depositVal);
-        if (!depositVal || isNaN(depositPct) || depositPct < 0 || depositPct > 100) {
-            showFieldError('mc-deposit', 'Enter a deposit between 0 and 100%.');
-            hasError = true;
-        }
+        if (!depositVal || isNaN(depositPct) || depositPct < 0 || depositPct > 100) return;
 
         var rateVal = document.getElementById('mc-rate').value.trim();
         var rate = parseFloat(rateVal);
-        if (!rateVal || isNaN(rate) || rate < 0 || rate > 30) {
-            showFieldError('mc-rate', 'Enter an interest rate between 0 and 30%.');
-            hasError = true;
-        }
+        if (!rateVal || isNaN(rate) || rate < 0 || rate > 30) return;
 
         var termVal = document.getElementById('mc-term').value.trim();
         var term = parseInt(termVal);
-        if (!termVal || isNaN(term) || term <= 0 || term > 40) {
-            showFieldError('mc-term', 'Enter a term between 1 and 40 years.');
-            hasError = true;
-        }
-
-        if (hasError) return;
-
-        btn.disabled = true;
-        btn.textContent = 'Calculating...';
+        if (!termVal || isNaN(term) || term <= 0 || term > 40) return;
 
         var url = '/api/mortgage-calculator/?' + new URLSearchParams({
             price: price,
             deposit_pct: depositPct,
             interest_rate: rate,
-            term_years: term
+            term_years: term,
+            buyer_type: getBuyerType(),
+            repayment_type: getRepaymentType()
         });
 
         fetch(url)
@@ -194,16 +216,21 @@
             })
             .catch(function() {
                 resultsEl.innerHTML = '<div class="mc-error">Could not calculate mortgage. Please try again.</div>';
-            })
-            .finally(function() {
-                btn.disabled = false;
-                btn.textContent = 'Calculate';
             });
     }
 
+    function buyerTypeLabel(t) {
+        if (t === 'first_time') return 'First-time Buyer';
+        if (t === 'additional') return 'Additional Property';
+        return 'Standard';
+    }
+
     function renderResults(d) {
+        var isInterestOnly = d.repayment_type === 'interest_only';
+        var monthlyLabel = isInterestOnly ? 'Estimated Monthly Interest' : 'Estimated Monthly Payment';
+
         var html = '<div class="mc-monthly">' +
-            '<div class="mc-monthly-label">Estimated Monthly Payment</div>' +
+            '<div class="mc-monthly-label">' + monthlyLabel + '</div>' +
             '<div class="mc-monthly-value">' + fmt(d.monthly_payment) + '</div>' +
             '</div>' +
             '<ul class="mc-breakdown">' +
@@ -211,10 +238,17 @@
             '<li><span class="mc-label">Deposit</span><span class="mc-value">' + fmt(d.deposit) + '</span></li>' +
             '<li><span class="mc-label">Loan Amount</span><span class="mc-value">' + fmt(d.loan_amount) + '</span></li>' +
             '<li><span class="mc-label">Interest Rate</span><span class="mc-value">' + Number(d.interest_rate).toFixed(1) + '%</span></li>' +
-            '<li><span class="mc-label">Term</span><span class="mc-value">' + d.term_years + ' years</span></li>' +
-            '<li><span class="mc-label">Total Repayment</span><span class="mc-value">' + fmt(d.total_cost) + '</span></li>' +
-            '<li><span class="mc-label">Total Interest</span><span class="mc-value">' + fmt(d.total_interest) + '</span></li>' +
-            '<li><span class="mc-label">Stamp Duty (England)</span><span class="mc-value">' + fmt(d.stamp_duty) + '</span></li>' +
+            '<li><span class="mc-label">Term</span><span class="mc-value">' + d.term_years + ' years</span></li>';
+
+        if (isInterestOnly) {
+            html += '<li><span class="mc-label">Total Interest Paid</span><span class="mc-value">' + fmt(d.total_interest) + '</span></li>' +
+                '<li><span class="mc-label">Capital to Repay at End</span><span class="mc-value">' + fmt(d.loan_amount) + '</span></li>';
+        } else {
+            html += '<li><span class="mc-label">Total Repayment</span><span class="mc-value">' + fmt(d.total_cost) + '</span></li>' +
+                '<li><span class="mc-label">Total Interest</span><span class="mc-value">' + fmt(d.total_interest) + '</span></li>';
+        }
+
+        html += '<li><span class="mc-label">Stamp Duty (' + buyerTypeLabel(d.buyer_type) + ')</span><span class="mc-value">' + fmt(d.stamp_duty) + '</span></li>' +
             '</ul>';
         resultsEl.innerHTML = html;
     }
