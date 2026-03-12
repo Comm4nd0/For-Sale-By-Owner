@@ -23,7 +23,7 @@ class ChatMessage {
       roomId: json['room'] ?? 0,
       senderId: json['sender'] ?? 0,
       senderName: json['sender_name'] ?? '',
-      content: json['content'] ?? '',
+      content: json['message'] ?? '',
       isRead: json['is_read'] ?? false,
       createdAt: json['created_at'] ?? '',
     );
