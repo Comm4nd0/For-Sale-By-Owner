@@ -156,6 +156,7 @@ REST_FRAMEWORK = {
         'user': '1000/hour',
         'anon': '200/hour',
     },
+    'EXCEPTION_HANDLER': 'api.exception_handler.custom_exception_handler',
 }
 
 # Djoser

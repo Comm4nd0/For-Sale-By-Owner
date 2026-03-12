@@ -425,7 +425,7 @@ class ServiceProviderReviewSerializer(serializers.ModelSerializer):
 
 class ServiceProviderListSerializer(serializers.ModelSerializer):
     """Lighter serializer for list views."""
-    logo = RelativeImageField()
+    logo = RelativeImageField(required=False, allow_null=True)
     categories = ServiceCategorySerializer(many=True, read_only=True)
     average_rating = serializers.SerializerMethodField()
     review_count = serializers.SerializerMethodField()
