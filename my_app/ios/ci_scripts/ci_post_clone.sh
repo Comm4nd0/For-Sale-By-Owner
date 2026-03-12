@@ -3,6 +3,10 @@ set -e
 
 echo "=== Xcode Cloud Post-Clone Script ==="
 
+# Suppress all interactive prompts and analytics in CI
+# Without CI=true, Flutter may hang waiting for user input
+export CI=true
+
 # Navigate to the Flutter project root
 cd "$CI_PRIMARY_REPOSITORY_PATH/my_app"
 
@@ -16,6 +20,7 @@ export PATH="$FLUTTER_HOME/bin:$PATH"
 
 # Disable analytics and first-run experience
 flutter config --no-analytics
+dart --disable-analytics 2>/dev/null || true
 flutter precache --ios
 
 echo "Flutter version:"
