@@ -3,6 +3,9 @@
 {% block title %}House Prices - For Sale By Owner{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin="" />
 <style>
     .hp-hero { background: linear-gradient(135deg, #115E66 0%, #19747E 100%); color: white; padding: 2.5rem 0; margin: -2rem 0 2rem; }
     .hp-hero h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
@@ -10,6 +13,10 @@
     .hp-search { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
     .hp-search input { flex: 1; padding: 0.7rem 1rem; border: none; border-radius: 6px; font-size: 1rem; font-family: inherit; max-width: 320px; }
     .hp-search .btn { white-space: nowrap; }
+
+    .hp-map-section { margin-bottom: 1.5rem; display: none; }
+    .hp-map-container { height: 350px; border-radius: 8px; overflow: hidden; border: 1px solid #E2E2E2; background: #EDF2EF; position: relative; z-index: 1; }
+    .hp-map-hint { text-align: center; padding: 0.5rem; font-size: 0.8rem; color: #4A5C62; background: #FFFFFF; border: 1px solid #E2E2E2; border-top: none; border-radius: 0 0 8px 8px; }
 
     .hp-summary { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; padding: 1rem 1.25rem; background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E2E2; }
     .hp-stat { text-align: center; flex: 1; min-width: 120px; }
@@ -42,6 +49,7 @@
         .hp-hero h1 { font-size: 1.4rem; }
         .hp-search { flex-direction: column; }
         .hp-search input { max-width: none; }
+        .hp-map-container { height: 250px; }
         .hp-table-wrap { display: none; }
         .hp-cards { display: block; }
     }
@@ -60,16 +68,30 @@
     </div>
 </section>
 
+<div id="hp-map-section" class="hp-map-section">
+    <div id="hp-map" class="hp-map-container"></div>
+    <div class="hp-map-hint">Click anywhere on the map to search house prices in that area</div>
+</div>
+
 <div id="hp-results"></div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
 <script>
 (function() {
     var form = document.getElementById('hp-form');
     var input = document.getElementById('hp-postcode');
     var btn = document.getElementById('hp-btn');
     var results = document.getElementById('hp-results');
+    var mapSection = document.getElementById('hp-map-section');
+
+    // Map state
+    var map = null;
+    var marker = null;
+    var circle = null;
 
     form.addEventListener('submit', function() { doSearch(); });
 
@@ -80,13 +102,108 @@
         doSearch();
     }
 
-    function doSearch() {
-        var postcode = input.value.trim();
+    // ── Map ────────────────────────────────────────────────────
+
+    function initMap(lat, lng, postcode) {
+        if (typeof L === 'undefined') return;
+        mapSection.style.display = '';
+
+        if (!map) {
+            map = L.map('hp-map', { scrollWheelZoom: false }).setView([lat, lng], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                maxZoom: 19
+            }).addTo(map);
+
+            map.on('click', function(e) {
+                reverseGeocodeAndSearch(e.latlng.lat, e.latlng.lng);
+            });
+        } else {
+            map.setView([lat, lng], 15);
+        }
+
+        // Clear previous markers
+        if (marker) map.removeLayer(marker);
+        if (circle) map.removeLayer(circle);
+
+        marker = L.marker([lat, lng]).addTo(map)
+            .bindPopup('<strong>' + escHtml(postcode) + '</strong>')
+            .openPopup();
+
+        circle = L.circle([lat, lng], {
+            radius: 200,
+            color: '#115E66',
+            fillColor: '#19747E',
+            fillOpacity: 0.12,
+            weight: 2
+        }).addTo(map);
+
+        // Fix tile rendering after container becomes visible
+        setTimeout(function() { map.invalidateSize(); }, 100);
+    }
+
+    function geocodePostcode(postcode, callback) {
+        var url = 'https://api.postcodes.io/postcodes/' + encodeURIComponent(postcode.replace(/\s+/g, ''));
+        fetch(url)
+            .then(function(r) {
+                if (!r.ok) throw new Error('Geocode failed');
+                return r.json();
+            })
+            .then(function(data) {
+                if (data.status === 200 && data.result) {
+                    callback(null, { lat: data.result.latitude, lng: data.result.longitude, postcode: data.result.postcode });
+                } else {
+                    callback(new Error('Postcode not found'));
+                }
+            })
+            .catch(function(err) { callback(err); });
+    }
+
+    function reverseGeocodeAndSearch(lat, lng) {
+        if (typeof L === 'undefined' || !map) return;
+
+        // Temporary marker while looking up
+        var tempMarker = L.marker([lat, lng], { opacity: 0.6 }).addTo(map)
+            .bindPopup('Looking up postcode\u2026').openPopup();
+
+        fetch('https://api.postcodes.io/postcodes?lon=' + lng + '&lat=' + lat)
+            .then(function(r) {
+                if (!r.ok) throw new Error('Reverse geocode failed');
+                return r.json();
+            })
+            .then(function(data) {
+                map.removeLayer(tempMarker);
+                if (data.status === 200 && data.result && data.result.length > 0) {
+                    var nearest = data.result[0];
+                    input.value = nearest.postcode;
+                    doSearch(nearest.postcode);
+                } else {
+                    tempMarker.bindPopup('No postcode found for this location').openPopup();
+                    setTimeout(function() { if (map.hasLayer(tempMarker)) map.removeLayer(tempMarker); }, 3000);
+                }
+            })
+            .catch(function() {
+                map.removeLayer(tempMarker);
+                var errMarker = L.marker([lat, lng]).addTo(map)
+                    .bindPopup('Could not find postcode here').openPopup();
+                setTimeout(function() { if (map.hasLayer(errMarker)) map.removeLayer(errMarker); }, 3000);
+            });
+    }
+
+    // ── Search ─────────────────────────────────────────────────
+
+    function doSearch(postcodeOverride) {
+        var postcode = (postcodeOverride || input.value).trim();
         if (!postcode) return;
 
         btn.disabled = true;
-        btn.textContent = 'Searching...';
-        results.innerHTML = '<div class="hp-loading">Searching Land Registry records...</div>';
+        btn.textContent = 'Searching\u2026';
+        results.innerHTML = '<div class="hp-loading">Searching Land Registry records\u2026</div>';
+
+        // Geocode in parallel — map updates independently of results
+        geocodePostcode(postcode, function(err, geo) {
+            if (!err && geo) initMap(geo.lat, geo.lng, geo.postcode);
+        });
 
         var url = '/api/house-prices/?postcode=' + encodeURIComponent(postcode);
 
@@ -107,6 +224,8 @@
                 btn.textContent = 'Search';
             });
     }
+
+    // ── Render ─────────────────────────────────────────────────
 
     function renderResults(items, postcode) {
         if (!items.length) {
@@ -163,6 +282,8 @@
 
         results.innerHTML = html;
     }
+
+    // ── Helpers ─────────────────────────────────────────────────
 
     function formatAddress(t) {
         var addr = t.propertyAddress || {};
