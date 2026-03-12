@@ -133,6 +133,36 @@ class _ServicesScreenState extends State<ServicesScreen> {
     _loadProviders();
   }
 
+  IconData _categoryIcon(String iconName) {
+    const iconMap = {
+      'build': Icons.build,
+      'plumbing': Icons.plumbing,
+      'electrical_services': Icons.electrical_services,
+      'format_paint': Icons.format_paint,
+      'roofing': Icons.roofing,
+      'cleaning_services': Icons.cleaning_services,
+      'local_shipping': Icons.local_shipping,
+      'architecture': Icons.architecture,
+      'gavel': Icons.gavel,
+      'account_balance': Icons.account_balance,
+      'camera_alt': Icons.camera_alt,
+      'landscape': Icons.landscape,
+      'lock': Icons.lock,
+      'pest_control': Icons.pest_control,
+      'house': Icons.house,
+      'handyman': Icons.handyman,
+      'engineering': Icons.engineering,
+      'home_repair_service': Icons.home_repair_service,
+      'energy_savings_leaf': Icons.energy_savings_leaf,
+      'window': Icons.window,
+      'garage': Icons.garage,
+      'foundation': Icons.foundation,
+      'payments': Icons.payments,
+      'inventory': Icons.inventory,
+    };
+    return iconMap[iconName] ?? Icons.build;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -205,26 +235,59 @@ class _ServicesScreenState extends State<ServicesScreen> {
           // Category chips
           if (_categories.isNotEmpty)
             SizedBox(
-              height: 48,
+              height: 56,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                itemCount: _categories.length,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                itemCount: _categories.length + 1,
                 separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
-                  final cat = _categories[index];
+                  if (index == 0) {
+                    final isSelected = _selectedCategory == null;
+                    return FilterChip(
+                      avatar: Icon(
+                        Icons.apps,
+                        size: 16,
+                        color: isSelected ? Colors.white : AppTheme.forestMid,
+                      ),
+                      label: Text('All'),
+                      selected: isSelected,
+                      onSelected: (_) => _selectCategory(null),
+                      selectedColor: AppTheme.forestMid,
+                      labelStyle: TextStyle(
+                        color: isSelected ? Colors.white : AppTheme.forestDeep,
+                        fontSize: 13,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                      backgroundColor: AppTheme.forestMist,
+                      showCheckmark: false,
+                      side: BorderSide.none,
+                    );
+                  }
+                  final cat = _categories[index - 1];
                   final isSelected = _selectedCategory == cat.slug;
                   return FilterChip(
-                    label: Text(cat.name),
+                    avatar: Icon(
+                      _categoryIcon(cat.icon),
+                      size: 16,
+                      color: isSelected ? Colors.white : AppTheme.forestMid,
+                    ),
+                    label: Text(
+                      cat.providerCount != null
+                          ? '${cat.name} (${cat.providerCount})'
+                          : cat.name,
+                    ),
                     selected: isSelected,
                     onSelected: (_) => _selectCategory(cat.slug),
                     selectedColor: AppTheme.forestMid,
                     labelStyle: TextStyle(
                       color: isSelected ? Colors.white : AppTheme.forestDeep,
-                      fontSize: 12,
+                      fontSize: 13,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                     ),
                     backgroundColor: AppTheme.forestMist,
-                    checkmarkColor: Colors.white,
+                    showCheckmark: false,
+                    side: BorderSide.none,
                   );
                 },
               ),
