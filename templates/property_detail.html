@@ -801,9 +801,18 @@
                         <button type="submit" class="btn btn-primary" style="width:100%;">Send Enquiry</button>
                     </form>
                 </div>` : `
-                <div class="enquiry-form-section">
-                    <h3>Contact Seller</h3>
-                    <p style="color:#4A5C62;"><a href="/login/?next=${encodeURIComponent(window.location.pathname)}">Log in</a> or <a href="/register/">register</a> to contact the seller.</p>
+                <div class="enquiry-form-section" style="text-align:center;">
+                    <h3 style="margin-bottom:0.75rem;">Interested in this property?</h3>
+                    <p style="color:#4A5C62; margin-bottom:0.25rem;">Log in or create a free account to:</p>
+                    <ul style="list-style:none; padding:0; margin:0 0 1rem 0; text-align:left; display:inline-block;">
+                        <li style="padding:0.35rem 0; color:#1E4635;">&#128172; Message the seller</li>
+                        <li style="padding:0.35rem 0; color:#1E4635;">&#128197; Book a viewing</li>
+                        <li style="padding:0.35rem 0; color:#1E4635;">&#128176; Make an offer</li>
+                    </ul>
+                    <div>
+                        <a href="/login/?next=${encodeURIComponent(window.location.pathname)}" class="btn btn-primary" style="width:100%; margin-bottom:0.5rem;">Log in</a>
+                        <a href="/register/" class="btn btn-secondary" style="width:100%;">Create a free account</a>
+                    </div>
                 </div>`;
 
             const mortgageHtml = `
