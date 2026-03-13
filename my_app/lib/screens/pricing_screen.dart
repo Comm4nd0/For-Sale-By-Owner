@@ -8,6 +8,7 @@ import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/branded_app_bar.dart';
 import '../widgets/scroll_to_top_button.dart';
+import '../utils/auto_retry.dart';
 
 class PricingScreen extends StatefulWidget {
   const PricingScreen({super.key});
@@ -16,7 +17,7 @@ class PricingScreen extends StatefulWidget {
   State<PricingScreen> createState() => _PricingScreenState();
 }
 
-class _PricingScreenState extends State<PricingScreen> {
+class _PricingScreenState extends State<PricingScreen> with AutoRetryMixin {
   final ScrollController _scrollController = ScrollController();
   bool _isAnnual = false;
   bool _isLoading = true;
@@ -54,7 +55,7 @@ class _PricingScreenState extends State<PricingScreen> {
   Future<void> _loadPricing() async {
     try {
       final api = Provider.of<ApiService>(context, listen: false);
-      final data = await api.getPricing();
+      final data = await withRetry(() => api.getPricing());
       setState(() {
         _tiers = (data['tiers'] as List)
             .map((t) => SubscriptionTier.fromJson(t))

@@ -28,6 +28,7 @@ import 'offers_screen.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
 import '../models/offer.dart';
+import '../utils/auto_retry.dart';
 
 class PropertyDetailScreen extends StatefulWidget {
   final int propertyId;
@@ -38,7 +39,7 @@ class PropertyDetailScreen extends StatefulWidget {
   State<PropertyDetailScreen> createState() => _PropertyDetailScreenState();
 }
 
-class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
+class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRetryMixin {
   late Future<Property> _propertyFuture;
   final PageController _pageController = PageController();
   final ScrollController _scrollController = ScrollController();
@@ -57,7 +58,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
 
   void _loadProperty() {
     final apiService = context.read<ApiService>();
-    _propertyFuture = apiService.getProperty(widget.propertyId);
+    _propertyFuture = withRetry(() => apiService.getProperty(widget.propertyId));
     _propertyFuture.then((p) {
       if (mounted) setState(() => _isSaved = p.isSaved);
     });

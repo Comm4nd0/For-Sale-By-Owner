@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../models/neighbourhood_info.dart';
+import '../utils/auto_retry.dart';
 
 class NeighbourhoodScreen extends StatefulWidget {
   final int propertyId;
@@ -11,7 +12,7 @@ class NeighbourhoodScreen extends StatefulWidget {
   State<NeighbourhoodScreen> createState() => _NeighbourhoodScreenState();
 }
 
-class _NeighbourhoodScreenState extends State<NeighbourhoodScreen> {
+class _NeighbourhoodScreenState extends State<NeighbourhoodScreen> with AutoRetryMixin {
   NeighbourhoodInfo? _info;
   bool _loading = true;
   String? _error;
@@ -25,7 +26,7 @@ class _NeighbourhoodScreenState extends State<NeighbourhoodScreen> {
   Future<void> _load() async {
     try {
       final api = context.read<ApiService>();
-      final info = await api.getNeighbourhoodInfo(widget.propertyId);
+      final info = await withRetry(() => api.getNeighbourhoodInfo(widget.propertyId));
       if (mounted) setState(() { _info = info; _loading = false; });
     } catch (e) {
       if (mounted) setState(() { _error = e.toString(); _loading = false; });

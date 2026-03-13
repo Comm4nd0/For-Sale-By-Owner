@@ -17,6 +17,7 @@ import 'offers_screen.dart';
 import 'edit_offer_screen.dart';
 import 'chat_screen.dart';
 import '../widgets/scroll_to_top_button.dart';
+import '../utils/auto_retry.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -26,7 +27,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AutoRetryMixin {
   DashboardStats? _stats;
   bool _statsLoading = true;
   String? _statsError;
@@ -84,7 +85,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     try {
       final apiService = context.read<ApiService>();
-      final stats = await apiService.getDashboardStats();
+      final stats = await withRetry(() => apiService.getDashboardStats());
       if (mounted) {
         setState(() {
           _stats = stats;
@@ -104,28 +105,30 @@ class _DashboardScreenState extends State<DashboardScreen>
   Future<void> _loadCounts() async {
     try {
       final apiService = context.read<ApiService>();
-      final counts = await apiService.getNotificationCounts();
+      final counts = await withRetry(() => apiService.getNotificationCounts());
       if (mounted) setState(() => _counts = counts);
     } catch (_) {}
   }
 
   void _loadEnquiries() {
     final apiService = context.read<ApiService>();
-    _enquiriesFuture =
-        apiService.getReceivedEnquiries().then((r) => r.results);
+    _enquiriesFuture = withRetry(
+      () => apiService.getReceivedEnquiries().then((r) => r.results),
+    );
   }
 
   void _loadViewings() {
     final apiService = context.read<ApiService>();
-    _viewingsFuture =
-        apiService.getReceivedViewings().then((r) => r.results);
+    _viewingsFuture = withRetry(
+      () => apiService.getReceivedViewings().then((r) => r.results),
+    );
   }
 
   void _loadOffers() {
     final apiService = context.read<ApiService>();
     final userId = context.read<AuthService>().userId;
     // Load both received offers (as seller) and sent offers (as buyer)
-    _offersFuture = Future.wait([
+    _offersFuture = withRetry(() => Future.wait([
       apiService.getOffers(received: true),
       apiService.getOffers(),
     ]).then((results) {
@@ -139,12 +142,12 @@ class _DashboardScreenState extends State<DashboardScreen>
         if (!receivedIds.contains(o.id)) combined.add(o);
       }
       return combined;
-    });
+    }));
   }
 
   void _loadMessages() {
     final apiService = context.read<ApiService>();
-    _messagesFuture = apiService.getChatRooms();
+    _messagesFuture = withRetry(() => apiService.getChatRooms());
   }
 
   Future<void> _refreshAll() async {
