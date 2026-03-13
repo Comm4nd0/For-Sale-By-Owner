@@ -11,6 +11,7 @@ import '../services/api_service.dart';
 import 'property_detail_screen.dart';
 import 'create_property_screen.dart';
 import 'edit_property_screen.dart';
+import '../utils/auto_retry.dart';
 
 class MyListingsScreen extends StatefulWidget {
   const MyListingsScreen({super.key});
@@ -19,7 +20,7 @@ class MyListingsScreen extends StatefulWidget {
   State<MyListingsScreen> createState() => _MyListingsScreenState();
 }
 
-class _MyListingsScreenState extends State<MyListingsScreen> {
+class _MyListingsScreenState extends State<MyListingsScreen> with AutoRetryMixin {
   final ScrollController _scrollController = ScrollController();
   List<Property> _properties = [];
   bool _isLoading = true;
@@ -45,7 +46,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
     try {
       final apiService = context.read<ApiService>();
-      final response = await apiService.getProperties(mine: true);
+      final response = await withRetry(() => apiService.getProperties(mine: true));
       if (mounted) {
         setState(() {
           _properties = response.results;

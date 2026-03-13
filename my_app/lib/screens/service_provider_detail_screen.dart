@@ -8,6 +8,7 @@ import '../models/service_provider.dart';
 import '../models/service_provider_review.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../utils/auto_retry.dart';
 
 class ServiceProviderDetailScreen extends StatefulWidget {
   final int providerId;
@@ -20,7 +21,7 @@ class ServiceProviderDetailScreen extends StatefulWidget {
 }
 
 class _ServiceProviderDetailScreenState
-    extends State<ServiceProviderDetailScreen> {
+    extends State<ServiceProviderDetailScreen> with AutoRetryMixin {
   final ScrollController _scrollController = ScrollController();
   ServiceProvider? _provider;
   List<ServiceProviderReview> _reviews = [];
@@ -45,9 +46,9 @@ class _ServiceProviderDetailScreenState
   Future<void> _load() async {
     try {
       final apiService = context.read<ApiService>();
-      final provider = await apiService.getServiceProvider(widget.providerId);
+      final provider = await withRetry(() => apiService.getServiceProvider(widget.providerId));
       final reviews =
-          await apiService.getServiceProviderReviews(widget.providerId);
+          await withRetry(() => apiService.getServiceProviderReviews(widget.providerId));
       if (mounted) {
         setState(() {
           _provider = provider;

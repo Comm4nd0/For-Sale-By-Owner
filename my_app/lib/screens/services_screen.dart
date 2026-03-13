@@ -12,6 +12,7 @@ import 'pricing_screen.dart';
 import '../widgets/tier_badge.dart';
 import '../widgets/branded_app_bar.dart';
 import '../widgets/scroll_to_top_button.dart';
+import '../utils/auto_retry.dart';
 
 class ServicesScreen extends StatefulWidget {
   const ServicesScreen({super.key});
@@ -20,7 +21,7 @@ class ServicesScreen extends StatefulWidget {
   State<ServicesScreen> createState() => _ServicesScreenState();
 }
 
-class _ServicesScreenState extends State<ServicesScreen> {
+class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
   final TextEditingController _locationController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -58,7 +59,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
   Future<void> _loadCategories() async {
     try {
       final apiService = context.read<ApiService>();
-      final cats = await apiService.getServiceCategories();
+      final cats = await withRetry(() => apiService.getServiceCategories());
       if (mounted) setState(() => _categories = cats);
     } catch (_) {}
   }
@@ -75,13 +76,13 @@ class _ServicesScreenState extends State<ServicesScreen> {
 
     try {
       final apiService = context.read<ApiService>();
-      final result = await apiService.getServiceProviders(
+      final result = await withRetry(() => apiService.getServiceProviders(
         category: _selectedCategory,
         location: _locationController.text.trim().isNotEmpty
             ? _locationController.text.trim()
             : null,
         page: 1,
-      );
+      ));
       if (mounted) {
         setState(() {
           _providers = result.results;

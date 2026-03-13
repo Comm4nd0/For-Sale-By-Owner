@@ -14,6 +14,7 @@ import 'property_detail_screen.dart';
 import 'search_filter_screen.dart';
 import 'services_screen.dart';
 import 'house_prices_screen.dart';
+import '../utils/auto_retry.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,7 +23,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _locationController = TextEditingController();
   final List<Property> _properties = [];
@@ -107,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final apiService = context.read<ApiService>();
-      final result = await apiService.getProperties(
+      final result = await withRetry(() => apiService.getProperties(
         location: _filters['location'],
         propertyType: _filters['property_type'],
         minPrice: _filters['min_price'] != null
@@ -120,7 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
         minBathrooms: _filters['min_bathrooms'],
         epcRating: _filters['epc_rating'],
         page: 1,
-      );
+      ));
 
       if (!mounted) return;
       setState(() {
