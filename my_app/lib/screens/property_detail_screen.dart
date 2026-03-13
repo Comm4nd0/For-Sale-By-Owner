@@ -893,7 +893,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                '${slot.displayDate} ${slot.startTime} - ${slot.endTime}',
+                                '${slot.displayTitle}  ${slot.startTime} - ${slot.endTime}',
                                 style: const TextStyle(fontSize: 14),
                               ),
                             ),
