@@ -161,7 +161,7 @@ class PropertyListSerializer(PropertySerializer):
             'latitude', 'longitude',
             'bedrooms', 'bathrooms', 'reception_rooms', 'square_feet',
             'epc_rating', 'epc_rating_display',
-            'feature_list', 'primary_image', 'image_count', 'is_saved',
+            'images', 'feature_list', 'primary_image', 'image_count', 'is_saved',
             'view_count', 'video_url',
             'created_at', 'updated_at',
         ]
