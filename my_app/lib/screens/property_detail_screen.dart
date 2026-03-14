@@ -183,6 +183,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                 ),
               ),
               SliverToBoxAdapter(
+                child: _buildThumbnailStrip(property),
+              ),
+              SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -991,32 +994,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
             );
           },
         ),
-        if (property.images.length > 1)
-          Positioned(
-            bottom: 16,
-            left: 0,
-            right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                property.images.length,
-                (index) => Container(
-                  width: 8,
-                  height: 8,
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _currentPage == index
-                        ? Colors.white
-                        : Colors.white.withAlpha(128),
-                  ),
-                ),
-              ),
-            ),
-          ),
         Positioned(
-          bottom: 16,
-          right: 16,
+          bottom: 8,
+          right: 12,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
@@ -1030,6 +1010,52 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildThumbnailStrip(Property property) {
+    if (property.images.length <= 1) return const SizedBox.shrink();
+    return SizedBox(
+      height: 56,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        itemCount: property.images.length,
+        itemBuilder: (context, index) {
+          final thumbUrl = property.images[index].thumbnailUrl != null
+              ? ApiConstants.fullUrl(property.images[index].thumbnailUrl!)
+              : ApiConstants.fullUrl(property.images[index].imageUrl);
+          final isActive = _currentPage == index;
+          return GestureDetector(
+            onTap: () => _pageController.animateToPage(
+              index,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            ),
+            child: Container(
+              width: 72,
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: isActive ? const Color(0xFF115E66) : Colors.transparent,
+                  width: 2,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: Opacity(
+                  opacity: isActive ? 1.0 : 0.5,
+                  child: CachedNetworkImage(
+                    imageUrl: thumbUrl,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -1113,10 +1139,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
           child: Text(
             [
               property.addressLine1,
-              if (property.addressLine2.isNotEmpty) property.addressLine2,
               property.city,
-              if (property.county.isNotEmpty) property.county,
-              property.postcode,
             ].join(', '),
             style: const TextStyle(fontSize: 15),
           ),

@@ -344,8 +344,6 @@ class ApiService {
 
   Future<Enquiry> createEnquiry({
     required int propertyId,
-    required String name,
-    required String email,
     String? phone,
     required String message,
   }) async {
@@ -354,8 +352,6 @@ class ApiService {
       headers: _headers,
       body: jsonEncode({
         'property': propertyId,
-        'name': name,
-        'email': email,
         'phone': phone ?? '',
         'message': message,
       }),
@@ -408,8 +404,6 @@ class ApiService {
 
   Future<ViewingRequest> createViewing({
     required int propertyId,
-    required String name,
-    required String email,
     String? phone,
     required String preferredDate,
     required String preferredTime,
@@ -419,8 +413,6 @@ class ApiService {
   }) async {
     final body = <String, dynamic>{
       'property': propertyId,
-      'name': name,
-      'email': email,
       'phone': phone ?? '',
       'preferred_date': preferredDate,
       'preferred_time': preferredTime,
