@@ -51,6 +51,10 @@ class _HousePricesScreenState extends State<HousePricesScreen> {
 
       final results = items.map((item) {
         final address = item['propertyAddress'] ?? {};
+        final rawType = item['propertyType'];
+        final typeStr = rawType is String
+            ? rawType
+            : (rawType is Map ? (rawType['_about'] as String? ?? '') : '');
         return SoldPrice(
           price: (item['pricePaid'] as num?)?.toInt() ?? 0,
           date: item['transactionDate'] as String? ?? '',
@@ -59,7 +63,7 @@ class _HousePricesScreenState extends State<HousePricesScreen> {
           street: address['street'] as String? ?? '',
           town: address['town'] as String? ?? '',
           postcode: address['postcode'] as String? ?? '',
-          propertyType: _mapPropertyType(item['propertyType'] as String? ?? ''),
+          propertyType: _mapPropertyType(typeStr),
           newBuild: item['newBuild'] == true,
         );
       }).toList();
@@ -78,18 +82,12 @@ class _HousePricesScreenState extends State<HousePricesScreen> {
   }
 
   String _mapPropertyType(String type) {
-    switch (type) {
-      case 'lrcommon:detached':
-        return 'Detached';
-      case 'lrcommon:semi-detached':
-        return 'Semi-Detached';
-      case 'lrcommon:terraced':
-        return 'Terraced';
-      case 'lrcommon:flat-maisonette':
-        return 'Flat/Maisonette';
-      default:
-        return type.replaceAll('lrcommon:', '').replaceAll('-', ' ');
-    }
+    if (type.contains('semi-detached')) return 'Semi-Detached';
+    if (type.contains('detached')) return 'Detached';
+    if (type.contains('terraced')) return 'Terraced';
+    if (type.contains('flat-maisonette')) return 'Flat/Maisonette';
+    if (type.isEmpty) return 'Other';
+    return type.replaceAll('lrcommon:', '').replaceAll('-', ' ');
   }
 
   String _formatDate(String dateStr) {

@@ -61,7 +61,7 @@
     <div class="container">
         <h1>House Price Lookup</h1>
         <p>Search sold property prices from the HM Land Registry Price Paid Data.</p>
-        <form class="hp-search" id="hp-form" onsubmit="return false;">
+        <form class="hp-search" id="hp-form">
             <input type="text" id="hp-postcode" placeholder="Enter a postcode, e.g. SW1A 1AA" aria-label="Postcode" autocomplete="postal-code" required>
             <button class="btn btn-primary" id="hp-btn" type="submit">Search</button>
         </form>
@@ -93,7 +93,8 @@
     var marker = null;
     var circle = null;
 
-    form.addEventListener('submit', function() { doSearch(); });
+    form.addEventListener('submit', function(e) { e.preventDefault(); doSearch(); });
+    btn.addEventListener('click', function() { doSearch(); });
 
     // Pre-fill from URL params
     var params = new URLSearchParams(window.location.search);
