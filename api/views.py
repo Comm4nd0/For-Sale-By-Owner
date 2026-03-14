@@ -378,7 +378,10 @@ class EnquiryViewSet(viewsets.ModelViewSet):
         prop = serializer.validated_data['property']
         if prop.owner == self.request.user:
             raise ValidationError("You cannot enquire about your own property.")
-        enquiry = serializer.save(sender=self.request.user, is_read=False)
+        user = self.request.user
+        name = serializer.validated_data.get('name') or user.get_full_name()
+        email = serializer.validated_data.get('email') or user.email
+        enquiry = serializer.save(sender=user, is_read=False, name=name, email=email)
         # Use async task instead of blocking
         try:
             from .tasks import send_enquiry_notification
@@ -443,7 +446,10 @@ class ViewingRequestViewSet(viewsets.ModelViewSet):
         prop = serializer.validated_data['property']
         if prop.owner == self.request.user:
             raise ValidationError("You cannot request a viewing for your own property.")
-        viewing = serializer.save(requester=self.request.user)
+        user = self.request.user
+        name = serializer.validated_data.get('name') or user.get_full_name()
+        email = serializer.validated_data.get('email') or user.email
+        viewing = serializer.save(requester=user, name=name, email=email)
         try:
             from .tasks import send_viewing_notification
             send_viewing_notification.delay(viewing.id)

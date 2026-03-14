@@ -20,8 +20,6 @@ class ViewingRequestForm extends StatefulWidget {
 
 class _ViewingRequestFormState extends State<ViewingRequestForm> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _messageController = TextEditingController();
 
@@ -37,8 +35,6 @@ class _ViewingRequestFormState extends State<ViewingRequestForm> {
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
     _phoneController.dispose();
     _messageController.dispose();
     super.dispose();
@@ -110,8 +106,6 @@ class _ViewingRequestFormState extends State<ViewingRequestForm> {
       final apiService = context.read<ApiService>();
       await apiService.createViewing(
         propertyId: widget.propertyId,
-        name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
         phone: _phoneController.text.trim(),
         preferredDate: _dateFormat.format(_preferredDate!),
         preferredTime: _formatTime(_preferredTime!),
@@ -133,8 +127,6 @@ class _ViewingRequestFormState extends State<ViewingRequestForm> {
       );
       widget.onSent();
 
-      _nameController.clear();
-      _emailController.clear();
       _phoneController.clear();
       _messageController.clear();
       setState(() {
@@ -205,35 +197,6 @@ class _ViewingRequestFormState extends State<ViewingRequestForm> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Name'),
-                  textInputAction: TextInputAction.next,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your name';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                    if (!emailRegex.hasMatch(value.trim())) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
                 TextFormField(
                   controller: _phoneController,
                   decoration: const InputDecoration(

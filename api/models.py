@@ -243,8 +243,8 @@ class Enquiry(models.Model):
     sender = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sent_enquiries'
     )
-    name = models.CharField(max_length=200)
-    email = models.EmailField()
+    name = models.CharField(max_length=200, blank=True)
+    email = models.EmailField(blank=True)
     phone = models.CharField(max_length=20, blank=True)
     message = models.TextField()
     is_read = models.BooleanField(default=False)
@@ -281,8 +281,8 @@ class ViewingRequest(models.Model):
     message = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     seller_notes = models.TextField(blank=True)
-    name = models.CharField(max_length=200)
-    email = models.EmailField()
+    name = models.CharField(max_length=200, blank=True)
+    email = models.EmailField(blank=True)
     phone = models.CharField(max_length=20, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -201,7 +201,8 @@ class EnquirySerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'sender', 'created_at']
         extra_kwargs = {
-            'email': {'write_only': True},
+            'name': {'required': False},
+            'email': {'write_only': True, 'required': False},
             'phone': {'write_only': True},
         }
 
@@ -230,7 +231,8 @@ class ViewingRequestSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'requester', 'status', 'seller_notes', 'created_at', 'updated_at']
         extra_kwargs = {
-            'email': {'write_only': True},
+            'name': {'required': False},
+            'email': {'write_only': True, 'required': False},
             'phone': {'write_only': True},
         }
 
