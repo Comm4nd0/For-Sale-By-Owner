@@ -35,9 +35,12 @@
     .carousel-btn:hover { background: rgba(26,60,46,0.85); }
     .carousel-prev { left: 10px; }
     .carousel-next { right: 10px; }
-    .carousel-dots { text-align: center; padding: 0.75rem; }
-    .carousel-dots span { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #E2E2E2; margin: 0 4px; cursor: pointer; }
-    .carousel-dots span.active { background: #115E66; }
+    .carousel-thumbs { display: flex; gap: 6px; padding: 8px 10px; overflow-x: auto; scrollbar-width: thin; }
+    .carousel-thumbs::-webkit-scrollbar { height: 4px; }
+    .carousel-thumbs::-webkit-scrollbar-thumb { background: #8FA3A8; border-radius: 2px; }
+    .carousel-thumbs img { width: 64px; height: 48px; object-fit: cover; border-radius: 4px; cursor: pointer; opacity: 0.5; transition: opacity 0.2s, border-color 0.2s; border: 2px solid transparent; flex-shrink: 0; display: block; height: 48px; }
+    .carousel-thumbs img.active { opacity: 1; border-color: #115E66; }
+    .carousel-thumbs img:hover { opacity: 0.85; }
     .no-image { height: 300px; display: flex; align-items: center; justify-content: center; color: #8FA3A8; font-size: 1.2rem; }
 
     .detail-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
@@ -260,14 +263,17 @@
     let propertyData = null;
 
     function showSlide(n) {
-        const imgs = document.querySelectorAll('.carousel img');
-        const dots = document.querySelectorAll('.carousel-dots span');
+        const imgs = document.querySelectorAll('.carousel > img');
+        const thumbs = document.querySelectorAll('.carousel-thumbs img');
         if (!imgs.length) return;
         currentSlide = (n + imgs.length) % imgs.length;
         imgs.forEach(img => img.classList.remove('active'));
-        dots.forEach(dot => dot.classList.remove('active'));
+        thumbs.forEach(t => t.classList.remove('active'));
         imgs[currentSlide].classList.add('active');
-        dots[currentSlide].classList.add('active');
+        if (thumbs[currentSlide]) {
+            thumbs[currentSlide].classList.add('active');
+            thumbs[currentSlide].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
     }
 
     let lightboxIndex = 0;
@@ -764,7 +770,7 @@
                     ${images.length > 1 ? `
                         <button class="carousel-btn carousel-prev" onclick="showSlide(currentSlide - 1)">&lsaquo;</button>
                         <button class="carousel-btn carousel-next" onclick="showSlide(currentSlide + 1)">&rsaquo;</button>
-                        <div class="carousel-dots">${images.map((_, i) => `<span class="${i === 0 ? 'active' : ''}" onclick="showSlide(${i})"></span>`).join('')}</div>
+                        <div class="carousel-thumbs">${images.map((img, i) => `<img src="${img.thumbnail || img.image}" alt="" class="${i === 0 ? 'active' : ''}" onclick="showSlide(${i})">`).join('')}</div>
                     ` : ''}
                    </div>`
                 : `<div class="carousel"><div class="no-image">No images available</div></div>`;
