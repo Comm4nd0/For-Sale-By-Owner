@@ -1049,20 +1049,19 @@ class ApiService {
 
   Future<MortgageCalculation> calculateMortgage({
     required double propertyPrice,
-    required double deposit,
+    required double depositPercent,
     required double interestRate,
     required int termYears,
   }) async {
-    final response = await http.post(
-      Uri.parse(ApiConstants.mortgageCalculator),
-      headers: _headers,
-      body: jsonEncode({
-        'property_price': propertyPrice,
-        'deposit': deposit,
-        'interest_rate': interestRate,
-        'term_years': termYears,
-      }),
+    final uri = Uri.parse(ApiConstants.mortgageCalculator).replace(
+      queryParameters: {
+        'price': propertyPrice.toString(),
+        'deposit_pct': depositPercent.toString(),
+        'interest_rate': interestRate.toString(),
+        'term_years': termYears.toString(),
+      },
     );
+    final response = await http.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       return MortgageCalculation.fromJson(jsonDecode(response.body));
     }
