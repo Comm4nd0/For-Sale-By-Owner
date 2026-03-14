@@ -31,8 +31,10 @@
     .property-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem; }
     .property-card { border: 1px solid #E2E2E2; border-radius: 8px; overflow: hidden; transition: box-shadow 0.2s; cursor: pointer; text-decoration: none; color: inherit; display: block; background: #FFFFFF; }
     .property-card:hover { box-shadow: 0 4px 12px rgba(26,60,46,0.12); }
+    .property-card .card-img-wrap { position: relative; }
     .property-card img { width: 100%; height: 200px; object-fit: cover; display: block; }
     .property-card .placeholder { width: 100%; height: 200px; background: #D1E8E2; display: flex; align-items: center; justify-content: center; color: #8FA3A8; font-size: 2.5rem; }
+    .image-count-badge { position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.65); color: #fff; font-size: 0.8rem; padding: 2px 8px; border-radius: 4px; display: flex; align-items: center; gap: 4px; }
     .property-card-body { padding: 1.25rem; }
     .property-card h3 { margin-bottom: 0.25rem; color: #115E66; }
     .property-price { font-size: 1.4rem; font-weight: 700; color: #19747E; margin-bottom: 0.5rem; }
@@ -146,8 +148,10 @@
         const imgHtml = p.primary_image
             ? `<img src="${p.primary_image}" alt="${escHtml(p.title)}" loading="lazy">`
             : `<div class="placeholder">&#8962;</div>`;
+        const imgCount = p.image_count || 0;
+        const imgBadge = imgCount > 0 ? `<span class="image-count-badge">&#128247; ${imgCount}</span>` : '';
         return `<a href="${url}" class="property-card">
-            ${imgHtml}
+            <div class="card-img-wrap">${imgHtml}${imgBadge}</div>
             <div class="property-card-body">
                 <h3>${escHtml(p.title)} ${p.owner_is_verified ? '<span style="color:#19747E; font-size:0.75rem;">&#10003; Verified</span>' : ''}</h3>
                 <div class="property-price">&pound;${Number(p.price).toLocaleString()}</div>

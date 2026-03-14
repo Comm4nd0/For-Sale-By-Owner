@@ -37,6 +37,7 @@ class Property {
   final double? longitude;
   final String? videoUrl;
   final String? videoThumbnail;
+  final int imageCount;
   final int? viewCount;
   final int? enquiryCount;
   final int? offerCount;
@@ -77,6 +78,7 @@ class Property {
     this.longitude,
     this.videoUrl,
     this.videoThumbnail,
+    required this.imageCount,
     this.viewCount,
     this.enquiryCount,
     this.offerCount,
@@ -131,6 +133,7 @@ class Property {
           : null,
       videoUrl: json['video_url'],
       videoThumbnail: json['video_thumbnail'],
+      imageCount: json['image_count'] ?? 0,
       viewCount: json['view_count'],
       enquiryCount: json['enquiry_count'],
       offerCount: json['offer_count'],

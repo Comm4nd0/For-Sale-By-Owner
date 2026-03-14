@@ -91,6 +91,7 @@ class PropertySerializer(serializers.ModelSerializer):
     price_history = PriceHistorySerializer(many=True, read_only=True)
     primary_image = serializers.SerializerMethodField()
     is_saved = serializers.SerializerMethodField()
+    image_count = serializers.SerializerMethodField()
     view_count = serializers.SerializerMethodField()
     enquiry_count = serializers.SerializerMethodField()
     offer_count = serializers.SerializerMethodField()
@@ -107,7 +108,7 @@ class PropertySerializer(serializers.ModelSerializer):
             'bedrooms', 'bathrooms', 'reception_rooms', 'square_feet',
             'epc_rating', 'epc_rating_display',
             'features', 'feature_list',
-            'images', 'floorplans', 'primary_image', 'is_saved',
+            'images', 'floorplans', 'primary_image', 'image_count', 'is_saved',
             'price_history', 'view_count', 'enquiry_count', 'offer_count',
             'video_url', 'video_thumbnail',
             'created_at', 'updated_at',
@@ -128,6 +129,9 @@ class PropertySerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return SavedProperty.objects.filter(user=request.user, property=obj).exists()
         return False
+
+    def get_image_count(self, obj):
+        return obj.images.count()
 
     def get_view_count(self, obj):
         return obj.views.count()
@@ -157,7 +161,7 @@ class PropertyListSerializer(PropertySerializer):
             'latitude', 'longitude',
             'bedrooms', 'bathrooms', 'reception_rooms', 'square_feet',
             'epc_rating', 'epc_rating_display',
-            'feature_list', 'primary_image', 'is_saved',
+            'feature_list', 'primary_image', 'image_count', 'is_saved',
             'view_count', 'video_url',
             'created_at', 'updated_at',
         ]

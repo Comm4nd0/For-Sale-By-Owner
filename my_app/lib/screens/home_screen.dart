@@ -947,6 +947,29 @@ class PropertyCard extends StatelessWidget {
                           const Icon(Icons.home, size: 48, color: Colors.grey),
                     ),
                   ),
+                if (property.imageCount > 0)
+                  Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.65),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${property.imageCount}',
+                            style: const TextStyle(color: Colors.white, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 if (authService.isAuthenticated)
                   Positioned(
                     top: 8,
