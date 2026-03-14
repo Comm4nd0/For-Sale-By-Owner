@@ -7,17 +7,6 @@ on:
       - 'my_app/**'
 
   workflow_dispatch:
-    inputs:
-      track:
-        description: 'Release track'
-        required: true
-        default: 'internal'
-        type: choice
-        options:
-          - internal
-          - alpha
-          - beta
-          - production
 
 jobs:
   deploy:
@@ -71,5 +60,5 @@ jobs:
           serviceAccountJson: my_app/service-account.json
           packageName: uk.co.forsalebyowner.android
           releaseFiles: my_app/build/app/outputs/bundle/release/app-release.aab
-          track: ${{ github.event.inputs.track || 'internal' }}
+          track: internal
           status: completed
