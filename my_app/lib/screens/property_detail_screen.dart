@@ -1113,10 +1113,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
           child: Text(
             [
               property.addressLine1,
-              if (property.addressLine2.isNotEmpty) property.addressLine2,
               property.city,
-              if (property.county.isNotEmpty) property.county,
-              property.postcode,
             ].join(', '),
             style: const TextStyle(fontSize: 15),
           ),

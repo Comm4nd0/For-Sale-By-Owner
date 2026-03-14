@@ -864,8 +864,8 @@
                         </div>` : ''}
                         <div class="detail-section">
                             <h3>Address</h3>
-                            <p>${escHtml(p.address_line_1)}${p.address_line_2 ? ', ' + escHtml(p.address_line_2) : ''}<br>
-                            ${escHtml(p.city)}${p.county ? ', ' + escHtml(p.county) : ''}<br>${escHtml(p.postcode)}</p>
+                            <p>${escHtml(p.address_line_1)}<br>
+                            ${escHtml(p.city)}</p>
                         </div>
                         ${epcHtml}
                         ${p.floorplans && p.floorplans.length ? `
