@@ -23,13 +23,13 @@ class MortgageCalculation {
 
   factory MortgageCalculation.fromJson(Map<String, dynamic> json) {
     return MortgageCalculation(
-      propertyPrice: _toDouble(json['property_price']),
+      propertyPrice: _toDouble(json['price']),
       deposit: _toDouble(json['deposit']),
       loanAmount: _toDouble(json['loan_amount']),
       interestRate: _toDouble(json['interest_rate']),
       termYears: json['term_years'] ?? 25,
       monthlyPayment: _toDouble(json['monthly_payment']),
-      totalRepayment: _toDouble(json['total_repayment']),
+      totalRepayment: _toDouble(json['total_cost']),
       totalInterest: _toDouble(json['total_interest']),
       stampDuty: _toDouble(json['stamp_duty']),
     );

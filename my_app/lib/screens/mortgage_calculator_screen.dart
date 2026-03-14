@@ -42,14 +42,13 @@ class _MortgageCalculatorScreenState extends State<MortgageCalculatorScreen> {
 
     final price = double.parse(_priceController.text);
     final depositPercent = double.parse(_depositController.text);
-    final deposit = price * (depositPercent / 100);
 
     setState(() => _calculating = true);
     try {
       final api = context.read<ApiService>();
       final result = await api.calculateMortgage(
         propertyPrice: price,
-        deposit: deposit,
+        depositPercent: depositPercent,
         interestRate: double.parse(_rateController.text),
         termYears: int.parse(_termController.text),
       );
