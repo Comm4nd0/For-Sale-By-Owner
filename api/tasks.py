@@ -22,32 +22,40 @@ def send_email_task(self, subject, message, from_email, recipient_list):
 
 
 @shared_task
-def send_enquiry_notification(enquiry_id):
-    """Send email notification for a new enquiry."""
-    from .models import Enquiry
+def send_message_notification(message_id):
+    """Send email notification for a new chat message."""
+    from .models import ChatMessage
     try:
-        enquiry = Enquiry.objects.select_related('property__owner').get(pk=enquiry_id)
-    except Enquiry.DoesNotExist:
+        msg = ChatMessage.objects.select_related(
+            'room__property__owner', 'room__buyer', 'sender'
+        ).get(pk=message_id)
+    except ChatMessage.DoesNotExist:
         return
 
-    owner = enquiry.property.owner
-    subject = f'New enquiry about {enquiry.property.title}'
+    room = msg.room
+    # Notify the other party (not the sender)
+    if msg.sender == room.seller:
+        recipient = room.buyer
+    else:
+        recipient = room.seller
+
+    sender_name = msg.sender.get_full_name() or msg.sender.email
+    subject = f'New message about {room.property.title}'
     message = (
-        f'Hi {owner.first_name or owner.email},\n\n'
-        f'You have received a new enquiry about your property "{enquiry.property.title}".\n\n'
-        f'From: {enquiry.name}\n\n'
-        f'Message:\n{enquiry.message}\n\n'
-        f'Reply to this enquiry on your dashboard:\n'
-        f'{settings.SITE_URL}/dashboard/\n\n'
+        f'Hi {recipient.first_name or recipient.email},\n\n'
+        f'You have received a new message about "{room.property.title}".\n\n'
+        f'From: {sender_name}\n\n'
+        f'Message:\n{msg.message}\n\n'
+        f'Reply on your dashboard:\n'
+        f'{settings.SITE_URL}/messages/{room.id}/\n\n'
         f'— For Sale By Owner'
     )
-    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [owner.email])
+    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [recipient.email])
 
-    # Also send push notification
     send_push_notification.delay(
-        owner.id,
-        'New Enquiry',
-        f'{enquiry.name} enquired about {enquiry.property.title}',
+        recipient.id,
+        'New Message',
+        f'{sender_name} messaged about {room.property.title}',
     )
 
 
@@ -89,26 +97,16 @@ def send_viewing_notification(viewing_id):
 
 @shared_task
 def send_reply_notification(reply_id):
-    """Send email notification for a reply."""
+    """Send email notification for a viewing reply."""
     from .models import Reply
     try:
         reply = Reply.objects.select_related(
-            'enquiry__property__owner', 'viewing_request__property__owner', 'author'
+            'viewing_request__property__owner', 'author'
         ).get(pk=reply_id)
     except Reply.DoesNotExist:
         return
 
-    if reply.enquiry:
-        parent = reply.enquiry
-        property_obj = parent.property
-        if reply.author == property_obj.owner:
-            recipient_email = parent.email
-            recipient_name = parent.name
-        else:
-            recipient_email = property_obj.owner.email
-            recipient_name = property_obj.owner.first_name or property_obj.owner.email
-        subject = f'New reply about {property_obj.title}'
-    elif reply.viewing_request:
+    if reply.viewing_request:
         parent = reply.viewing_request
         property_obj = parent.property
         if reply.author == property_obj.owner:

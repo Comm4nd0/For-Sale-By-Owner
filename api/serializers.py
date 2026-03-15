@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from .models import (
     Property, PropertyImage, PropertyFloorplan, PropertyFeature,
-    PriceHistory, SavedProperty, Enquiry, PropertyView,
+    PriceHistory, SavedProperty, PropertyView,
     ViewingRequest, SavedSearch, Reply,
     ServiceCategory, ServiceProvider, ServiceProviderReview,
     SubscriptionTier, SubscriptionAddOn, ServiceProviderSubscription,
@@ -93,7 +93,7 @@ class PropertySerializer(serializers.ModelSerializer):
     is_saved = serializers.SerializerMethodField()
     image_count = serializers.SerializerMethodField()
     view_count = serializers.SerializerMethodField()
-    enquiry_count = serializers.SerializerMethodField()
+    message_count = serializers.SerializerMethodField()
     offer_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -109,7 +109,7 @@ class PropertySerializer(serializers.ModelSerializer):
             'epc_rating', 'epc_rating_display',
             'features', 'feature_list',
             'images', 'floorplans', 'primary_image', 'image_count', 'is_saved',
-            'price_history', 'view_count', 'enquiry_count', 'offer_count',
+            'price_history', 'view_count', 'message_count', 'offer_count',
             'video_url', 'video_thumbnail',
             'created_at', 'updated_at',
         ]
@@ -136,10 +136,10 @@ class PropertySerializer(serializers.ModelSerializer):
     def get_view_count(self, obj):
         return obj.views.count()
 
-    def get_enquiry_count(self, obj):
+    def get_message_count(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated and obj.owner == request.user:
-            return obj.enquiries.count()
+            return ChatMessage.objects.filter(room__property=obj).count()
         return None
 
     def get_offer_count(self, obj):
@@ -181,37 +181,11 @@ class ReplySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Reply
-        fields = ['id', 'enquiry', 'viewing_request', 'author', 'author_name', 'message', 'created_at']
+        fields = ['id', 'viewing_request', 'author', 'author_name', 'message', 'created_at']
         read_only_fields = ['id', 'author', 'created_at']
 
     def get_author_name(self, obj):
         return obj.author.get_full_name() or 'User'
-
-
-class EnquirySerializer(serializers.ModelSerializer):
-    sender_name = serializers.CharField(source='sender.get_full_name', read_only=True)
-    property_title = serializers.CharField(source='property.title', read_only=True)
-    replies = ReplySerializer(many=True, read_only=True)
-    reply_count = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Enquiry
-        fields = [
-            'id', 'property', 'property_title',
-            'sender', 'sender_name',
-            'name', 'email', 'phone', 'message',
-            'is_read', 'created_at',
-            'replies', 'reply_count',
-        ]
-        read_only_fields = ['id', 'sender', 'created_at']
-        extra_kwargs = {
-            'name': {'required': False},
-            'email': {'write_only': True, 'required': False},
-            'phone': {'write_only': True},
-        }
-
-    def get_reply_count(self, obj):
-        return obj.replies.count()
 
 
 class ViewingRequestSerializer(serializers.ModelSerializer):
@@ -259,8 +233,8 @@ class DashboardStatsSerializer(serializers.Serializer):
     total_listings = serializers.IntegerField()
     active_listings = serializers.IntegerField()
     total_views = serializers.IntegerField()
-    total_enquiries = serializers.IntegerField()
-    unread_enquiries = serializers.IntegerField()
+    total_messages = serializers.IntegerField()
+    unread_messages = serializers.IntegerField()
     total_saves = serializers.IntegerField()
 
 

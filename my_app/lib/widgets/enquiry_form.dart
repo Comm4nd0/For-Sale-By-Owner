@@ -19,13 +19,11 @@ class EnquiryForm extends StatefulWidget {
 
 class _EnquiryFormState extends State<EnquiryForm> {
   final _formKey = GlobalKey<FormState>();
-  final _phoneController = TextEditingController();
   final _messageController = TextEditingController();
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _phoneController.dispose();
     _messageController.dispose();
     super.dispose();
   }
@@ -37,25 +35,23 @@ class _EnquiryFormState extends State<EnquiryForm> {
 
     try {
       final apiService = context.read<ApiService>();
-      await apiService.createEnquiry(
+      await apiService.createChatRoom(
         propertyId: widget.propertyId,
-        phone: _phoneController.text.trim(),
         message: _messageController.text.trim(),
       );
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enquiry sent!')),
+        const SnackBar(content: Text('Message sent!')),
       );
       widget.onSent();
 
-      _phoneController.clear();
       _messageController.clear();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to send enquiry: $e')),
+        SnackBar(content: Text('Failed to send message: $e')),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -65,9 +61,9 @@ class _EnquiryFormState extends State<EnquiryForm> {
   @override
   Widget build(BuildContext context) {
     return ExpansionTile(
-      leading: const Icon(Icons.email_outlined, color: AppTheme.forestMid),
+      leading: const Icon(Icons.chat_outlined, color: AppTheme.forestMid),
       title: const Text(
-        'Contact Seller',
+        'Message Seller',
         style: TextStyle(fontWeight: FontWeight.w600),
       ),
       children: [
@@ -77,15 +73,6 @@ class _EnquiryFormState extends State<EnquiryForm> {
             key: _formKey,
             child: Column(
               children: [
-                TextFormField(
-                  controller: _phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone (optional)',
-                  ),
-                  keyboardType: TextInputType.phone,
-                  textInputAction: TextInputAction.next,
-                ),
-                const SizedBox(height: 12),
                 TextFormField(
                   controller: _messageController,
                   decoration: const InputDecoration(
@@ -115,7 +102,7 @@ class _EnquiryFormState extends State<EnquiryForm> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text('Send Enquiry'),
+                        : const Text('Send Message'),
                   ),
                 ),
               ],

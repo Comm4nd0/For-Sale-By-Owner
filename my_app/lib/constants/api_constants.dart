@@ -49,12 +49,6 @@ class ApiConstants {
   static String get savedProperties => '$apiUrl/saved/';
   static String savedProperty(int id) => '$apiUrl/saved/$id/';
 
-  // Enquiries
-  static String get enquiries => '$apiUrl/enquiries/';
-  static String get receivedEnquiries => '$apiUrl/enquiries/received/';
-  static String enquiryDetail(int id) => '$apiUrl/enquiries/$id/';
-  static String enquiryReply(int id) => '$apiUrl/enquiries/$id/reply/';
-
   // Viewings
   static String get viewings => '$apiUrl/viewings/';
   static String get receivedViewings => '$apiUrl/viewings/received/';

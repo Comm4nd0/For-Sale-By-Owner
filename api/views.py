@@ -22,7 +22,7 @@ from django.core.cache import cache
 
 from .models import (
     Property, PropertyImage, PropertyFloorplan, PropertyFeature,
-    PriceHistory, SavedProperty, Enquiry, PropertyView,
+    PriceHistory, SavedProperty, PropertyView,
     ViewingRequest, SavedSearch, PushNotificationDevice, Reply,
     ServiceCategory, ServiceProvider, ServiceProviderReview,
     SubscriptionTier, SubscriptionAddOn, ServiceProviderSubscription,
@@ -34,7 +34,7 @@ from .models import (
 from .serializers import (
     PropertySerializer, PropertyListSerializer, PropertyImageSerializer,
     PropertyFloorplanSerializer, PropertyFeatureSerializer,
-    SavedPropertySerializer, EnquirySerializer, DashboardStatsSerializer,
+    SavedPropertySerializer, DashboardStatsSerializer,
     ViewingRequestSerializer, SavedSearchSerializer, UserProfileSerializer,
     ReplySerializer,
     ServiceCategorySerializer, ServiceProviderListSerializer,
@@ -46,10 +46,6 @@ from .serializers import (
     OfferSerializer, PropertyDocumentSerializer,
     PropertyFlagSerializer,
 )
-
-
-class EnquiryRateThrottle(UserRateThrottle):
-    rate = '10/hour'
 
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
@@ -358,79 +354,6 @@ def toggle_saved(request, property_pk):
         return Response({'saved': False}, status=status.HTTP_200_OK)
 
 
-class EnquiryViewSet(viewsets.ModelViewSet):
-    serializer_class = EnquirySerializer
-    permission_classes = [permissions.IsAuthenticated]
-    http_method_names = ['get', 'post', 'patch']
-
-    def get_throttles(self):
-        if self.action == 'create':
-            return [EnquiryRateThrottle()]
-        return []
-
-    def get_queryset(self):
-        user = self.request.user
-        return Enquiry.objects.filter(
-            Q(sender=user) | Q(property__owner=user)
-        ).select_related('property', 'sender').prefetch_related('replies__author')
-
-    def perform_create(self, serializer):
-        prop = serializer.validated_data['property']
-        if prop.owner == self.request.user:
-            raise ValidationError("You cannot enquire about your own property.")
-        user = self.request.user
-        name = serializer.validated_data.get('name') or user.get_full_name()
-        email = serializer.validated_data.get('email') or user.email
-        enquiry = serializer.save(sender=user, is_read=False, name=name, email=email)
-        # Use async task instead of blocking
-        try:
-            from .tasks import send_enquiry_notification
-            send_enquiry_notification.delay(enquiry.id)
-        except Exception:
-            from .notifications import notify_new_enquiry
-            notify_new_enquiry(enquiry)
-
-    def perform_update(self, serializer):
-        if serializer.instance.property.owner != self.request.user:
-            raise PermissionDenied()
-        serializer.save()
-
-    @action(detail=False, methods=['get'])
-    def received(self, request):
-        """Get enquiries received for the user's properties."""
-        qs = Enquiry.objects.filter(
-            property__owner=request.user
-        ).select_related('property', 'sender').prefetch_related('replies__author').order_by('-created_at')
-        page = self.paginate_queryset(qs)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        serializer = self.get_serializer(qs, many=True)
-        return Response(serializer.data)
-
-    @action(detail=True, methods=['post'])
-    def reply(self, request, pk=None):
-        """Post a reply to an enquiry. Both sender and property owner can reply."""
-        enquiry = self.get_object()
-        user = request.user
-        if user != enquiry.sender and user != enquiry.property.owner:
-            raise PermissionDenied("You are not a participant in this conversation.")
-        message = request.data.get('message', '').strip()
-        if not message:
-            raise ValidationError("Message cannot be empty.")
-        reply_obj = Reply.objects.create(enquiry=enquiry, author=user, message=message)
-        if user == enquiry.property.owner and not enquiry.is_read:
-            enquiry.is_read = True
-            enquiry.save(update_fields=['is_read'])
-        try:
-            from .tasks import send_reply_notification
-            send_reply_notification.delay(reply_obj.id)
-        except Exception:
-            from .notifications import notify_reply
-            notify_reply(reply_obj)
-        return Response(ReplySerializer(reply_obj).data, status=status.HTTP_201_CREATED)
-
-
 class ViewingRequestViewSet(viewsets.ModelViewSet):
     serializer_class = ViewingRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -545,8 +468,11 @@ def dashboard_stats(request):
     user = request.user
     properties = Property.objects.filter(owner=user)
     total_views = PropertyView.objects.filter(property__owner=user).count()
-    total_enquiries = Enquiry.objects.filter(property__owner=user).count()
-    unread_enquiries = Enquiry.objects.filter(property__owner=user, is_read=False).count()
+    user_rooms = ChatRoom.objects.filter(Q(buyer=user) | Q(seller=user))
+    total_messages = ChatMessage.objects.filter(room__in=user_rooms).exclude(sender=user).count()
+    unread_messages = ChatMessage.objects.filter(
+        room__in=user_rooms, is_read=False,
+    ).exclude(sender=user).count()
     total_saves = SavedProperty.objects.filter(property__owner=user).count()
     pending_viewings = ViewingRequest.objects.filter(property__owner=user, status='pending').count()
     total_offers = Offer.objects.filter(property__owner=user).count()
@@ -562,21 +488,21 @@ def dashboard_stats(request):
         .order_by('day')
     )
 
-    # Enquiry conversion rate (enquiries / views)
-    enquiry_rate = round((total_enquiries / total_views * 100), 1) if total_views > 0 else 0
+    # Message conversion rate (messages / views)
+    message_rate = round((total_messages / total_views * 100), 1) if total_views > 0 else 0
 
     # Per-property stats
     property_stats = []
     for prop in properties:
         prop_views = prop.views.count()
-        prop_enquiries = prop.enquiries.count()
+        prop_messages = ChatMessage.objects.filter(room__property=prop).exclude(sender=user).count()
         has_floorplan = prop.floorplans.exists()
         image_count = prop.images.count()
         tips = []
         if image_count < 5:
-            tips.append(f'Add more photos ({image_count}/10). Listings with 5+ photos get 40% more enquiries.')
+            tips.append(f'Add more photos ({image_count}/10). Listings with 5+ photos get 40% more interest.')
         if not has_floorplan:
-            tips.append('Add a floorplan. Listings with floorplans get 30% more enquiries.')
+            tips.append('Add a floorplan. Listings with floorplans get 30% more interest.')
         if not prop.description or len(prop.description) < 100:
             tips.append('Write a longer description (100+ chars) to attract more interest.')
         if not prop.video_url:
@@ -587,10 +513,10 @@ def dashboard_stats(request):
             'title': prop.title,
             'status': prop.status,
             'views': prop_views,
-            'enquiries': prop_enquiries,
+            'messages': prop_messages,
             'saves': prop.saved_by.count(),
             'offers': prop.offers.count(),
-            'conversion_rate': round((prop_enquiries / prop_views * 100), 1) if prop_views > 0 else 0,
+            'conversion_rate': round((prop_messages / prop_views * 100), 1) if prop_views > 0 else 0,
             'tips': tips,
         })
 
@@ -598,13 +524,13 @@ def dashboard_stats(request):
         'total_listings': properties.count(),
         'active_listings': properties.filter(status='active').count(),
         'total_views': total_views,
-        'total_enquiries': total_enquiries,
-        'unread_enquiries': unread_enquiries,
+        'total_messages': total_messages,
+        'unread_messages': unread_messages,
         'pending_viewings': pending_viewings,
         'total_saves': total_saves,
         'total_offers': total_offers,
         'pending_offers': pending_offers,
-        'enquiry_conversion_rate': enquiry_rate,
+        'message_conversion_rate': message_rate,
         'views_by_day': list(views_by_day),
         'property_stats': property_stats,
     }
@@ -616,18 +542,16 @@ def dashboard_stats(request):
 def notification_counts(request):
     """Lightweight endpoint for nav bell badge — returns unread/pending counts."""
     user = request.user
-    unread = Enquiry.objects.filter(property__owner=user, is_read=False).count()
     pending = ViewingRequest.objects.filter(property__owner=user, status='pending').count()
     unread_chats = ChatMessage.objects.filter(
         room__in=ChatRoom.objects.filter(Q(buyer=user) | Q(seller=user)),
         is_read=False,
     ).exclude(sender=user).count()
     pending_offers = Offer.objects.filter(property__owner=user, status='submitted').count()
-    total = unread + pending + unread_chats + pending_offers
+    total = pending + unread_chats + pending_offers
     return Response({
-        'unread_enquiries': unread,
         'pending_viewings': pending,
-        'unread_chats': unread_chats,
+        'unread_messages': unread_chats,
         'pending_offers': pending_offers,
         'total': total,
     })
@@ -700,6 +624,11 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
             buyer=request.user,
             defaults={'seller': prop.owner},
         )
+        # If an initial message was provided, create it
+        message_text = request.data.get('message', '').strip()
+        if message_text:
+            ChatMessage.objects.create(room=room, sender=request.user, message=message_text)
+            room.save(update_fields=['updated_at'])
         serializer = self.get_serializer(room)
         return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
