@@ -72,6 +72,15 @@ class ApiService {
     return headers;
   }
 
+  Map<String, String> get _authJsonHeaders {
+    final headers = {'Content-Type': 'application/json'};
+    final token = _getToken();
+    if (token != null) {
+      headers['Authorization'] = 'Token $token';
+    }
+    return headers;
+  }
+
   // ── Properties ──────────────────────────────────────────────────────
 
   Future<PaginatedResponse<Property>> getProperties({
