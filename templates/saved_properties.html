@@ -91,7 +91,7 @@
                     <div class="property-card-body">
                         <h3>${p.title}</h3>
                         <div class="property-price">&pound;${Number(p.price).toLocaleString()}</div>
-                        <div class="property-details">${p.address_line_1}, ${p.city} ${p.postcode}</div>
+                        <div class="property-details">${p.address_line_1}, ${p.city}</div>
                         <div class="property-meta">
                             <span>${p.bedrooms} bed</span>
                             <span>${p.bathrooms} bath</span>
@@ -130,19 +130,23 @@
         const wrap = e.target.closest('.card-img-wrap[data-count]');
         if (!wrap) return;
         const slider = wrap.querySelector('.card-slider');
+        const link = wrap.closest('a');
         const startX = e.touches[0].clientX;
         const startY = e.touches[0].clientY;
         let dx = 0;
         let locked = false;
+        let swiped = false;
         const cur = parseInt(wrap.dataset.slide);
         const count = parseInt(wrap.dataset.count);
         const width = wrap.offsetWidth;
         slider.classList.add('swiping');
+        function blockClick(ev) { ev.preventDefault(); ev.stopPropagation(); }
         function onMove(ev) {
             dx = ev.touches[0].clientX - startX;
             const dy = ev.touches[0].clientY - startY;
             if (!locked && Math.abs(dy) > Math.abs(dx)) { cleanup(); return; }
             locked = true;
+            swiped = true;
             ev.preventDefault();
             slider.style.transform = `translateX(${-(cur * width) + dx}px)`;
         }
@@ -154,6 +158,10 @@
             wrap.dataset.slide = next;
             slider.style.transform = `translateX(-${next * 100}%)`;
             wrap.querySelectorAll('.card-dots span').forEach((d, i) => d.classList.toggle('active', i === next));
+            if (swiped && link) {
+                link.addEventListener('click', blockClick, { capture: true, once: true });
+                setTimeout(() => link.removeEventListener('click', blockClick, { capture: true }), 300);
+            }
             cleanup();
         }
         function cleanup() {
