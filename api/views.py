@@ -696,6 +696,7 @@ class ViewingSlotViewSet(viewsets.ModelViewSet):
     """Manage viewing availability slots."""
     serializer_class = ViewingSlotSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
