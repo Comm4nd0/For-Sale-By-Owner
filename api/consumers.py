@@ -87,11 +87,12 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def check_participant(self, user_id, room_id):
+        from django.db.models import Q
         from .models import ChatRoom
         return ChatRoom.objects.filter(
             pk=room_id
         ).filter(
-            models.Q(buyer_id=user_id) | models.Q(seller_id=user_id)
+            Q(buyer_id=user_id) | Q(seller_id=user_id)
         ).exists()
 
     @database_sync_to_async
@@ -136,7 +137,3 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         ChatMessage.objects.filter(
             room_id=room_id, is_read=False
         ).exclude(sender_id=user_id).update(is_read=True)
-
-
-# Fix import for check_participant
-import django.db.models as models
