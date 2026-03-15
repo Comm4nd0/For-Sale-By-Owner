@@ -719,7 +719,12 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user != room.buyer and user != room.seller:
             raise PermissionDenied()
-        return ChatMessage.objects.filter(room=room).select_related('sender')
+        qs = ChatMessage.objects.filter(room=room).select_related('sender')
+        logger.info(
+            'ChatMessage list: room_pk=%s, user=%s, buyer=%s, seller=%s, msg_count=%d',
+            room_pk, user.pk, room.buyer_id, room.seller_id, qs.count(),
+        )
+        return qs
 
     def perform_create(self, serializer):
         room = get_object_or_404(ChatRoom, pk=self.kwargs['room_pk'])

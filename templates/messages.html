@@ -171,11 +171,15 @@
             ]);
 
             if (!roomRes.ok) throw new Error('Chat room not found');
-            if (!msgsRes.ok) throw new Error('Failed to load messages');
 
             const room = await roomRes.json();
-            const msgsData = await msgsRes.json();
-            const messages = Array.isArray(msgsData) ? msgsData : (msgsData.results || []);
+
+            // Parse messages - handle error responses gracefully
+            let messages = [];
+            if (msgsRes.ok) {
+                const msgsData = await msgsRes.json();
+                messages = Array.isArray(msgsData) ? msgsData : (msgsData.results || []);
+            }
 
             const otherName = room.buyer === currentUserId
                 ? (room.seller_name || 'Seller')
