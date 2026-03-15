@@ -251,7 +251,7 @@ class _TopicListScreenState extends State<_TopicListScreen> {
     });
     try {
       final api = context.read<ApiService>();
-      final data = await api.getForumTopics(category: widget.category.id);
+      final data = await api.getForumTopics(category: widget.category.id.toString());
       final list =
           data.map<ForumTopic>((j) => ForumTopic.fromJson(j)).toList();
 

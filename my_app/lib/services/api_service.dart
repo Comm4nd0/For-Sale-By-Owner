@@ -1243,11 +1243,11 @@ class ApiService {
 
   // ── #37 Open House Events ─────────────────────────────────────────
 
-  Future<List<dynamic>> getOpenHouseEvents(int propertyId) async {
-    final response = await http.get(
-      Uri.parse(ApiConstants.openHouseEvents(propertyId)),
-      headers: _headers,
-    );
+  Future<List<dynamic>> getOpenHouseEvents({int? propertyId}) async {
+    final url = propertyId != null
+        ? ApiConstants.openHouseEvents(propertyId)
+        : ApiConstants.openHouseUpcoming;
+    final response = await http.get(Uri.parse(url), headers: _headers);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return data is List ? data : (data['results'] ?? []);

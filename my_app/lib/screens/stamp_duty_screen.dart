@@ -65,7 +65,7 @@ class _StampDutyScreenState extends State<StampDutyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: BrandedAppBar(title: 'Stamp Duty Calculator'),
+      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(

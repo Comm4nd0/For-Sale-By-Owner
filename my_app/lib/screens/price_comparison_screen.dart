@@ -33,7 +33,7 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: BrandedAppBar(title: 'Price Comparison'),
+      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
       body: Column(
         children: [
           Container(

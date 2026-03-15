@@ -186,6 +186,7 @@ class ApiConstants {
       '$apiUrl/properties/$propertyId/history/';
 
   // #37 Open House Events
+  static String get openHouseUpcoming => '$apiUrl/open-house/';
   static String openHouseEvents(int propertyId) =>
       '$apiUrl/properties/$propertyId/open-house/';
   static String openHouseEventDetail(int propertyId, int eventId) =>

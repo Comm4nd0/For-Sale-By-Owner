@@ -73,7 +73,7 @@ class _BuyerVerificationScreenState extends State<BuyerVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: BrandedAppBar(title: 'Buyer Verification'),
+      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(

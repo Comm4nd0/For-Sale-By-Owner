@@ -81,7 +81,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: BrandedAppBar(title: 'Buyer Profile'),
+      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(

@@ -264,7 +264,7 @@ class _OpenHouseScreenState extends State<OpenHouseScreen> {
 
     try {
       final api = context.read<ApiService>();
-      await api.createOpenHouseEvent(result);
+      await api.createOpenHouseEvent(widget.propertyId!, result);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Open house event created')),
@@ -305,7 +305,7 @@ class _OpenHouseScreenState extends State<OpenHouseScreen> {
 
     try {
       final api = context.read<ApiService>();
-      await api.deleteOpenHouseEvent(event.id);
+      await api.deleteOpenHouseEvent(widget.propertyId!, event.id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Event deleted')),
@@ -356,7 +356,7 @@ class _OpenHouseScreenState extends State<OpenHouseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: BrandedAppBar(title: 'Open House Events'),
+      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
       floatingActionButton: _isSellerView
           ? FloatingActionButton(
               onPressed: _showCreateEventDialog,
