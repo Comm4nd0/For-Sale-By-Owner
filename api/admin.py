@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 from .models import (
     Property, PropertyImage, PropertyFloorplan, PropertyFeature,
-    PriceHistory, SavedProperty, Enquiry, PropertyView,
+    PriceHistory, SavedProperty, PropertyView,
     ViewingRequest, SavedSearch, PushNotificationDevice, Reply,
     ServiceCategory, ServiceProvider, ServiceProviderReview,
     SubscriptionTier, SubscriptionAddOn, ServiceProviderSubscription,
@@ -68,11 +68,11 @@ class PropertyDocumentInline(admin.TabularInline):
 
 @admin.register(Property)
 class PropertyAdmin(admin.ModelAdmin):
-    list_display = ['title', 'property_type', 'status', 'status_badge', 'price_display', 'city', 'postcode', 'owner', 'view_count', 'enquiry_count', 'flag_count', 'created_at']
+    list_display = ['title', 'property_type', 'status', 'status_badge', 'price_display', 'city', 'postcode', 'owner', 'view_count', 'message_count', 'flag_count', 'created_at']
     list_filter = ['status', 'property_type', 'epc_rating', 'city', 'created_at']
     list_editable = ['status']
     search_fields = ['title', 'address_line_1', 'city', 'postcode', 'owner__email', 'slug']
-    readonly_fields = ['slug', 'view_count', 'enquiry_count', 'save_count', 'flag_count', 'created_at', 'updated_at']
+    readonly_fields = ['slug', 'view_count', 'message_count', 'save_count', 'flag_count', 'created_at', 'updated_at']
     inlines = [PropertyImageInline, PropertyFloorplanInline, PropertyDocumentInline]
     filter_horizontal = ['features']
     actions = ['approve_listings', 'reject_listings', 'mark_active', 'mark_withdrawn']
@@ -82,7 +82,7 @@ class PropertyAdmin(admin.ModelAdmin):
         ('Address', {'fields': ('address_line_1', 'address_line_2', 'city', 'county', 'postcode')}),
         ('Geolocation', {'fields': ('latitude', 'longitude')}),
         ('Media', {'fields': ('video_url', 'video_thumbnail')}),
-        ('Statistics', {'fields': ('view_count', 'enquiry_count', 'save_count', 'flag_count')}),
+        ('Statistics', {'fields': ('view_count', 'message_count', 'save_count', 'flag_count')}),
         ('Dates', {'fields': ('created_at', 'updated_at')}),
     )
 
@@ -96,8 +96,8 @@ class PropertyAdmin(admin.ModelAdmin):
     price_display.short_description = 'Price'
     def view_count(self, obj): return obj.views.count()
     view_count.short_description = 'Views'
-    def enquiry_count(self, obj): return obj.enquiries.count()
-    enquiry_count.short_description = 'Enquiries'
+    def message_count(self, obj): return ChatMessage.objects.filter(room__property=obj).count()
+    message_count.short_description = 'Messages'
     def save_count(self, obj): return obj.saved_by.count()
     save_count.short_description = 'Saves'
     def flag_count(self, obj): return obj.flags.filter(status='pending').count()
@@ -134,18 +134,8 @@ class PriceHistoryAdmin(admin.ModelAdmin):
     list_filter = ['changed_at']
     search_fields = ['property__title']
 
-class EnquiryReplyInline(admin.TabularInline):
-    model = Reply; fk_name = 'enquiry'; extra = 0; readonly_fields = ['author', 'message', 'created_at']
-
 class ViewingReplyInline(admin.TabularInline):
     model = Reply; fk_name = 'viewing_request'; extra = 0; readonly_fields = ['author', 'message', 'created_at']
-
-@admin.register(Enquiry)
-class EnquiryAdmin(admin.ModelAdmin):
-    list_display = ['property', 'name', 'email', 'is_read', 'created_at']
-    list_filter = ['is_read', 'created_at']
-    search_fields = ['name', 'email', 'property__title']
-    inlines = [EnquiryReplyInline]
 
 @admin.register(ViewingRequest)
 class ViewingRequestAdmin(admin.ModelAdmin):
@@ -156,7 +146,7 @@ class ViewingRequestAdmin(admin.ModelAdmin):
 
 @admin.register(Reply)
 class ReplyAdmin(admin.ModelAdmin):
-    list_display = ['id', 'author', 'enquiry', 'viewing_request', 'created_at']
+    list_display = ['id', 'author', 'viewing_request', 'created_at']
 
 @admin.register(SavedSearch)
 class SavedSearchAdmin(admin.ModelAdmin):
