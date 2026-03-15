@@ -27,6 +27,8 @@ import 'viewing_slots_screen.dart';
 import 'offers_screen.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
+import 'open_house_screen.dart';
+import 'neighbourhood_review_screen.dart';
 import '../models/offer.dart';
 import '../utils/auto_retry.dart';
 
@@ -469,6 +471,33 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                             ),
                           ],
                         ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => OpenHouseScreen(
+                                      propertyId: property.id,
+                                    ),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.event),
+                                label: const Text('Open House'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => _showListingQuality(property.id),
+                                icon: const Icon(Icons.star_rate),
+                                label: const Text('Quality Score'),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
 
                       // Contact forms (non-owners only)
@@ -548,6 +577,33 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                                   ),
                                 ),
                               ],
+                            ),
+                          ),
+                        ),
+                      ],
+
+                      // Open House Events (for non-owners)
+                      if (!isOwner) ...[
+                        const SizedBox(height: 16),
+                        _buildOpenHouseSection(property),
+                      ],
+
+                      // Neighbourhood Reviews
+                      if (property.postcode.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.location_city, color: AppTheme.forestMid),
+                            title: const Text('Neighbourhood Reviews'),
+                            subtitle: Text('See what residents say about ${property.postcode.split(' ').first}'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => NeighbourhoodReviewScreen(
+                                  postcode: property.postcode.split(' ').first,
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -860,6 +916,128 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
         );
       }
     }
+  }
+
+  void _showListingQuality(int propertyId) async {
+    try {
+      final api = context.read<ApiService>();
+      final data = await api.getListingQualityScore(propertyId);
+      if (!mounted) return;
+      final score = data['score'] ?? 0;
+      final tips = (data['tips'] as List?)?.cast<String>() ?? [];
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.star_rate, color: Color(0xFF115E66)),
+              const SizedBox(width: 8),
+              Text('Quality Score: $score/100'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LinearProgressIndicator(
+                value: score / 100,
+                backgroundColor: Colors.grey[200],
+                color: score >= 80 ? Colors.green : score >= 50 ? Colors.orange : Colors.red,
+                minHeight: 8,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              if (tips.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Text('Tips to improve:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                ...tips.map((t) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.lightbulb_outline, size: 16, color: Colors.orange),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(t, style: const TextStyle(fontSize: 13))),
+                    ],
+                  ),
+                )),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to load quality score')),
+        );
+      }
+    }
+  }
+
+  Widget _buildOpenHouseSection(Property property) {
+    return FutureBuilder<List<dynamic>>(
+      future: context.read<ApiService>().getOpenHouseEvents(propertyId: property.id),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) return const SizedBox.shrink();
+        final events = snapshot.data!;
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Open House Events',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                ...events.take(3).map((e) {
+                  final event = e is Map<String, dynamic> ? e : {};
+                  return ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.event, color: AppTheme.forestMid),
+                    title: Text(event['title'] ?? 'Open House'),
+                    subtitle: Text('${event['date'] ?? ''} ${event['start_time'] ?? ''} - ${event['end_time'] ?? ''}'),
+                    trailing: (event['user_has_rsvpd'] == true)
+                        ? const Chip(label: Text('RSVP\'d', style: TextStyle(fontSize: 11, color: Colors.white)), backgroundColor: Colors.green)
+                        : TextButton(
+                            onPressed: () async {
+                              try {
+                                await context.read<ApiService>().rsvpOpenHouse(event['id']);
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('RSVP confirmed!')),
+                                  );
+                                  setState(() {});
+                                }
+                              } catch (err) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('RSVP failed: $err')),
+                                  );
+                                }
+                              }
+                            },
+                            child: const Text('RSVP'),
+                          ),
+                  );
+                }),
+                if (events.length > 3)
+                  TextButton(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => OpenHouseScreen(propertyId: property.id)),
+                    ),
+                    child: Text('View all ${events.length} events'),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildAvailableSlots(int propertyId) {

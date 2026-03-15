@@ -9,9 +9,12 @@ from django.db.models import Q, Count, Sum, Avg, F
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
+from django.contrib.auth import get_user_model
 from rest_framework import viewsets, permissions, status, generics
 from rest_framework.decorators import api_view, permission_classes, action
 from django.shortcuts import get_object_or_404
+
+User = get_user_model()
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
@@ -30,6 +33,11 @@ from .models import (
     ChatRoom, ChatMessage,
     ViewingSlot, ViewingSlotBooking,
     Offer, PropertyDocument, PropertyFlag,
+    BuyerVerification, ConveyancingCase, ConveyancingStep,
+    OpenHouseEvent, OpenHouseRSVP,
+    ConveyancerQuoteRequest, ConveyancerQuote,
+    NeighbourhoodReview, BoardOrder, BuyerProfile,
+    ForumCategory, ForumTopic, ForumPost,
 )
 from .serializers import (
     PropertySerializer, PropertyListSerializer, PropertyImageSerializer,
@@ -45,6 +53,13 @@ from .serializers import (
     ViewingSlotSerializer,
     OfferSerializer, PropertyDocumentSerializer,
     PropertyFlagSerializer,
+    BuyerVerificationSerializer,
+    ConveyancingCaseSerializer, ConveyancingStepSerializer,
+    OpenHouseEventSerializer, OpenHouseRSVPSerializer,
+    ConveyancerQuoteRequestSerializer, ConveyancerQuoteSerializer,
+    NeighbourhoodReviewSerializer, BoardOrderSerializer, BuyerProfileSerializer,
+    ForumCategorySerializer, ForumTopicSerializer, ForumTopicDetailSerializer,
+    ForumPostSerializer,
 )
 
 
@@ -1650,3 +1665,1216 @@ def house_price_lookup(request):
 def health_check(request):
     """Health check endpoint for monitoring."""
     return Response({'status': 'healthy', 'version': '2.0.0'})
+
+
+# ══════════════════════════════════════════════════════════════════
+# NEW FEATURES (#28-#45)
+# ══════════════════════════════════════════════════════════════════
+
+
+# ── #28 Listing Quality Score ────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def listing_quality_score(request, property_pk):
+    """Return the listing quality score and improvement tips for a property."""
+    prop = get_object_or_404(Property, pk=property_pk)
+    if prop.owner != request.user:
+        raise PermissionDenied('You can only view the quality score of your own listings.')
+    return Response(prop.listing_quality_score())
+
+
+# ── #29 Price Comparison & Valuation Tool ────────────────────────
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def price_comparison(request):
+    """Compare property prices in an area using Land Registry data and local listings."""
+    postcode = request.query_params.get('postcode', '').strip().upper()
+    if not postcode:
+        return Response({'error': 'Postcode is required'}, status=400)
+
+    # Get the postcode district (e.g. "BS1" from "BS1 4DJ")
+    postcode_district = postcode.split()[0] if ' ' in postcode else postcode[:3]
+
+    # 1. Land Registry sold prices
+    land_registry_data = []
+    try:
+        resp = requests.get(
+            'https://landregistry.data.gov.uk/data/ppi/transaction-record.json',
+            params={
+                'propertyAddress.postcode': postcode,
+                '_pageSize': '50',
+                '_sort': '-transactionDate',
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        items = data.get('result', {}).get('items', [])
+        for item in items:
+            land_registry_data.append({
+                'address': item.get('propertyAddress', {}).get('paon', ''),
+                'price': item.get('pricePaid', 0),
+                'date': item.get('transactionDate', ''),
+                'property_type': item.get('propertyType', {}).get('prefLabel', [''])[0] if isinstance(item.get('propertyType', {}).get('prefLabel'), list) else item.get('propertyType', {}).get('prefLabel', ''),
+                'is_new_build': item.get('newBuild', False),
+            })
+    except requests.RequestException:
+        pass
+
+    # 2. Local listings on our platform
+    local_listings = Property.objects.filter(
+        status='active',
+        postcode__istartswith=postcode_district,
+    ).values('id', 'title', 'price', 'property_type', 'bedrooms', 'square_feet', 'slug')[:20]
+
+    # 3. Calculate statistics
+    sold_prices = [item['price'] for item in land_registry_data if item.get('price')]
+    listing_prices = [float(p['price']) for p in local_listings if p.get('price')]
+    all_prices = sold_prices + listing_prices
+
+    stats = {}
+    if all_prices:
+        stats = {
+            'average_price': round(sum(all_prices) / len(all_prices)),
+            'median_price': round(sorted(all_prices)[len(all_prices) // 2]),
+            'min_price': round(min(all_prices)),
+            'max_price': round(max(all_prices)),
+            'total_comparables': len(all_prices),
+        }
+
+    # 4. Price per square foot from our listings
+    sqft_data = [
+        float(p['price']) / p['square_feet']
+        for p in local_listings
+        if p.get('square_feet') and p['square_feet'] > 0
+    ]
+    if sqft_data:
+        stats['avg_price_per_sqft'] = round(sum(sqft_data) / len(sqft_data))
+
+    return Response({
+        'postcode': postcode,
+        'postcode_district': postcode_district,
+        'sold_prices': land_registry_data[:20],
+        'local_listings': list(local_listings),
+        'statistics': stats,
+    })
+
+
+# ── #30 Buyer Verification ──────────────────────────────────────
+
+class BuyerVerificationViewSet(viewsets.ModelViewSet):
+    """CRUD for buyer verification documents."""
+    serializer_class = BuyerVerificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_queryset(self):
+        return BuyerVerification.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def buyer_verification_status(request, user_pk):
+    """Check if a buyer is verified (public endpoint for sellers)."""
+    user = get_object_or_404(User, pk=user_pk)
+    verifications = BuyerVerification.objects.filter(user=user, status='verified')
+    has_valid = any(v.is_valid for v in verifications)
+    types_verified = [v.get_verification_type_display() for v in verifications if v.is_valid]
+    return Response({
+        'user_id': user.pk,
+        'is_verified_buyer': has_valid,
+        'verified_types': types_verified,
+    })
+
+
+# ── #31 Conveyancing Progress Tracker ────────────────────────────
+
+class ConveyancingCaseViewSet(viewsets.ModelViewSet):
+    """CRUD for conveyancing cases."""
+    serializer_class = ConveyancingCaseSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        return ConveyancingCase.objects.filter(
+            Q(buyer=user) | Q(seller=user)
+        ).select_related('property', 'offer', 'buyer', 'seller').prefetch_related('steps')
+
+    def perform_create(self, serializer):
+        offer = serializer.validated_data.get('offer')
+        if not offer:
+            raise ValidationError('An accepted offer is required to create a conveyancing case.')
+        if offer.status != 'accepted':
+            raise ValidationError('Only accepted offers can start conveyancing.')
+        if offer.property.owner != self.request.user and offer.buyer != self.request.user:
+            raise PermissionDenied('You must be the buyer or seller.')
+
+        case = serializer.save(
+            buyer=offer.buyer,
+            seller=offer.property.owner,
+            property=offer.property,
+        )
+        # Create default steps
+        default_steps = [
+            ('offer_accepted', 0),
+            ('memorandum_of_sale', 1),
+            ('solicitors_instructed', 2),
+            ('draft_contract', 3),
+            ('searches_ordered', 4),
+            ('searches_received', 5),
+            ('survey_booked', 6),
+            ('survey_received', 7),
+            ('mortgage_offer', 8),
+            ('enquiries_raised', 9),
+            ('enquiries_answered', 10),
+            ('ready_to_exchange', 11),
+            ('exchanged', 12),
+            ('completion', 13),
+        ]
+        for step_type, order in default_steps:
+            ConveyancingStep.objects.create(
+                case=case, step_type=step_type, order=order,
+                status='completed' if step_type == 'offer_accepted' else 'pending',
+                completed_at=timezone.now() if step_type == 'offer_accepted' else None,
+            )
+
+
+@api_view(['PATCH'])
+@permission_classes([permissions.IsAuthenticated])
+def update_conveyancing_step(request, case_pk, step_pk):
+    """Update a conveyancing step status."""
+    case = get_object_or_404(ConveyancingCase, pk=case_pk)
+    if case.buyer != request.user and case.seller != request.user:
+        raise PermissionDenied('You are not part of this conveyancing case.')
+
+    step = get_object_or_404(ConveyancingStep, pk=step_pk, case=case)
+    new_status = request.data.get('status')
+    if new_status and new_status in dict(ConveyancingStep.STATUS_CHOICES):
+        step.status = new_status
+        if new_status == 'completed':
+            step.completed_at = timezone.now()
+        step.notes = request.data.get('notes', step.notes)
+        step.save()
+
+        # Trigger nudge check
+        try:
+            from .tasks import check_conveyancing_stale_steps
+            check_conveyancing_stale_steps.delay(case.pk)
+        except Exception:
+            pass
+
+    return Response(ConveyancingStepSerializer(step).data)
+
+
+# ── #32 AI-Powered Listing Description Generator ─────────────────
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def generate_listing_description(request):
+    """Generate a property listing description based on provided details."""
+    property_type = request.data.get('property_type', '')
+    bedrooms = request.data.get('bedrooms', 0)
+    bathrooms = request.data.get('bathrooms', 0)
+    reception_rooms = request.data.get('reception_rooms', 0)
+    square_feet = request.data.get('square_feet')
+    features = request.data.get('features', [])
+    location = request.data.get('location', '')
+    epc_rating = request.data.get('epc_rating', '')
+    tone = request.data.get('tone', 'professional')
+    additional_notes = request.data.get('additional_notes', '')
+
+    # Build description from property details
+    type_display = dict(Property.PROPERTY_TYPES).get(property_type, property_type)
+
+    # Construct structured description
+    parts = []
+
+    if tone == 'estate_agent':
+        opener = f"A stunning {bedrooms} bedroom {type_display.lower()}"
+    elif tone == 'casual':
+        opener = f"This lovely {bedrooms} bedroom {type_display.lower()}"
+    else:
+        opener = f"A well-presented {bedrooms} bedroom {type_display.lower()}"
+
+    if location:
+        opener += f" located in the sought-after area of {location}"
+    parts.append(opener + ".")
+
+    # Accommodation details
+    rooms = []
+    if reception_rooms:
+        rooms.append(f"{reception_rooms} reception room{'s' if reception_rooms > 1 else ''}")
+    if bathrooms:
+        rooms.append(f"{bathrooms} bathroom{'s' if bathrooms > 1 else ''}")
+    if rooms:
+        parts.append(f"The property comprises {', '.join(rooms)}.")
+
+    if square_feet:
+        parts.append(f"Offering approximately {square_feet} sq ft of living space.")
+
+    # Features
+    if features:
+        feature_list = ', '.join(features[:-1])
+        if len(features) > 1:
+            feature_list += f" and {features[-1]}"
+        else:
+            feature_list = features[0]
+        parts.append(f"Key features include {feature_list}.")
+
+    # EPC
+    if epc_rating:
+        parts.append(f"The property has an EPC rating of {epc_rating}.")
+
+    # Additional notes
+    if additional_notes:
+        parts.append(additional_notes)
+
+    # Closing
+    if tone == 'estate_agent':
+        parts.append("Internal viewing is highly recommended to fully appreciate what this property has to offer.")
+    elif tone == 'casual':
+        parts.append("Come and see it for yourself — you won't be disappointed!")
+    else:
+        parts.append("Viewings are welcomed and encouraged.")
+
+    description = " ".join(parts)
+
+    return Response({
+        'description': description,
+        'tone': tone,
+        'word_count': len(description.split()),
+    })
+
+
+# ── #33 Similar Properties ──────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def similar_properties(request, property_pk):
+    """Find properties similar to the given one."""
+    prop = get_object_or_404(Property, pk=property_pk)
+
+    # Match on same area, similar price (±25%), same type, similar bedrooms (±1)
+    price_min = float(prop.price) * 0.75
+    price_max = float(prop.price) * 1.25
+
+    queryset = Property.objects.filter(
+        status='active',
+        price__gte=price_min,
+        price__lte=price_max,
+    ).exclude(pk=prop.pk)
+
+    # Prefer same city/postcode area
+    postcode_prefix = prop.postcode.split()[0] if ' ' in prop.postcode else prop.postcode[:3]
+    same_area = queryset.filter(
+        Q(city__iexact=prop.city) | Q(postcode__istartswith=postcode_prefix)
+    )
+
+    # Further filter by property type and similar bedrooms
+    close_match = same_area.filter(
+        property_type=prop.property_type,
+        bedrooms__gte=max(0, prop.bedrooms - 1),
+        bedrooms__lte=prop.bedrooms + 1,
+    )
+
+    # Fall back to broader matches if not enough results
+    if close_match.count() >= 4:
+        results = close_match[:8]
+    elif same_area.count() >= 4:
+        results = same_area[:8]
+    else:
+        results = queryset[:8]
+
+    serializer = PropertyListSerializer(
+        results, many=True, context={'request': request}
+    )
+    return Response(serializer.data)
+
+
+# ── #35 Stamp Duty Calculator ────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def stamp_duty_calculator(request):
+    """Calculate UK Stamp Duty Land Tax."""
+    try:
+        price = float(request.query_params.get('price', 0))
+    except (ValueError, TypeError):
+        return Response({'error': 'Invalid price'}, status=400)
+
+    is_first_time = request.query_params.get('first_time_buyer', 'false').lower() == 'true'
+    is_additional = request.query_params.get('additional_property', 'false').lower() == 'true'
+    country = request.query_params.get('country', 'england').lower()
+
+    if country in ('england', 'northern_ireland'):
+        # Standard SDLT rates (2024/25)
+        if is_first_time and price <= 625000:
+            bands = [
+                (425000, 0.0),
+                (625000, 0.05),
+            ]
+        else:
+            bands = [
+                (250000, 0.0),
+                (925000, 0.05),
+                (1500000, 0.10),
+                (float('inf'), 0.12),
+            ]
+        additional_surcharge = 0.03 if is_additional else 0.0
+    elif country == 'scotland':
+        # Scottish LBTT
+        bands = [
+            (145000, 0.0),
+            (250000, 0.02),
+            (325000, 0.05),
+            (750000, 0.10),
+            (float('inf'), 0.12),
+        ]
+        additional_surcharge = 0.06 if is_additional else 0.0
+    elif country == 'wales':
+        # Welsh LTT
+        bands = [
+            (225000, 0.0),
+            (400000, 0.06),
+            (750000, 0.075),
+            (1500000, 0.10),
+            (float('inf'), 0.12),
+        ]
+        additional_surcharge = 0.04 if is_additional else 0.0
+    else:
+        return Response({'error': 'Invalid country. Use: england, scotland, wales, northern_ireland'}, status=400)
+
+    # Calculate banded tax
+    tax = 0
+    remaining = price
+    prev_threshold = 0
+    band_breakdown = []
+
+    for threshold, rate in bands:
+        if remaining <= 0:
+            break
+        band_amount = min(remaining, threshold - prev_threshold)
+        effective_rate = rate + additional_surcharge
+        band_tax = band_amount * effective_rate
+        band_breakdown.append({
+            'from': prev_threshold,
+            'to': min(threshold, price),
+            'rate': effective_rate,
+            'tax': round(band_tax, 2),
+        })
+        tax += band_tax
+        remaining -= band_amount
+        prev_threshold = threshold
+
+    # Estimated total costs
+    estimated_legal_fees = 1500 if price < 500000 else 2500
+    estimated_survey_cost = 400 if price < 300000 else 700
+
+    return Response({
+        'price': price,
+        'country': country,
+        'is_first_time_buyer': is_first_time,
+        'is_additional_property': is_additional,
+        'stamp_duty': round(tax, 2),
+        'effective_rate': round((tax / price) * 100, 2) if price > 0 else 0,
+        'band_breakdown': band_breakdown,
+        'total_purchase_costs': {
+            'property_price': price,
+            'stamp_duty': round(tax, 2),
+            'estimated_legal_fees': estimated_legal_fees,
+            'estimated_survey_cost': estimated_survey_cost,
+            'total': round(price + tax + estimated_legal_fees + estimated_survey_cost, 2),
+        },
+    })
+
+
+# ── #36 Property History & Title Insights ────────────────────────
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def property_history(request, property_pk):
+    """Return property price history and days on market."""
+    prop = get_object_or_404(Property, pk=property_pk)
+
+    # Internal price history
+    price_changes = PriceHistory.objects.filter(property=prop).order_by('changed_at')
+    history = [
+        {
+            'price': float(ph.price),
+            'date': ph.changed_at.isoformat(),
+        }
+        for ph in price_changes
+    ]
+
+    # Days on market
+    days_on_market = (timezone.now() - prop.created_at).days
+
+    # Land Registry previous sales for this postcode
+    land_registry = []
+    try:
+        resp = requests.get(
+            'https://landregistry.data.gov.uk/data/ppi/transaction-record.json',
+            params={
+                'propertyAddress.postcode': prop.postcode,
+                'propertyAddress.paon': prop.address_line_1.split()[0] if prop.address_line_1 else '',
+                '_pageSize': '10',
+                '_sort': '-transactionDate',
+            },
+            timeout=15,
+        )
+        resp.raise_for_status()
+        items = resp.json().get('result', {}).get('items', [])
+        for item in items:
+            land_registry.append({
+                'price': item.get('pricePaid', 0),
+                'date': item.get('transactionDate', ''),
+            })
+    except requests.RequestException:
+        pass
+
+    return Response({
+        'property_id': prop.pk,
+        'current_price': float(prop.price),
+        'days_on_market': days_on_market,
+        'listed_date': prop.created_at.isoformat(),
+        'price_changes': history,
+        'land_registry_sales': land_registry,
+    })
+
+
+# ── #37 Open House Events ───────────────────────────────────────
+
+class OpenHouseEventViewSet(viewsets.ModelViewSet):
+    """CRUD for open house events."""
+    serializer_class = OpenHouseEventSerializer
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
+
+    def get_queryset(self):
+        property_pk = self.kwargs.get('property_pk')
+        if property_pk:
+            return OpenHouseEvent.objects.filter(property_id=property_pk)
+        if self.request.user.is_authenticated:
+            return OpenHouseEvent.objects.filter(property__owner=self.request.user)
+        return OpenHouseEvent.objects.none()
+
+    def perform_create(self, serializer):
+        property_pk = self.kwargs.get('property_pk')
+        prop = get_object_or_404(Property, pk=property_pk)
+        if prop.owner != self.request.user:
+            raise PermissionDenied('Only the property owner can create open house events.')
+        serializer.save(property=prop)
+
+    def perform_update(self, serializer):
+        if serializer.instance.property.owner != self.request.user:
+            raise PermissionDenied()
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.property.owner != self.request.user:
+            raise PermissionDenied()
+        instance.delete()
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def rsvp_open_house(request, event_pk):
+    """RSVP to an open house event."""
+    event = get_object_or_404(OpenHouseEvent, pk=event_pk, is_active=True)
+
+    if not event.has_capacity:
+        return Response({'error': 'This event is at full capacity.'}, status=400)
+
+    if event.property.owner == request.user:
+        return Response({'error': 'You cannot RSVP to your own open house.'}, status=400)
+
+    rsvp, created = OpenHouseRSVP.objects.get_or_create(
+        event=event,
+        user=request.user,
+        defaults={
+            'attendees': request.data.get('attendees', 1),
+            'message': request.data.get('message', ''),
+        }
+    )
+
+    if not created:
+        return Response({'error': 'You have already RSVPd to this event.'}, status=400)
+
+    # Notify the seller
+    try:
+        from .tasks import send_email_task
+        send_email_task.delay(
+            f'New RSVP for {event.title}',
+            f'Hi {event.property.owner.first_name or event.property.owner.email},\n\n'
+            f'{request.user.get_full_name() or request.user.email} has RSVPd to your '
+            f'open house event for "{event.property.title}" on {event.date}.\n\n'
+            f'— For Sale By Owner',
+            settings.DEFAULT_FROM_EMAIL,
+            [event.property.owner.email],
+        )
+    except Exception:
+        pass
+
+    return Response(OpenHouseRSVPSerializer(rsvp).data, status=201)
+
+
+@api_view(['DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+def cancel_rsvp(request, event_pk):
+    """Cancel an RSVP to an open house event."""
+    rsvp = get_object_or_404(OpenHouseRSVP, event_id=event_pk, user=request.user)
+    rsvp.delete()
+    return Response(status=204)
+
+
+# ── #38 QR Code Property Flyers ──────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def generate_property_flyer(request, property_pk):
+    """Generate a printable property flyer with QR code."""
+    prop = get_object_or_404(Property, pk=property_pk)
+    if prop.owner != request.user:
+        raise PermissionDenied('Only the property owner can generate flyers.')
+
+    property_url = f"{settings.SITE_URL}/properties/{prop.slug or prop.pk}/"
+
+    # Generate QR code
+    try:
+        import qrcode
+        from io import BytesIO
+        import base64
+
+        qr = qrcode.QRCode(version=1, box_size=10, border=4)
+        qr.add_data(property_url)
+        qr.make(fit=True)
+        qr_img = qr.make_image(fill_color="black", back_color="white")
+        qr_buffer = BytesIO()
+        qr_img.save(qr_buffer, format='PNG')
+        qr_base64 = base64.b64encode(qr_buffer.getvalue()).decode()
+    except ImportError:
+        qr_base64 = None
+
+    # Get primary image
+    primary_image = None
+    primary = prop.images.filter(is_primary=True).first()
+    if primary and primary.image:
+        primary_image = primary.image.url
+
+    # Build flyer data
+    flyer_data = {
+        'property': {
+            'title': prop.title,
+            'price': f"£{prop.price:,.0f}",
+            'address': f"{prop.address_line_1}, {prop.city}, {prop.postcode}",
+            'bedrooms': prop.bedrooms,
+            'bathrooms': prop.bathrooms,
+            'reception_rooms': prop.reception_rooms,
+            'square_feet': prop.square_feet,
+            'property_type': prop.get_property_type_display(),
+            'epc_rating': prop.epc_rating,
+            'description': prop.description[:300] + ('...' if len(prop.description) > 300 else ''),
+            'primary_image': primary_image,
+        },
+        'qr_code': qr_base64,
+        'property_url': property_url,
+        'generated_at': timezone.now().isoformat(),
+    }
+
+    return Response(flyer_data)
+
+
+# ── #39 Solicitor / Conveyancer Matching ─────────────────────────
+
+class ConveyancerQuoteRequestViewSet(viewsets.ModelViewSet):
+    """CRUD for conveyancer quote requests."""
+    serializer_class = ConveyancerQuoteRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return ConveyancerQuoteRequest.objects.filter(
+            requester=self.request.user
+        ).prefetch_related('quotes__provider')
+
+    def perform_create(self, serializer):
+        quote_request = serializer.save(requester=self.request.user)
+
+        # Notify matching conveyancers
+        prop = quote_request.property
+        postcode_prefix = prop.postcode.split()[0] if ' ' in prop.postcode else prop.postcode[:3]
+
+        # Find conveyancers covering this area
+        conveyancing_categories = ServiceCategory.objects.filter(
+            slug__in=['conveyancing', 'solicitor', 'conveyancer']
+        )
+        matching_providers = ServiceProvider.objects.filter(
+            status='active',
+            categories__in=conveyancing_categories,
+        ).filter(
+            Q(coverage_postcodes__icontains=postcode_prefix) |
+            Q(coverage_counties__icontains=prop.county)
+        ).distinct()[:10]
+
+        try:
+            from .tasks import send_email_task
+            for provider in matching_providers:
+                send_email_task.delay(
+                    f'New conveyancing quote request for {prop.city}',
+                    f'Hi {provider.business_name},\n\n'
+                    f'A new conveyancing quote request has been submitted for a property in '
+                    f'{prop.city} ({prop.postcode}).\n\n'
+                    f'Transaction type: {quote_request.get_transaction_type_display()}\n\n'
+                    f'Submit your quote on the platform:\n'
+                    f'{settings.SITE_URL}/my-service/\n\n'
+                    f'— For Sale By Owner',
+                    settings.DEFAULT_FROM_EMAIL,
+                    [provider.contact_email],
+                )
+        except Exception:
+            pass
+
+
+class ConveyancerQuoteViewSet(viewsets.ModelViewSet):
+    """Viewset for service providers to submit and manage quotes."""
+    serializer_class = ConveyancerQuoteSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Providers see quotes they've made; requesters see quotes on their requests
+        user = self.request.user
+        return ConveyancerQuote.objects.filter(
+            Q(provider__owner=user) | Q(request__requester=user)
+        )
+
+    def perform_create(self, serializer):
+        try:
+            provider = self.request.user.service_provider
+        except ServiceProvider.DoesNotExist:
+            raise PermissionDenied('You must be a registered service provider to submit quotes.')
+        serializer.save(provider=provider)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def accept_conveyancer_quote(request, quote_pk):
+    """Accept a conveyancing quote."""
+    quote = get_object_or_404(ConveyancerQuote, pk=quote_pk)
+    if quote.request.requester != request.user:
+        raise PermissionDenied('Only the requester can accept quotes.')
+
+    quote.is_accepted = True
+    quote.save()
+    quote.request.status = 'accepted'
+    quote.request.save()
+
+    # Reject other quotes
+    ConveyancerQuote.objects.filter(
+        request=quote.request
+    ).exclude(pk=quote.pk).update(is_accepted=False)
+
+    # Notify accepted provider
+    try:
+        from .tasks import send_email_task
+        send_email_task.delay(
+            'Your conveyancing quote has been accepted',
+            f'Hi {quote.provider.business_name},\n\n'
+            f'Your quote of £{quote.total:,.2f} has been accepted.\n\n'
+            f'Please contact the client to proceed.\n\n'
+            f'— For Sale By Owner',
+            settings.DEFAULT_FROM_EMAIL,
+            [quote.provider.contact_email],
+        )
+    except Exception:
+        pass
+
+    return Response(ConveyancerQuoteSerializer(quote).data)
+
+
+# ── #40 Neighbourhood Reviews ───────────────────────────────────
+
+class NeighbourhoodReviewViewSet(viewsets.ModelViewSet):
+    """CRUD for neighbourhood reviews."""
+    serializer_class = NeighbourhoodReviewSerializer
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
+
+    def get_queryset(self):
+        postcode_area = self.request.query_params.get('postcode_area', '').strip().upper()
+        qs = NeighbourhoodReview.objects.all()
+        if postcode_area:
+            qs = qs.filter(postcode_area__iexact=postcode_area)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(reviewer=self.request.user)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def neighbourhood_summary(request, postcode_area):
+    """Aggregate neighbourhood review scores."""
+    postcode_area = postcode_area.strip().upper()
+    reviews = NeighbourhoodReview.objects.filter(postcode_area__iexact=postcode_area)
+
+    if not reviews.exists():
+        return Response({'postcode_area': postcode_area, 'review_count': 0})
+
+    agg = reviews.aggregate(
+        avg_overall=Avg('overall_rating'),
+        avg_community=Avg('community_rating'),
+        avg_noise=Avg('noise_rating'),
+        avg_parking=Avg('parking_rating'),
+        avg_shops=Avg('shops_rating'),
+        avg_safety=Avg('safety_rating'),
+        avg_schools=Avg('schools_rating'),
+        avg_transport=Avg('transport_rating'),
+        count=Count('id'),
+    )
+
+    return Response({
+        'postcode_area': postcode_area,
+        'review_count': agg['count'],
+        'ratings': {
+            'overall': round(agg['avg_overall'], 1) if agg['avg_overall'] else None,
+            'community': round(agg['avg_community'], 1) if agg['avg_community'] else None,
+            'noise': round(agg['avg_noise'], 1) if agg['avg_noise'] else None,
+            'parking': round(agg['avg_parking'], 1) if agg['avg_parking'] else None,
+            'shops': round(agg['avg_shops'], 1) if agg['avg_shops'] else None,
+            'safety': round(agg['avg_safety'], 1) if agg['avg_safety'] else None,
+            'schools': round(agg['avg_schools'], 1) if agg['avg_schools'] else None,
+            'transport': round(agg['avg_transport'], 1) if agg['avg_transport'] else None,
+        },
+    })
+
+
+# ── #41 "For Sale" Board Ordering ────────────────────────────────
+
+BOARD_PRICES = {
+    'standard': Decimal('29.99'),
+    'premium': Decimal('49.99'),
+    'solar_lit': Decimal('79.99'),
+}
+
+
+class BoardOrderViewSet(viewsets.ModelViewSet):
+    """CRUD for board orders."""
+    serializer_class = BoardOrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return BoardOrder.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        prop = serializer.validated_data['property']
+        if prop.owner != self.request.user:
+            raise PermissionDenied('Only the property owner can order boards.')
+        board_type = serializer.validated_data.get('board_type', 'standard')
+        price = BOARD_PRICES.get(board_type, BOARD_PRICES['standard'])
+        serializer.save(user=self.request.user, price=price)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def board_pricing(request):
+    """Return board pricing options."""
+    return Response({
+        'boards': [
+            {
+                'type': 'standard',
+                'name': 'Standard Board',
+                'price': float(BOARD_PRICES['standard']),
+                'description': 'Professional "For Sale" board with property details and website URL.',
+            },
+            {
+                'type': 'premium',
+                'name': 'Premium Board with QR Code',
+                'price': float(BOARD_PRICES['premium']),
+                'description': 'Premium board with QR code linking directly to your listing.',
+            },
+            {
+                'type': 'solar_lit',
+                'name': 'Solar-Lit Board',
+                'price': float(BOARD_PRICES['solar_lit']),
+                'description': 'Solar-powered illuminated board visible day and night.',
+            },
+        ],
+    })
+
+
+# ── #42 EPC Energy Improvement Suggestions ───────────────────────
+
+EPC_IMPROVEMENTS = {
+    'G': [
+        {'improvement': 'Loft insulation (270mm)', 'estimated_cost': '£300-£500', 'annual_saving': '£150-£250', 'rating_improvement': '+5-10'},
+        {'improvement': 'Cavity wall insulation', 'estimated_cost': '£500-£1,500', 'annual_saving': '£100-£200', 'rating_improvement': '+5-10'},
+        {'improvement': 'Draught-proofing', 'estimated_cost': '£100-£300', 'annual_saving': '£25-£50', 'rating_improvement': '+1-3'},
+        {'improvement': 'Upgrade boiler to A-rated condensing', 'estimated_cost': '£2,000-£3,500', 'annual_saving': '£200-£350', 'rating_improvement': '+10-15'},
+        {'improvement': 'Double glazing', 'estimated_cost': '£3,000-£7,000', 'annual_saving': '£75-£150', 'rating_improvement': '+3-5'},
+        {'improvement': 'Solar panels (4kW)', 'estimated_cost': '£5,000-£8,000', 'annual_saving': '£300-£500', 'rating_improvement': '+10-15'},
+    ],
+    'F': [
+        {'improvement': 'Loft insulation top-up', 'estimated_cost': '£200-£400', 'annual_saving': '£100-£150', 'rating_improvement': '+3-5'},
+        {'improvement': 'Cavity wall insulation', 'estimated_cost': '£500-£1,500', 'annual_saving': '£100-£200', 'rating_improvement': '+5-10'},
+        {'improvement': 'Upgrade boiler to A-rated condensing', 'estimated_cost': '£2,000-£3,500', 'annual_saving': '£200-£350', 'rating_improvement': '+10-15'},
+        {'improvement': 'Smart heating controls', 'estimated_cost': '£200-£400', 'annual_saving': '£75-£125', 'rating_improvement': '+2-4'},
+        {'improvement': 'Solar panels (4kW)', 'estimated_cost': '£5,000-£8,000', 'annual_saving': '£300-£500', 'rating_improvement': '+10-15'},
+    ],
+    'E': [
+        {'improvement': 'Upgrade boiler to A-rated condensing', 'estimated_cost': '£2,000-£3,500', 'annual_saving': '£150-£250', 'rating_improvement': '+8-12'},
+        {'improvement': 'Smart heating controls', 'estimated_cost': '£200-£400', 'annual_saving': '£75-£125', 'rating_improvement': '+2-4'},
+        {'improvement': 'Solar panels (4kW)', 'estimated_cost': '£5,000-£8,000', 'annual_saving': '£300-£500', 'rating_improvement': '+10-15'},
+        {'improvement': 'External wall insulation', 'estimated_cost': '£8,000-£15,000', 'annual_saving': '£200-£400', 'rating_improvement': '+10-15'},
+    ],
+    'D': [
+        {'improvement': 'Solar panels (4kW)', 'estimated_cost': '£5,000-£8,000', 'annual_saving': '£300-£500', 'rating_improvement': '+10-15'},
+        {'improvement': 'Heat pump (air source)', 'estimated_cost': '£7,000-£14,000', 'annual_saving': '£200-£400', 'rating_improvement': '+10-20'},
+        {'improvement': 'Smart heating controls', 'estimated_cost': '£200-£400', 'annual_saving': '£50-£100', 'rating_improvement': '+2-3'},
+        {'improvement': 'LED lighting throughout', 'estimated_cost': '£100-£300', 'annual_saving': '£30-£60', 'rating_improvement': '+1-2'},
+    ],
+    'C': [
+        {'improvement': 'Solar panels (4kW)', 'estimated_cost': '£5,000-£8,000', 'annual_saving': '£300-£500', 'rating_improvement': '+5-10'},
+        {'improvement': 'Heat pump (air source)', 'estimated_cost': '£7,000-£14,000', 'annual_saving': '£200-£400', 'rating_improvement': '+5-10'},
+        {'improvement': 'Battery storage', 'estimated_cost': '£3,000-£6,000', 'annual_saving': '£150-£300', 'rating_improvement': '+2-5'},
+    ],
+    'B': [
+        {'improvement': 'Solar panels (if not already fitted)', 'estimated_cost': '£5,000-£8,000', 'annual_saving': '£300-£500', 'rating_improvement': '+3-5'},
+        {'improvement': 'Battery storage', 'estimated_cost': '£3,000-£6,000', 'annual_saving': '£150-£300', 'rating_improvement': '+1-3'},
+    ],
+}
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def epc_improvement_suggestions(request, property_pk):
+    """Suggest energy improvements based on EPC rating."""
+    prop = get_object_or_404(Property, pk=property_pk)
+
+    if not prop.epc_rating:
+        return Response({
+            'error': 'This property has no EPC rating set.',
+            'suggestion': 'Add your EPC rating to receive improvement suggestions.',
+        }, status=400)
+
+    if prop.epc_rating == 'A':
+        return Response({
+            'epc_rating': 'A',
+            'message': 'This property already has the highest EPC rating. No improvements needed.',
+            'improvements': [],
+        })
+
+    improvements = EPC_IMPROVEMENTS.get(prop.epc_rating, [])
+
+    # Find relevant service providers on the platform
+    related_categories = ServiceCategory.objects.filter(
+        slug__in=['epc', 'insulation', 'solar', 'boiler', 'heating', 'electrician']
+    )
+    postcode_prefix = prop.postcode.split()[0] if ' ' in prop.postcode else prop.postcode[:3]
+    local_providers = ServiceProvider.objects.filter(
+        status='active',
+        categories__in=related_categories,
+    ).filter(
+        Q(coverage_postcodes__icontains=postcode_prefix) |
+        Q(coverage_counties__icontains=prop.county)
+    ).distinct()[:5]
+
+    provider_data = [
+        {
+            'id': p.pk,
+            'business_name': p.business_name,
+            'slug': p.slug,
+            'average_rating': p.average_rating,
+        }
+        for p in local_providers
+    ]
+
+    return Response({
+        'epc_rating': prop.epc_rating,
+        'improvements': improvements,
+        'local_service_providers': provider_data,
+    })
+
+
+# ── #43 Buyer Affordability Profile ──────────────────────────────
+
+@api_view(['GET', 'PUT', 'PATCH'])
+@permission_classes([permissions.IsAuthenticated])
+def buyer_profile_view(request):
+    """Get or update the buyer's affordability profile."""
+    profile, created = BuyerProfile.objects.get_or_create(user=request.user)
+
+    if request.method == 'GET':
+        return Response(BuyerProfileSerializer(profile).data)
+
+    serializer = BuyerProfileSerializer(profile, data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def affordable_properties(request):
+    """Return properties within the buyer's budget."""
+    try:
+        profile = request.user.buyer_profile
+    except BuyerProfile.DoesNotExist:
+        return Response(
+            {'error': 'Please set up your buyer profile first.'},
+            status=400,
+        )
+
+    if not profile.max_budget:
+        return Response(
+            {'error': 'Please set your maximum budget in your buyer profile.'},
+            status=400,
+        )
+
+    queryset = Property.objects.filter(
+        status='active',
+        price__lte=profile.max_budget,
+    )
+
+    # Filter by preferred areas
+    if profile.preferred_areas:
+        areas = [a.strip() for a in profile.preferred_areas.split(',') if a.strip()]
+        if areas:
+            area_q = Q()
+            for area in areas:
+                area_q |= Q(city__icontains=area) | Q(postcode__istartswith=area.upper())
+            queryset = queryset.filter(area_q)
+
+    queryset = queryset.order_by('-created_at')[:20]
+    serializer = PropertyListSerializer(
+        queryset, many=True, context={'request': request}
+    )
+    return Response(serializer.data)
+
+
+# ── #44 Two-Factor Authentication ────────────────────────────────
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def setup_2fa(request):
+    """Generate a TOTP secret and provisioning URI for 2FA setup."""
+    import secrets
+    import base64
+    import hmac
+    import struct
+    import time as time_module
+
+    user = request.user
+    if user.two_fa_enabled:
+        return Response({'error': '2FA is already enabled.'}, status=400)
+
+    # Generate a random secret
+    secret_bytes = secrets.token_bytes(20)
+    secret = base64.b32encode(secret_bytes).decode('utf-8').rstrip('=')
+
+    user.two_fa_secret = secret
+    user.save(update_fields=['two_fa_secret'])
+
+    # Build otpauth URI
+    issuer = 'ForSaleByOwner'
+    provisioning_uri = (
+        f'otpauth://totp/{issuer}:{user.email}'
+        f'?secret={secret}&issuer={issuer}&digits=6&period=30'
+    )
+
+    return Response({
+        'secret': secret,
+        'provisioning_uri': provisioning_uri,
+        'message': 'Scan the QR code with your authenticator app, then confirm with /api/2fa/confirm/',
+    })
+
+
+def _generate_totp(secret, time_step=30):
+    """Generate a TOTP code from a base32 secret."""
+    import base64
+    import hmac
+    import hashlib
+    import struct
+    import time as time_module
+
+    # Pad the secret if needed
+    padding = 8 - (len(secret) % 8)
+    if padding != 8:
+        secret += '=' * padding
+
+    key = base64.b32decode(secret.upper())
+    counter = int(time_module.time()) // time_step
+    counter_bytes = struct.pack('>Q', counter)
+    hmac_hash = hmac.new(key, counter_bytes, hashlib.sha1).digest()
+    offset = hmac_hash[-1] & 0x0F
+    code = struct.unpack('>I', hmac_hash[offset:offset + 4])[0]
+    code = (code & 0x7FFFFFFF) % 1000000
+    return f'{code:06d}'
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def confirm_2fa(request):
+    """Confirm 2FA setup with a TOTP code."""
+    user = request.user
+    code = request.data.get('code', '')
+
+    if not user.two_fa_secret:
+        return Response({'error': 'Please set up 2FA first via /api/2fa/setup/'}, status=400)
+
+    expected = _generate_totp(user.two_fa_secret)
+    if code != expected:
+        return Response({'error': 'Invalid code. Please try again.'}, status=400)
+
+    user.two_fa_enabled = True
+    user.save(update_fields=['two_fa_enabled'])
+
+    return Response({'message': '2FA has been successfully enabled.'})
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def disable_2fa(request):
+    """Disable 2FA for the current user."""
+    user = request.user
+    code = request.data.get('code', '')
+
+    if not user.two_fa_enabled:
+        return Response({'error': '2FA is not enabled.'}, status=400)
+
+    expected = _generate_totp(user.two_fa_secret)
+    if code != expected:
+        return Response({'error': 'Invalid code.'}, status=400)
+
+    user.two_fa_enabled = False
+    user.two_fa_secret = ''
+    user.save(update_fields=['two_fa_enabled', 'two_fa_secret'])
+
+    return Response({'message': '2FA has been disabled.'})
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def verify_2fa(request):
+    """Verify a 2FA code during login."""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    email = request.data.get('email', '')
+    code = request.data.get('code', '')
+
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        return Response({'error': 'Invalid credentials.'}, status=400)
+
+    if not user.two_fa_enabled:
+        return Response({'error': '2FA is not enabled for this account.'}, status=400)
+
+    expected = _generate_totp(user.two_fa_secret)
+    if code != expected:
+        return Response({'error': 'Invalid 2FA code.'}, status=400)
+
+    # Generate or retrieve token
+    from rest_framework.authtoken.models import Token
+    token, _ = Token.objects.get_or_create(user=user)
+
+    return Response({
+        'auth_token': token.key,
+        'message': '2FA verified successfully.',
+    })
+
+
+# ── #45 Community Forum ──────────────────────────────────────────
+
+class ForumCategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    """List forum categories."""
+    serializer_class = ForumCategorySerializer
+    permission_classes = [permissions.AllowAny]
+    queryset = ForumCategory.objects.all()
+
+
+class ForumTopicViewSet(viewsets.ModelViewSet):
+    """CRUD for forum topics."""
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return ForumTopicDetailSerializer
+        return ForumTopicSerializer
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
+
+    def get_queryset(self):
+        qs = ForumTopic.objects.select_related('category', 'author')
+        category_slug = self.request.query_params.get('category')
+        if category_slug:
+            qs = qs.filter(category__slug=category_slug)
+        search = self.request.query_params.get('search')
+        if search:
+            qs = qs.filter(Q(title__icontains=search) | Q(content__icontains=search))
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Increment view count
+        ForumTopic.objects.filter(pk=instance.pk).update(view_count=F('view_count') + 1)
+        instance.refresh_from_db()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
+
+class ForumPostViewSet(viewsets.ModelViewSet):
+    """CRUD for forum posts (replies to topics)."""
+    serializer_class = ForumPostSerializer
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
+
+    def get_queryset(self):
+        topic_pk = self.kwargs.get('topic_pk')
+        if topic_pk:
+            return ForumPost.objects.filter(topic_id=topic_pk)
+        return ForumPost.objects.all()
+
+    def perform_create(self, serializer):
+        topic_pk = self.kwargs.get('topic_pk')
+        topic = get_object_or_404(ForumTopic, pk=topic_pk)
+        if topic.is_locked:
+            raise PermissionDenied('This topic is locked.')
+        serializer.save(author=self.request.user, topic=topic)
+
+    def perform_destroy(self, instance):
+        if instance.author != self.request.user:
+            raise PermissionDenied()
+        instance.delete()
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def mark_solution(request, post_pk):
+    """Mark a forum post as the solution (by topic author only)."""
+    post = get_object_or_404(ForumPost, pk=post_pk)
+    if post.topic.author != request.user:
+        raise PermissionDenied('Only the topic author can mark a solution.')
+    # Unmark any existing solution
+    ForumPost.objects.filter(topic=post.topic, is_solution=True).update(is_solution=False)
+    post.is_solution = True
+    post.save(update_fields=['is_solution'])
+    return Response(ForumPostSerializer(post).data)

@@ -9,6 +9,8 @@ import '../services/auth_service.dart';
 import '../widgets/branded_app_bar.dart';
 import '../widgets/scroll_to_top_button.dart';
 import '../utils/auto_retry.dart';
+import 'login_screen.dart';
+import 'service_provider_form_screen.dart';
 
 class PricingScreen extends StatefulWidget {
   const PricingScreen({super.key});
@@ -76,7 +78,7 @@ class _PricingScreenState extends State<PricingScreen> with AutoRetryMixin {
   Future<void> _subscribe(SubscriptionTier tier) async {
     final auth = Provider.of<AuthService>(context, listen: false);
     if (!auth.isAuthenticated) {
-      Navigator.pushNamed(context, '/login');
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
       return;
     }
 
@@ -465,7 +467,7 @@ class _PricingScreenState extends State<PricingScreen> with AutoRetryMixin {
                   child: isFree
                       ? OutlinedButton(
                           onPressed: () =>
-                              Navigator.pushNamed(context, '/services/register'),
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const ServiceProviderFormScreen())),
                           child: const Text('Get Started Free'),
                         )
                       : ElevatedButton(

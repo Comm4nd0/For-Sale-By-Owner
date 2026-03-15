@@ -63,6 +63,12 @@ urlpatterns = [
     # Slug-based property URL (must come after /properties/new/ and /properties/<int:id>/)
     path('properties/<slug:slug>/', CSRFTemplateView.as_view(template_name='property_detail.html'), name='property-detail-slug'),
 
+    # New feature pages
+    path('stamp-duty-calculator/', CSRFTemplateView.as_view(template_name='stamp_duty_calculator.html'), name='stamp-duty-calculator'),
+    path('forum/', CSRFTemplateView.as_view(template_name='forum.html'), name='forum'),
+    path('conveyancing/', CSRFTemplateView.as_view(template_name='conveyancing.html'), name='conveyancing'),
+    path('price-comparison/', CSRFTemplateView.as_view(template_name='price_comparison.html'), name='price-comparison'),
+
     # Legal pages
     path('terms/', CSRFTemplateView.as_view(template_name='terms.html'), name='terms'),
     path('privacy/', CSRFTemplateView.as_view(template_name='privacy.html'), name='privacy'),
