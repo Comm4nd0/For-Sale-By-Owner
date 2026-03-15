@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../models/board_order.dart';
+import '../models/property.dart';
 import '../widgets/branded_app_bar.dart';
 
 class BoardOrderScreen extends StatefulWidget {
@@ -329,9 +330,13 @@ class _NewBoardOrderFormState extends State<_NewBoardOrderForm> {
   );
 
   final _formKey = GlobalKey<FormState>();
-  final _propertyIdController = TextEditingController();
   final _addressController = TextEditingController();
   final _notesController = TextEditingController();
+
+  List<Property> _userProperties = [];
+  Property? _selectedProperty;
+  bool _loadingProperties = true;
+  String? _propertiesError;
 
   List<BoardPricingOption> _pricingOptions = [];
   BoardPricingOption? _selectedOption;
@@ -342,18 +347,41 @@ class _NewBoardOrderFormState extends State<_NewBoardOrderForm> {
   @override
   void initState() {
     super.initState();
-    if (widget.propertyId != null) {
-      _propertyIdController.text = widget.propertyId.toString();
-    }
     _loadPricing();
+    _loadUserProperties();
   }
 
   @override
   void dispose() {
-    _propertyIdController.dispose();
     _addressController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadUserProperties() async {
+    try {
+      final api = context.read<ApiService>();
+      final response = await api.getProperties(mine: true);
+      if (mounted) {
+        setState(() {
+          _userProperties = response.results;
+          // Pre-select the property if an ID was passed in
+          if (widget.propertyId != null) {
+            _selectedProperty = _userProperties
+                .where((p) => p.id == widget.propertyId)
+                .firstOrNull;
+          }
+          _loadingProperties = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _propertiesError = e.toString();
+          _loadingProperties = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadPricing() async {
@@ -442,10 +470,9 @@ class _NewBoardOrderFormState extends State<_NewBoardOrderForm> {
   Future<void> _submitOrder() async {
     if (!_formKey.currentState!.validate() || _selectedOption == null) return;
 
-    final propertyId = int.tryParse(_propertyIdController.text.trim());
-    if (propertyId == null) {
+    if (_selectedProperty == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid property ID')),
+        const SnackBar(content: Text('Please select a property')),
       );
       return;
     }
@@ -458,6 +485,8 @@ class _NewBoardOrderFormState extends State<_NewBoardOrderForm> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text('Property: ${_selectedProperty!.title}'),
+            const SizedBox(height: 4),
             Text('Board type: ${_selectedOption!.name}'),
             const SizedBox(height: 4),
             Text('Delivery to: ${_addressController.text.trim()}'),
@@ -493,7 +522,7 @@ class _NewBoardOrderFormState extends State<_NewBoardOrderForm> {
     try {
       final api = context.read<ApiService>();
       await api.createBoardOrder(
-        propertyId,
+        _selectedProperty!.id,
         _selectedOption!.type,
         _addressController.text.trim(),
       );
@@ -524,7 +553,7 @@ class _NewBoardOrderFormState extends State<_NewBoardOrderForm> {
         backgroundColor: _brandColor,
         foregroundColor: Colors.white,
       ),
-      body: _loadingPricing
+      body: (_loadingPricing || _loadingProperties)
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -554,26 +583,102 @@ class _NewBoardOrderFormState extends State<_NewBoardOrderForm> {
 
                     const SizedBox(height: 24),
 
-                    // Property ID
-                    TextFormField(
-                      controller: _propertyIdController,
-                      decoration: const InputDecoration(
-                        labelText: 'Property ID',
-                        prefixIcon: Icon(Icons.home),
-                        border: OutlineInputBorder(),
+                    // Property selector
+                    if (_propertiesError != null && _userProperties.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Text(
+                          'Could not load your properties. Please try again later.',
+                          style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+                        ),
                       ),
-                      keyboardType: TextInputType.number,
-                      readOnly: widget.propertyId != null,
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Property ID is required';
-                        }
-                        if (int.tryParse(v.trim()) == null) {
-                          return 'Enter a valid number';
-                        }
-                        return null;
-                      },
-                    ),
+                    if (_userProperties.isEmpty && _propertiesError == null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.orange.shade200),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'You don\'t have any property listings yet. Create a listing first to order a board.',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    if (_userProperties.isNotEmpty)
+                      DropdownButtonFormField<int>(
+                        value: _selectedProperty?.id,
+                        decoration: const InputDecoration(
+                          labelText: 'Select Property',
+                          prefixIcon: Icon(Icons.home),
+                          border: OutlineInputBorder(),
+                        ),
+                        items: _userProperties.map((property) {
+                          final subtitle = [
+                            property.addressLine1,
+                            property.city,
+                            property.postcode,
+                          ].where((s) => s.isNotEmpty).join(', ');
+                          return DropdownMenuItem<int>(
+                            value: property.id,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  property.title,
+                                  style: const TextStyle(fontSize: 14),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (subtitle.isNotEmpty)
+                                  Text(
+                                    subtitle,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (id) {
+                          setState(() {
+                            _selectedProperty = _userProperties
+                                .firstWhere((p) => p.id == id);
+                          });
+                        },
+                        validator: (_) {
+                          if (_selectedProperty == null) {
+                            return 'Please select a property';
+                          }
+                          return null;
+                        },
+                        isExpanded: true,
+                        selectedItemBuilder: (context) {
+                          return _userProperties.map((property) {
+                            return Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                property.title,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList();
+                        },
+                      ),
                     const SizedBox(height: 16),
 
                     // Delivery address
