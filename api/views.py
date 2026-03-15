@@ -708,10 +708,14 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
     """Messages within a chat room."""
     serializer_class = ChatMessageSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
     http_method_names = ['get', 'post']
 
     def get_queryset(self):
-        room = get_object_or_404(ChatRoom, pk=self.kwargs['room_pk'])
+        room_pk = self.kwargs.get('room_pk')
+        if room_pk is None:
+            return ChatMessage.objects.none()
+        room = get_object_or_404(ChatRoom, pk=room_pk)
         user = self.request.user
         if user != room.buyer and user != room.seller:
             raise PermissionDenied()

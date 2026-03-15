@@ -171,6 +171,7 @@
             ]);
 
             if (!roomRes.ok) throw new Error('Chat room not found');
+            if (!msgsRes.ok) throw new Error('Failed to load messages');
 
             const room = await roomRes.json();
             const msgsData = await msgsRes.json();
@@ -296,6 +297,7 @@
             if (currentRoomId !== roomId) return;
             try {
                 const res = await Auth.authFetch(`/api/chat-rooms/${roomId}/messages/`, { headers: Auth.headers() });
+                if (!res.ok) return;
                 const data = await res.json();
                 const messages = Array.isArray(data) ? data : (data.results || []);
                 renderMessages(messages);
