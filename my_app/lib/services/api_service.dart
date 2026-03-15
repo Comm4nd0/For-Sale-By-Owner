@@ -754,6 +754,13 @@ class ApiService {
     throw Exception('Failed to send message');
   }
 
+  Future<void> markMessagesRead(int roomId) async {
+    await http.post(
+      Uri.parse(ApiConstants.chatMarkRead(roomId)),
+      headers: _headers,
+    );
+  }
+
   // ── Offers ──────────────────────────────────────────────────────────
 
   Future<List<Offer>> getOffers({bool? received}) async {

@@ -663,6 +663,17 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
         serializer.save(room=room, sender=user)
         room.save(update_fields=['updated_at'])
 
+    @action(detail=False, methods=['post'])
+    def mark_read(self, request, room_pk=None):
+        room = get_object_or_404(ChatRoom, pk=room_pk)
+        user = request.user
+        if user != room.buyer and user != room.seller:
+            raise PermissionDenied()
+        updated = ChatMessage.objects.filter(
+            room=room, is_read=False
+        ).exclude(sender=user).update(is_read=True)
+        return Response({'marked': updated})
+
 
 # ── Viewing Slots ────────────────────────────────────────────────
 
