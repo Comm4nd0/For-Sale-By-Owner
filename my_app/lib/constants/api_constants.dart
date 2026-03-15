@@ -105,6 +105,8 @@ class ApiConstants {
   static String chatRoomDetail(int id) => '$apiUrl/chat-rooms/$id/';
   static String chatMessages(int roomId) =>
       '$apiUrl/chat-rooms/$roomId/messages/';
+  static String chatMarkRead(int roomId) =>
+      '$apiUrl/chat-rooms/$roomId/messages/mark_read/';
 
   // Offers
   static String get offers => '$apiUrl/offers/';

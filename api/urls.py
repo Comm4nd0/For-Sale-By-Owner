@@ -106,6 +106,11 @@ urlpatterns = [
         views.ChatMessageViewSet.as_view({'get': 'list', 'post': 'create'}),
         name='chat-messages-list',
     ),
+    path(
+        'chat-rooms/<int:room_pk>/messages/mark_read/',
+        views.ChatMessageViewSet.as_view({'post': 'mark_read'}),
+        name='chat-messages-mark-read',
+    ),
     # Service provider reviews (nested)
     path(
         'service-providers/<int:provider_pk>/reviews/',

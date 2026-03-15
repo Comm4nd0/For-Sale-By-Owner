@@ -41,6 +41,8 @@ class _ChatScreenState extends State<ChatScreen> {
         setState(() { _messages = messages; _loading = false; });
         _scrollToBottom();
       }
+      // Mark messages as read
+      api.markMessagesRead(widget.room.id).catchError((_) {});
     } catch (e) {
       if (mounted) setState(() => _loading = false);
     }
