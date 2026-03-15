@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Stamp Duty Calculator - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .sd-hero { background: linear-gradient(135deg, #115E66 0%, #19747E 100%); color: white; padding: 2.5rem 0; margin: -2rem 0 2rem; }
+    .sd-hero h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+    .sd-hero p { opacity: 0.85; font-size: 1rem; }
+    .sd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+    .sd-card { background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E2E2; padding: 1.5rem; }
+    .sd-card h2 { font-size: 1.15rem; color: #115E66; margin-bottom: 1.25rem; }
+    .sd-field { margin-bottom: 1rem; }
+    .sd-field label { display: block; font-size: 0.85rem; font-weight: 600; color: #4A5C62; margin-bottom: 0.35rem; }
+    .sd-field input, .sd-field select { width: 100%; padding: 0.65rem 0.75rem; border: 1px solid #D1E8E2; border-radius: 6px; font-size: 1rem; font-family: inherit; box-sizing: border-box; }
+    .sd-field input:focus, .sd-field select:focus { outline: none; border-color: #19747E; box-shadow: 0 0 0 2px rgba(25,116,126,0.15); }
+    .sd-input-wrap { position: relative; }
+    .sd-prefix { position: absolute; top: 50%; transform: translateY(-50%); left: 0.75rem; color: #8FA3A8; pointer-events: none; }
+    .sd-input-wrap input { padding-left: 1.75rem; }
+    .sd-monthly { text-align: center; padding: 1.25rem 0; margin-bottom: 1rem; border-bottom: 1px solid #EDF2EF; }
+    .sd-monthly-label { font-size: 0.85rem; color: #4A5C62; margin-bottom: 0.25rem; }
+    .sd-monthly-value { font-size: 2rem; font-weight: 700; color: #115E66; }
+    .sd-breakdown { list-style: none; padding: 0; margin: 0; }
+    .sd-breakdown li { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid #EDF2EF; font-size: 0.9rem; }
+    .sd-breakdown li:last-child { border-bottom: none; }
+    .sd-breakdown .sd-label { color: #4A5C62; }
+    .sd-breakdown .sd-value { font-weight: 600; }
+    .sd-band { background: #F7FAF8; border-radius: 6px; padding: 1rem; margin: 1rem 0; }
+    .sd-band-title { font-size: 0.85rem; font-weight: 600; color: #4A5C62; margin-bottom: 0.5rem; }
+    .sd-band-row { display: flex; justify-content: space-between; font-size: 0.8rem; padding: 0.25rem 0; }
+    .sd-checkbox { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .sd-checkbox input { width: auto; }
+    .sd-checkbox label { margin-bottom: 0; font-weight: 400; }
+    @media (max-width: 768px) { .sd-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="sd-hero">
+    <div class="container">
+        <h1>Stamp Duty Calculator</h1>
+        <p>Calculate your Stamp Duty Land Tax, Land Transaction Tax (Wales), or LBTT (Scotland).</p>
+    </div>
+</section>
+
+<div class="container">
+    <div class="sd-grid">
+        <div class="sd-card">
+            <h2>Property Details</h2>
+            <div class="sd-field">
+                <label for="sd-price">Property Price</label>
+                <div class="sd-input-wrap">
+                    <span class="sd-prefix">&pound;</span>
+                    <input type="number" id="sd-price" value="250000" min="1" step="1">
+                </div>
+            </div>
+            <div class="sd-field">
+                <label for="sd-country">Country</label>
+                <select id="sd-country">
+                    <option value="england">England / Northern Ireland</option>
+                    <option value="scotland">Scotland (LBTT)</option>
+                    <option value="wales">Wales (LTT)</option>
+                </select>
+            </div>
+            <div class="sd-checkbox">
+                <input type="checkbox" id="sd-first-time">
+                <label for="sd-first-time">First-time buyer</label>
+            </div>
+            <div class="sd-checkbox">
+                <input type="checkbox" id="sd-additional">
+                <label for="sd-additional">Additional property (second home / buy-to-let)</label>
+            </div>
+        </div>
+
+        <div class="sd-card">
+            <h2>Results</h2>
+            <div id="sd-results">
+                <div class="sd-monthly">
+                    <div class="sd-monthly-label">Stamp Duty to Pay</div>
+                    <div class="sd-monthly-value" id="sd-total">&pound;0</div>
+                </div>
+                <div id="sd-bands"></div>
+                <ul class="sd-breakdown" id="sd-breakdown"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    var inputs = ['sd-price', 'sd-country', 'sd-first-time', 'sd-additional'];
+    inputs.forEach(function(id) {
+        document.getElementById(id).addEventListener('input', calc);
+        document.getElementById(id).addEventListener('change', calc);
+    });
+
+    calc();
+
+    function calc() {
+        var price = parseFloat(document.getElementById('sd-price').value) || 0;
+        var country = document.getElementById('sd-country').value;
+        var firstTime = document.getElementById('sd-first-time').checked;
+        var additional = document.getElementById('sd-additional').checked;
+
+        var url = '/api/stamp-duty-calculator/?' + new URLSearchParams({
+            price: price,
+            country: country,
+            first_time_buyer: firstTime,
+            additional_property: additional
+        });
+
+        fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                document.getElementById('sd-total').textContent = fmt(data.stamp_duty);
+
+                var bandsHtml = '<div class="sd-band"><div class="sd-band-title">Tax Band Breakdown</div>';
+                (data.band_breakdown || []).forEach(function(b) {
+                    bandsHtml += '<div class="sd-band-row"><span>' + fmt(b.from) + ' - ' + fmt(b.to) + ' @ ' + (b.rate * 100).toFixed(1) + '%</span><span>' + fmt(b.tax) + '</span></div>';
+                });
+                bandsHtml += '</div>';
+                document.getElementById('sd-bands').innerHTML = bandsHtml;
+
+                var costs = data.total_purchase_costs || {};
+                var html = '';
+                html += '<li><span class="sd-label">Property Price</span><span class="sd-value">' + fmt(costs.property_price) + '</span></li>';
+                html += '<li><span class="sd-label">Stamp Duty (' + (data.effective_rate || 0) + '%)</span><span class="sd-value">' + fmt(costs.stamp_duty) + '</span></li>';
+                html += '<li><span class="sd-label">Est. Legal Fees</span><span class="sd-value">' + fmt(costs.estimated_legal_fees) + '</span></li>';
+                html += '<li><span class="sd-label">Est. Survey Cost</span><span class="sd-value">' + fmt(costs.estimated_survey_cost) + '</span></li>';
+                html += '<li><span class="sd-label" style="font-weight:700;color:#115E66;">Total Purchase Cost</span><span class="sd-value" style="color:#115E66;">' + fmt(costs.total) + '</span></li>';
+                document.getElementById('sd-breakdown').innerHTML = html;
+            });
+    }
+
+    function fmt(n) {
+        if (n == null) return '\u00A30';
+        return '\u00A3' + Number(n).toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+})();
+</script>
+{% endblock %}

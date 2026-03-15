@@ -10,6 +10,11 @@ from .models import (
     ChatRoom, ChatMessage,
     ViewingSlot, ViewingSlotBooking,
     Offer, PropertyDocument, PropertyFlag,
+    BuyerVerification, ConveyancingCase, ConveyancingStep,
+    OpenHouseEvent, OpenHouseRSVP,
+    ConveyancerQuoteRequest, ConveyancerQuote,
+    NeighbourhoodReview, BoardOrder, BuyerProfile,
+    ForumCategory, ForumTopic, ForumPost,
 )
 
 User = get_user_model()
@@ -95,6 +100,7 @@ class PropertySerializer(serializers.ModelSerializer):
     view_count = serializers.SerializerMethodField()
     message_count = serializers.SerializerMethodField()
     offer_count = serializers.SerializerMethodField()
+    listing_quality = serializers.SerializerMethodField()
 
     class Meta:
         model = Property
@@ -110,6 +116,7 @@ class PropertySerializer(serializers.ModelSerializer):
             'features', 'feature_list',
             'images', 'floorplans', 'primary_image', 'image_count', 'is_saved',
             'price_history', 'view_count', 'message_count', 'offer_count',
+            'listing_quality',
             'video_url', 'video_thumbnail',
             'created_at', 'updated_at',
         ]
@@ -146,6 +153,12 @@ class PropertySerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request and request.user.is_authenticated and obj.owner == request.user:
             return obj.offers.count()
+        return None
+
+    def get_listing_quality(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated and obj.owner == request.user:
+            return obj.listing_quality_score()
         return None
 
 
@@ -599,3 +612,260 @@ class ServiceProviderSubscriptionSerializer(serializers.ModelSerializer):
             'current_period_start', 'current_period_end',
             'cancel_at_period_end', 'started_at',
         ]
+
+
+# ── #30 Buyer Verification Serializers ───────────────────────────
+
+class BuyerVerificationSerializer(serializers.ModelSerializer):
+    verification_type_display = serializers.CharField(
+        source='get_verification_type_display', read_only=True
+    )
+    is_valid = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = BuyerVerification
+        fields = [
+            'id', 'user', 'verification_type', 'verification_type_display',
+            'document', 'status', 'is_valid', 'expires_at',
+            'created_at', 'reviewed_at',
+        ]
+        read_only_fields = ['id', 'user', 'status', 'created_at', 'reviewed_at']
+
+
+# ── #31 Conveyancing Serializers ─────────────────────────────────
+
+class ConveyancingStepSerializer(serializers.ModelSerializer):
+    step_type_display = serializers.CharField(
+        source='get_step_type_display', read_only=True
+    )
+    status_display = serializers.CharField(
+        source='get_status_display', read_only=True
+    )
+
+    class Meta:
+        model = ConveyancingStep
+        fields = [
+            'id', 'step_type', 'step_type_display',
+            'status', 'status_display', 'notes',
+            'completed_at', 'order', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class ConveyancingCaseSerializer(serializers.ModelSerializer):
+    steps = ConveyancingStepSerializer(many=True, read_only=True)
+    property_title = serializers.CharField(source='property.title', read_only=True)
+    buyer_name = serializers.SerializerMethodField()
+    seller_name = serializers.SerializerMethodField()
+    progress_percentage = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ConveyancingCase
+        fields = [
+            'id', 'property', 'property_title', 'offer',
+            'buyer', 'buyer_name', 'seller', 'seller_name',
+            'status', 'buyer_solicitor', 'seller_solicitor',
+            'target_completion_date', 'notes', 'steps',
+            'progress_percentage',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'buyer', 'seller', 'created_at', 'updated_at']
+
+    def get_buyer_name(self, obj):
+        return obj.buyer.get_full_name() or obj.buyer.email
+
+    def get_seller_name(self, obj):
+        return obj.seller.get_full_name() or obj.seller.email
+
+    def get_progress_percentage(self, obj):
+        steps = obj.steps.exclude(status='not_applicable')
+        if not steps.exists():
+            return 0
+        completed = steps.filter(status='completed').count()
+        return round((completed / steps.count()) * 100)
+
+
+# ── #37 Open House Serializers ───────────────────────────────────
+
+class OpenHouseRSVPSerializer(serializers.ModelSerializer):
+    user_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OpenHouseRSVP
+        fields = ['id', 'event', 'user', 'user_name', 'attendees', 'message', 'created_at']
+        read_only_fields = ['id', 'user', 'created_at']
+
+    def get_user_name(self, obj):
+        return obj.user.get_full_name() or obj.user.email
+
+
+class OpenHouseEventSerializer(serializers.ModelSerializer):
+    rsvp_count = serializers.IntegerField(read_only=True)
+    has_capacity = serializers.BooleanField(read_only=True)
+    user_has_rsvpd = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OpenHouseEvent
+        fields = [
+            'id', 'property', 'title', 'date', 'start_time', 'end_time',
+            'description', 'max_attendees', 'is_active',
+            'rsvp_count', 'has_capacity', 'user_has_rsvpd',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'property', 'created_at']
+
+    def get_user_has_rsvpd(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.rsvps.filter(user=request.user).exists()
+        return False
+
+
+# ── #39 Conveyancer Matching Serializers ─────────────────────────
+
+class ConveyancerQuoteSerializer(serializers.ModelSerializer):
+    provider_name = serializers.CharField(source='provider.business_name', read_only=True)
+
+    class Meta:
+        model = ConveyancerQuote
+        fields = [
+            'id', 'request', 'provider', 'provider_name',
+            'legal_fee', 'disbursements', 'total',
+            'estimated_weeks', 'notes', 'is_accepted', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+
+class ConveyancerQuoteRequestSerializer(serializers.ModelSerializer):
+    quotes = ConveyancerQuoteSerializer(many=True, read_only=True)
+    requester_name = serializers.SerializerMethodField()
+    property_title = serializers.CharField(source='property.title', read_only=True)
+
+    class Meta:
+        model = ConveyancerQuoteRequest
+        fields = [
+            'id', 'property', 'property_title',
+            'requester', 'requester_name',
+            'transaction_type', 'status', 'additional_info',
+            'quotes', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'requester', 'status', 'created_at', 'updated_at']
+
+    def get_requester_name(self, obj):
+        return obj.requester.get_full_name() or obj.requester.email
+
+
+# ── #40 Neighbourhood Review Serializers ─────────────────────────
+
+class NeighbourhoodReviewSerializer(serializers.ModelSerializer):
+    reviewer_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = NeighbourhoodReview
+        fields = [
+            'id', 'reviewer', 'reviewer_name', 'postcode_area',
+            'overall_rating', 'community_rating', 'noise_rating',
+            'parking_rating', 'shops_rating', 'safety_rating',
+            'schools_rating', 'transport_rating',
+            'comment', 'years_lived', 'is_current_resident',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'reviewer', 'created_at']
+
+    def get_reviewer_name(self, obj):
+        return obj.reviewer.get_full_name() or 'Resident'
+
+
+# ── #41 Board Order Serializers ──────────────────────────────────
+
+class BoardOrderSerializer(serializers.ModelSerializer):
+    board_type_display = serializers.CharField(
+        source='get_board_type_display', read_only=True
+    )
+    status_display = serializers.CharField(
+        source='get_status_display', read_only=True
+    )
+    property_title = serializers.CharField(source='property.title', read_only=True)
+
+    class Meta:
+        model = BoardOrder
+        fields = [
+            'id', 'property', 'property_title', 'user',
+            'board_type', 'board_type_display',
+            'status', 'status_display',
+            'delivery_address', 'price', 'tracking_number',
+            'notes', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'user', 'status', 'price', 'tracking_number', 'created_at', 'updated_at']
+
+
+# ── #43 Buyer Profile Serializers ────────────────────────────────
+
+class BuyerProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BuyerProfile
+        fields = [
+            'id', 'user', 'max_budget', 'deposit_amount',
+            'mortgage_approved', 'mortgage_amount',
+            'is_first_time_buyer', 'is_cash_buyer',
+            'has_property_to_sell', 'preferred_areas',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
+
+
+# ── #45 Forum Serializers ────────────────────────────────────────
+
+class ForumPostSerializer(serializers.ModelSerializer):
+    author_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ForumPost
+        fields = [
+            'id', 'topic', 'author', 'author_name',
+            'content', 'is_solution',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'author', 'is_solution', 'created_at', 'updated_at']
+
+    def get_author_name(self, obj):
+        return obj.author.get_full_name() or obj.author.email
+
+
+class ForumTopicSerializer(serializers.ModelSerializer):
+    author_name = serializers.SerializerMethodField()
+    reply_count = serializers.IntegerField(read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+
+    class Meta:
+        model = ForumTopic
+        fields = [
+            'id', 'category', 'category_name',
+            'author', 'author_name',
+            'title', 'slug', 'content',
+            'is_pinned', 'is_locked', 'view_count',
+            'reply_count',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = [
+            'id', 'author', 'slug', 'is_pinned', 'is_locked',
+            'view_count', 'created_at', 'updated_at',
+        ]
+
+    def get_author_name(self, obj):
+        return obj.author.get_full_name() or obj.author.email
+
+
+class ForumTopicDetailSerializer(ForumTopicSerializer):
+    posts = ForumPostSerializer(many=True, read_only=True)
+
+    class Meta(ForumTopicSerializer.Meta):
+        fields = ForumTopicSerializer.Meta.fields + ['posts']
+
+
+class ForumCategorySerializer(serializers.ModelSerializer):
+    topic_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = ForumCategory
+        fields = ['id', 'name', 'slug', 'description', 'icon', 'order', 'topic_count']

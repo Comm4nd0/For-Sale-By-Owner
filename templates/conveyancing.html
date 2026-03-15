@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Conveyancing Tracker - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cv-hero { background: linear-gradient(135deg, #115E66 0%, #19747E 100%); color: white; padding: 2.5rem 0; margin: -2rem 0 2rem; }
+    .cv-hero h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+    .cv-hero p { opacity: 0.85; }
+    .cv-card { background: #fff; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .cv-card h2 { font-size: 1.15rem; color: #115E66; margin-bottom: 0.5rem; }
+    .cv-progress { background: #EDF2EF; border-radius: 10px; height: 12px; overflow: hidden; margin: 1rem 0; }
+    .cv-progress-bar { background: linear-gradient(90deg, #115E66, #28A745); height: 100%; border-radius: 10px; transition: width 0.5s; }
+    .cv-progress-text { font-size: 0.85rem; color: #4A5C62; margin-bottom: 0.5rem; }
+    .cv-steps { list-style: none; padding: 0; margin: 0; }
+    .cv-step { display: flex; align-items: flex-start; padding: 0.75rem 0; border-bottom: 1px solid #EDF2EF; gap: 1rem; }
+    .cv-step:last-child { border-bottom: none; }
+    .cv-step-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0; font-weight: 700; }
+    .cv-step-icon.completed { background: #28A745; color: #fff; }
+    .cv-step-icon.in_progress { background: #FFC107; color: #333; }
+    .cv-step-icon.pending { background: #E2E2E2; color: #8FA3A8; }
+    .cv-step-icon.blocked { background: #DC3545; color: #fff; }
+    .cv-step-info { flex: 1; }
+    .cv-step-name { font-weight: 600; color: #1A2C33; font-size: 0.9rem; }
+    .cv-step-status { font-size: 0.8rem; color: #8FA3A8; }
+    .cv-step-notes { font-size: 0.8rem; color: #4A5C62; margin-top: 0.25rem; }
+    .cv-step-actions { display: flex; gap: 0.5rem; }
+    .cv-step-btn { background: #115E66; color: #fff; border: none; padding: 0.3rem 0.7rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-family: inherit; }
+    .cv-step-btn:hover { background: #19747E; }
+    .cv-step-btn.blocked-btn { background: #DC3545; }
+    .cv-empty { text-align: center; padding: 3rem; color: #8FA3A8; }
+    .cv-meta { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; }
+    .cv-meta-item { font-size: 0.85rem; }
+    .cv-meta-item .label { color: #8FA3A8; font-size: 0.75rem; }
+    .cv-meta-item .value { color: #1A2C33; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="cv-hero">
+    <div class="container">
+        <h1>Conveyancing Tracker</h1>
+        <p>Track the progress of your property sale or purchase from offer to completion.</p>
+    </div>
+</section>
+
+<div class="container" id="cv-app">
+    <div class="cv-empty" id="cv-loading">Loading your conveyancing cases...</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var token = localStorage.getItem('auth_token');
+if (!token) { window.location.href = '/login/'; }
+
+var headers = {'Authorization': 'Token ' + token, 'Content-Type': 'application/json'};
+
+function api(url, opts) {
+    opts = opts || {};
+    opts.headers = headers;
+    return fetch('/api/' + url, opts).then(function(r) { return r.json(); });
+}
+
+var statusIcons = {completed: '&#10003;', in_progress: '&#9679;', pending: '&#8226;', blocked: '!', not_applicable: '&#8212;'};
+
+function renderCases() {
+    api('conveyancing-cases/').then(function(data) {
+        var cases = data.results || data;
+        var app = document.getElementById('cv-app');
+
+        if (!cases.length) {
+            app.innerHTML = '<div class="cv-empty"><p>No conveyancing cases yet.</p><p style="font-size:0.85rem;">When an offer is accepted on your property, you can start tracking the conveyancing process here.</p></div>';
+            return;
+        }
+
+        var html = '';
+        cases.forEach(function(c) {
+            html += '<div class="cv-card"><h2>' + c.property_title + '</h2>';
+            html += '<div class="cv-meta">';
+            html += '<div class="cv-meta-item"><div class="label">Buyer</div><div class="value">' + c.buyer_name + '</div></div>';
+            html += '<div class="cv-meta-item"><div class="label">Seller</div><div class="value">' + c.seller_name + '</div></div>';
+            if (c.buyer_solicitor) html += '<div class="cv-meta-item"><div class="label">Buyer Solicitor</div><div class="value">' + c.buyer_solicitor + '</div></div>';
+            if (c.seller_solicitor) html += '<div class="cv-meta-item"><div class="label">Seller Solicitor</div><div class="value">' + c.seller_solicitor + '</div></div>';
+            if (c.target_completion_date) html += '<div class="cv-meta-item"><div class="label">Target Completion</div><div class="value">' + c.target_completion_date + '</div></div>';
+            html += '</div>';
+
+            var pct = c.progress_percentage || 0;
+            html += '<div class="cv-progress-text">' + pct + '% complete</div>';
+            html += '<div class="cv-progress"><div class="cv-progress-bar" style="width:' + pct + '%"></div></div>';
+
+            html += '<ul class="cv-steps">';
+            (c.steps || []).forEach(function(s) {
+                html += '<li class="cv-step">';
+                html += '<div class="cv-step-icon ' + s.status + '">' + (statusIcons[s.status] || '') + '</div>';
+                html += '<div class="cv-step-info"><div class="cv-step-name">' + s.step_type_display + '</div>';
+                html += '<div class="cv-step-status">' + s.status_display;
+                if (s.completed_at) html += ' &middot; ' + new Date(s.completed_at).toLocaleDateString();
+                html += '</div>';
+                if (s.notes) html += '<div class="cv-step-notes">' + s.notes + '</div>';
+                html += '</div>';
+                if (s.status !== 'completed' && s.status !== 'not_applicable') {
+                    html += '<div class="cv-step-actions">';
+                    if (s.status !== 'in_progress') html += '<button class="cv-step-btn" onclick="updateStep(' + c.id + ',' + s.id + ',\'in_progress\')">Start</button>';
+                    html += '<button class="cv-step-btn" onclick="updateStep(' + c.id + ',' + s.id + ',\'completed\')">Done</button>';
+                    html += '<button class="cv-step-btn blocked-btn" onclick="updateStep(' + c.id + ',' + s.id + ',\'blocked\')">Blocked</button>';
+                    html += '</div>';
+                }
+                html += '</li>';
+            });
+            html += '</ul></div>';
+        });
+        app.innerHTML = html;
+    });
+}
+
+function updateStep(caseId, stepId, newStatus) {
+    api('conveyancing-cases/' + caseId + '/steps/' + stepId + '/', {
+        method: 'PATCH',
+        body: JSON.stringify({status: newStatus})
+    }).then(function() { renderCases(); });
+}
+
+renderCases();
+</script>
+{% endblock %}

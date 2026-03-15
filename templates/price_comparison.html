@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Price Comparison Tool - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pc-hero { background: linear-gradient(135deg, #115E66 0%, #19747E 100%); color: white; padding: 2.5rem 0; margin: -2rem 0 2rem; }
+    .pc-hero h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+    .pc-hero p { opacity: 0.85; }
+    .pc-search { display: flex; gap: 0.75rem; margin-bottom: 2rem; }
+    .pc-search input { flex: 1; padding: 0.75rem 1rem; border: 1px solid #D1E8E2; border-radius: 6px; font-size: 1rem; font-family: inherit; }
+    .pc-search button { background: #115E66; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .pc-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .pc-stat { background: #fff; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1rem; text-align: center; }
+    .pc-stat .value { font-size: 1.4rem; font-weight: 700; color: #115E66; }
+    .pc-stat .label { font-size: 0.8rem; color: #8FA3A8; margin-top: 0.25rem; }
+    .pc-section { background: #fff; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .pc-section h2 { font-size: 1.1rem; color: #115E66; margin-bottom: 1rem; }
+    .pc-table { width: 100%; border-collapse: collapse; }
+    .pc-table th { text-align: left; padding: 0.6rem 0.75rem; font-size: 0.8rem; color: #8FA3A8; border-bottom: 2px solid #EDF2EF; }
+    .pc-table td { padding: 0.6rem 0.75rem; font-size: 0.9rem; border-bottom: 1px solid #EDF2EF; }
+    .pc-table tr:last-child td { border-bottom: none; }
+    .pc-empty { text-align: center; padding: 3rem; color: #8FA3A8; }
+    @media (max-width: 768px) { .pc-search { flex-direction: column; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="pc-hero">
+    <div class="container">
+        <h1>What's My Home Worth?</h1>
+        <p>Compare recent sold prices and local listings to estimate your property's value.</p>
+    </div>
+</section>
+
+<div class="container">
+    <div class="pc-search">
+        <input type="text" id="pc-postcode" placeholder="Enter postcode (e.g. BS1 4DJ)" value="">
+        <button onclick="doSearch()">Compare Prices</button>
+    </div>
+
+    <div id="pc-results" style="display:none;">
+        <div class="pc-stats" id="pc-stats"></div>
+        <div class="pc-section">
+            <h2>Recent Sold Prices (Land Registry)</h2>
+            <table class="pc-table" id="pc-sold"><thead><tr><th>Address</th><th>Price</th><th>Date</th><th>Type</th></tr></thead><tbody></tbody></table>
+        </div>
+        <div class="pc-section">
+            <h2>Current Listings on FSBO</h2>
+            <table class="pc-table" id="pc-listings"><thead><tr><th>Property</th><th>Price</th><th>Beds</th><th>Type</th></tr></thead><tbody></tbody></table>
+        </div>
+    </div>
+    <div class="pc-empty" id="pc-empty">Enter a postcode above to see price comparisons.</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function doSearch() {
+    var postcode = document.getElementById('pc-postcode').value.trim();
+    if (!postcode) return;
+
+    fetch('/api/price-comparison/?postcode=' + encodeURIComponent(postcode))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            document.getElementById('pc-empty').style.display = 'none';
+            document.getElementById('pc-results').style.display = '';
+
+            var stats = data.statistics || {};
+            var statsHtml = '';
+            if (stats.average_price) statsHtml += '<div class="pc-stat"><div class="value">' + fmt(stats.average_price) + '</div><div class="label">Average Price</div></div>';
+            if (stats.median_price) statsHtml += '<div class="pc-stat"><div class="value">' + fmt(stats.median_price) + '</div><div class="label">Median Price</div></div>';
+            if (stats.min_price) statsHtml += '<div class="pc-stat"><div class="value">' + fmt(stats.min_price) + '</div><div class="label">Lowest</div></div>';
+            if (stats.max_price) statsHtml += '<div class="pc-stat"><div class="value">' + fmt(stats.max_price) + '</div><div class="label">Highest</div></div>';
+            if (stats.avg_price_per_sqft) statsHtml += '<div class="pc-stat"><div class="value">' + fmt(stats.avg_price_per_sqft) + '</div><div class="label">Avg &pound;/sq ft</div></div>';
+            if (stats.total_comparables) statsHtml += '<div class="pc-stat"><div class="value">' + stats.total_comparables + '</div><div class="label">Comparables</div></div>';
+            document.getElementById('pc-stats').innerHTML = statsHtml;
+
+            var soldHtml = '';
+            (data.sold_prices || []).forEach(function(s) {
+                soldHtml += '<tr><td>' + s.address + '</td><td>' + fmt(s.price) + '</td><td>' + (s.date || '').substring(0, 10) + '</td><td>' + (s.property_type || '') + '</td></tr>';
+            });
+            document.querySelector('#pc-sold tbody').innerHTML = soldHtml || '<tr><td colspan="4" style="text-align:center;color:#8FA3A8;">No recent sold prices found.</td></tr>';
+
+            var listHtml = '';
+            (data.local_listings || []).forEach(function(l) {
+                listHtml += '<tr><td><a href="/properties/' + (l.slug || l.id) + '/" style="color:#115E66;font-weight:600;">' + l.title + '</a></td><td>' + fmt(l.price) + '</td><td>' + (l.bedrooms || '-') + '</td><td>' + (l.property_type || '') + '</td></tr>';
+            });
+            document.querySelector('#pc-listings tbody').innerHTML = listHtml || '<tr><td colspan="4" style="text-align:center;color:#8FA3A8;">No active listings in this area.</td></tr>';
+        });
+}
+
+function fmt(n) {
+    if (n == null) return '\u00A30';
+    return '\u00A3' + Number(n).toLocaleString('en-GB', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+}
+
+document.getElementById('pc-postcode').addEventListener('keydown', function(e) { if (e.key === 'Enter') doSearch(); });
+</script>
+{% endblock %}

@@ -13,6 +13,11 @@ from .models import (
     ChatRoom, ChatMessage,
     ViewingSlot, ViewingSlotBooking,
     Offer, PropertyDocument, PropertyFlag,
+    BuyerVerification, ConveyancingCase, ConveyancingStep,
+    OpenHouseEvent, OpenHouseRSVP,
+    ConveyancerQuoteRequest, ConveyancerQuote,
+    NeighbourhoodReview, BoardOrder, BuyerProfile,
+    ForumCategory, ForumTopic, ForumPost,
 )
 from .notifications import notify_listing_approved, notify_listing_rejected
 
@@ -262,3 +267,98 @@ class ServiceProviderSubscriptionAdmin(admin.ModelAdmin):
 @admin.register(ServiceProviderPhoto)
 class ServiceProviderPhotoAdmin(admin.ModelAdmin):
     list_display = ['provider', 'caption', 'order', 'uploaded_at']
+
+
+# ── New Features Admin (#28-#45) ─────────────────────────────────
+
+@admin.register(BuyerVerification)
+class BuyerVerificationAdmin(admin.ModelAdmin):
+    list_display = ['user', 'verification_type', 'status', 'expires_at', 'created_at']
+    list_filter = ['status', 'verification_type']
+    list_editable = ['status']
+    actions = ['approve_verifications', 'reject_verifications']
+
+    @admin.action(description='Approve verifications')
+    def approve_verifications(self, request, qs):
+        qs.update(status='verified', reviewed_at=timezone.now())
+
+    @admin.action(description='Reject verifications')
+    def reject_verifications(self, request, qs):
+        qs.update(status='rejected', reviewed_at=timezone.now())
+
+
+class ConveyancingStepInline(admin.TabularInline):
+    model = ConveyancingStep
+    extra = 0
+    fields = ['step_type', 'status', 'notes', 'completed_at', 'order']
+
+
+@admin.register(ConveyancingCase)
+class ConveyancingCaseAdmin(admin.ModelAdmin):
+    list_display = ['property', 'buyer', 'seller', 'status', 'created_at']
+    list_filter = ['status']
+    inlines = [ConveyancingStepInline]
+
+
+@admin.register(OpenHouseEvent)
+class OpenHouseEventAdmin(admin.ModelAdmin):
+    list_display = ['property', 'title', 'date', 'start_time', 'end_time', 'is_active']
+    list_filter = ['is_active', 'date']
+
+
+@admin.register(OpenHouseRSVP)
+class OpenHouseRSVPAdmin(admin.ModelAdmin):
+    list_display = ['event', 'user', 'attendees', 'created_at']
+
+
+@admin.register(ConveyancerQuoteRequest)
+class ConveyancerQuoteRequestAdmin(admin.ModelAdmin):
+    list_display = ['property', 'requester', 'transaction_type', 'status', 'created_at']
+    list_filter = ['status', 'transaction_type']
+
+
+@admin.register(ConveyancerQuote)
+class ConveyancerQuoteAdmin(admin.ModelAdmin):
+    list_display = ['request', 'provider', 'total', 'is_accepted', 'created_at']
+    list_filter = ['is_accepted']
+
+
+@admin.register(NeighbourhoodReview)
+class NeighbourhoodReviewAdmin(admin.ModelAdmin):
+    list_display = ['postcode_area', 'reviewer', 'overall_rating', 'is_current_resident', 'created_at']
+    list_filter = ['overall_rating', 'is_current_resident']
+    search_fields = ['postcode_area']
+
+
+@admin.register(BoardOrder)
+class BoardOrderAdmin(admin.ModelAdmin):
+    list_display = ['property', 'user', 'board_type', 'status', 'price', 'created_at']
+    list_filter = ['status', 'board_type']
+    list_editable = ['status']
+
+
+@admin.register(BuyerProfile)
+class BuyerProfileAdmin(admin.ModelAdmin):
+    list_display = ['user', 'max_budget', 'is_first_time_buyer', 'is_cash_buyer', 'mortgage_approved']
+    list_filter = ['is_first_time_buyer', 'is_cash_buyer', 'mortgage_approved']
+
+
+@admin.register(ForumCategory)
+class ForumCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'slug', 'icon', 'order']
+    list_editable = ['order']
+    prepopulated_fields = {'slug': ('name',)}
+
+
+@admin.register(ForumTopic)
+class ForumTopicAdmin(admin.ModelAdmin):
+    list_display = ['title', 'category', 'author', 'is_pinned', 'is_locked', 'view_count', 'created_at']
+    list_filter = ['category', 'is_pinned', 'is_locked']
+    list_editable = ['is_pinned', 'is_locked']
+    search_fields = ['title', 'content']
+
+
+@admin.register(ForumPost)
+class ForumPostAdmin(admin.ModelAdmin):
+    list_display = ['topic', 'author', 'is_solution', 'created_at']
+    list_filter = ['is_solution']

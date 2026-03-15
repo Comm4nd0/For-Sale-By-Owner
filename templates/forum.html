@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Community Forum - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<style>
+    .forum-hero { background: linear-gradient(135deg, #115E66 0%, #19747E 100%); color: white; padding: 2.5rem 0; margin: -2rem 0 2rem; }
+    .forum-hero h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+    .forum-hero p { opacity: 0.85; }
+    .forum-cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .forum-cat { background: #fff; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.25rem; cursor: pointer; transition: box-shadow 0.2s; }
+    .forum-cat:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .forum-cat h3 { font-size: 1rem; color: #115E66; margin: 0 0 0.35rem; }
+    .forum-cat p { font-size: 0.85rem; color: #4A5C62; margin: 0; }
+    .forum-cat .meta { font-size: 0.8rem; color: #8FA3A8; margin-top: 0.5rem; }
+    .forum-topics { background: #fff; border: 1px solid #E2E2E2; border-radius: 8px; overflow: hidden; }
+    .forum-topic-row { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid #EDF2EF; cursor: pointer; transition: background 0.15s; }
+    .forum-topic-row:hover { background: #F7FAF8; }
+    .forum-topic-row:last-child { border-bottom: none; }
+    .forum-topic-title { font-weight: 600; color: #1A2C33; margin-bottom: 0.2rem; }
+    .forum-topic-title .pinned { background: #115E66; color: #fff; font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 3px; margin-right: 0.4rem; font-weight: 700; }
+    .forum-topic-meta { font-size: 0.8rem; color: #8FA3A8; }
+    .forum-topic-stats { text-align: right; font-size: 0.8rem; color: #8FA3A8; min-width: 80px; }
+    .forum-btn { background: #115E66; color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .forum-btn:hover { background: #19747E; }
+    .forum-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .forum-search { padding: 0.5rem 0.75rem; border: 1px solid #D1E8E2; border-radius: 6px; font-size: 0.9rem; width: 250px; font-family: inherit; }
+    .forum-empty { text-align: center; padding: 3rem; color: #8FA3A8; }
+    #forum-detail, #forum-new-topic { display: none; }
+    .forum-back { background: none; border: none; color: #19747E; font-size: 0.85rem; cursor: pointer; font-weight: 600; margin-bottom: 1rem; font-family: inherit; }
+    .forum-post { background: #fff; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+    .forum-post.solution { border-color: #28A745; background: #F0FFF4; }
+    .forum-post .author { font-weight: 600; color: #115E66; }
+    .forum-post .date { font-size: 0.8rem; color: #8FA3A8; }
+    .forum-post .content { margin-top: 0.5rem; color: #1A2C33; line-height: 1.6; }
+    .forum-post .solution-badge { background: #28A745; color: #fff; font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 3px; font-weight: 700; }
+    .forum-reply-box { margin-top: 1.5rem; }
+    .forum-reply-box textarea { width: 100%; padding: 0.75rem; border: 1px solid #D1E8E2; border-radius: 6px; font-size: 0.9rem; min-height: 100px; font-family: inherit; box-sizing: border-box; resize: vertical; }
+    .new-topic-form input, .new-topic-form select, .new-topic-form textarea { width: 100%; padding: 0.65rem 0.75rem; border: 1px solid #D1E8E2; border-radius: 6px; font-size: 0.9rem; font-family: inherit; box-sizing: border-box; margin-bottom: 1rem; }
+    .new-topic-form textarea { min-height: 150px; resize: vertical; }
+    .new-topic-form label { display: block; font-size: 0.85rem; font-weight: 600; color: #4A5C62; margin-bottom: 0.35rem; }
+    @media (max-width: 768px) { .forum-search { width: 100%; } .forum-header { flex-wrap: wrap; gap: 0.5rem; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="forum-hero">
+    <div class="container">
+        <h1>Community Forum</h1>
+        <p>Get help, share advice, and connect with other FSBO sellers and buyers.</p>
+    </div>
+</section>
+
+<div class="container">
+    <!-- Category / Topic List View -->
+    <div id="forum-list">
+        <div class="forum-header">
+            <input type="text" class="forum-search" id="forum-search" placeholder="Search topics...">
+            <button class="forum-btn" id="new-topic-btn" style="display:none;" onclick="showNewTopic()">New Topic</button>
+        </div>
+        <div class="forum-cats" id="forum-categories"></div>
+        <div class="forum-topics" id="forum-topics" style="display:none;"></div>
+    </div>
+
+    <!-- Topic Detail View -->
+    <div id="forum-detail">
+        <button class="forum-back" onclick="backToList()">&larr; Back to topics</button>
+        <div id="forum-detail-content"></div>
+    </div>
+
+    <!-- New Topic Form -->
+    <div id="forum-new-topic">
+        <button class="forum-back" onclick="backToList()">&larr; Cancel</button>
+        <div class="sd-card" style="background:#fff;border:1px solid #E2E2E2;border-radius:8px;padding:1.5rem;">
+            <h2 style="color:#115E66;margin-bottom:1rem;">New Topic</h2>
+            <div class="new-topic-form">
+                <label for="nt-category">Category</label>
+                <select id="nt-category"></select>
+                <label for="nt-title">Title</label>
+                <input type="text" id="nt-title" placeholder="What's your question or topic?">
+                <label for="nt-content">Content</label>
+                <textarea id="nt-content" placeholder="Share the details..."></textarea>
+                <button class="forum-btn" onclick="submitTopic()">Post Topic</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var token = localStorage.getItem('auth_token');
+var headers = token ? {'Authorization': 'Token ' + token, 'Content-Type': 'application/json'} : {'Content-Type': 'application/json'};
+var currentCategory = null;
+
+function api(url, opts) {
+    opts = opts || {};
+    opts.headers = headers;
+    return fetch('/api/' + url, opts).then(function(r) { return r.json(); });
+}
+
+// Load categories
+api('forum-categories/').then(function(data) {
+    var cats = data.results || data;
+    var html = '';
+    cats.forEach(function(c) {
+        html += '<div class="forum-cat" onclick="loadCategory(\'' + c.slug + '\')">' +
+            '<h3>' + (c.icon ? c.icon + ' ' : '') + c.name + '</h3>' +
+            '<p>' + c.description + '</p>' +
+            '<div class="meta">' + (c.topic_count || 0) + ' topics</div></div>';
+    });
+    document.getElementById('forum-categories').innerHTML = html || '<div class="forum-empty">No categories yet.</div>';
+
+    // Populate new topic dropdown
+    var sel = document.getElementById('nt-category');
+    cats.forEach(function(c) {
+        sel.innerHTML += '<option value="' + c.id + '">' + c.name + '</option>';
+    });
+});
+
+if (token) document.getElementById('new-topic-btn').style.display = '';
+
+function loadCategory(slug) {
+    currentCategory = slug;
+    document.getElementById('forum-categories').style.display = 'none';
+    document.getElementById('forum-topics').style.display = '';
+    document.getElementById('new-topic-btn').style.display = token ? '' : 'none';
+
+    api('forum-topics/?category=' + slug).then(function(data) {
+        var topics = data.results || data;
+        if (!topics.length) {
+            document.getElementById('forum-topics').innerHTML = '<div class="forum-empty">No topics yet. Be the first to start a discussion!</div>';
+            return;
+        }
+        var html = '';
+        topics.forEach(function(t) {
+            html += '<div class="forum-topic-row" onclick="loadTopic(' + t.id + ')">' +
+                '<div><div class="forum-topic-title">' + (t.is_pinned ? '<span class="pinned">PINNED</span>' : '') + t.title + '</div>' +
+                '<div class="forum-topic-meta">by ' + t.author_name + ' &middot; ' + new Date(t.created_at).toLocaleDateString() + '</div></div>' +
+                '<div class="forum-topic-stats">' + (t.reply_count || 0) + ' replies<br>' + (t.view_count || 0) + ' views</div></div>';
+        });
+        document.getElementById('forum-topics').innerHTML = html;
+    });
+}
+
+function loadTopic(id) {
+    document.getElementById('forum-list').style.display = 'none';
+    document.getElementById('forum-detail').style.display = '';
+
+    api('forum-topics/' + id + '/').then(function(t) {
+        var html = '<div class="forum-post"><div><span class="author">' + t.author_name + '</span> <span class="date">' + new Date(t.created_at).toLocaleDateString() + '</span></div>' +
+            '<h2 style="margin:0.5rem 0;color:#1A2C33;">' + t.title + '</h2>' +
+            '<div class="content">' + t.content.replace(/\n/g, '<br>') + '</div></div>';
+
+        var posts = t.posts || [];
+        posts.forEach(function(p) {
+            html += '<div class="forum-post' + (p.is_solution ? ' solution' : '') + '">' +
+                '<div><span class="author">' + p.author_name + '</span> <span class="date">' + new Date(p.created_at).toLocaleDateString() + '</span>' +
+                (p.is_solution ? ' <span class="solution-badge">SOLUTION</span>' : '') + '</div>' +
+                '<div class="content">' + p.content.replace(/\n/g, '<br>') + '</div></div>';
+        });
+
+        if (token) {
+            html += '<div class="forum-reply-box"><textarea id="reply-content" placeholder="Write your reply..."></textarea>' +
+                '<button class="forum-btn" style="margin-top:0.5rem;" onclick="submitReply(' + id + ')">Post Reply</button></div>';
+        }
+
+        document.getElementById('forum-detail-content').innerHTML = html;
+    });
+}
+
+function backToList() {
+    document.getElementById('forum-detail').style.display = 'none';
+    document.getElementById('forum-new-topic').style.display = 'none';
+    document.getElementById('forum-list').style.display = '';
+    if (!currentCategory) {
+        document.getElementById('forum-categories').style.display = '';
+        document.getElementById('forum-topics').style.display = 'none';
+    }
+}
+
+function showNewTopic() {
+    document.getElementById('forum-list').style.display = 'none';
+    document.getElementById('forum-new-topic').style.display = '';
+}
+
+function submitTopic() {
+    api('forum-topics/', {
+        method: 'POST',
+        body: JSON.stringify({
+            category: parseInt(document.getElementById('nt-category').value),
+            title: document.getElementById('nt-title').value,
+            content: document.getElementById('nt-content').value
+        })
+    }).then(function(t) {
+        if (t.id) loadTopic(t.id);
+    });
+}
+
+function submitReply(topicId) {
+    var content = document.getElementById('reply-content').value;
+    if (!content.trim()) return;
+    api('forum-topics/' + topicId + '/posts/', {
+        method: 'POST',
+        body: JSON.stringify({ content: content })
+    }).then(function() { loadTopic(topicId); });
+}
+
+// Search
+document.getElementById('forum-search').addEventListener('input', function() {
+    var q = this.value.trim();
+    if (q.length < 2) return;
+    clearTimeout(this._timer);
+    this._timer = setTimeout(function() {
+        document.getElementById('forum-categories').style.display = 'none';
+        document.getElementById('forum-topics').style.display = '';
+        api('forum-topics/?search=' + encodeURIComponent(q)).then(function(data) {
+            var topics = data.results || data;
+            if (!topics.length) {
+                document.getElementById('forum-topics').innerHTML = '<div class="forum-empty">No topics found.</div>';
+                return;
+            }
+            var html = '';
+            topics.forEach(function(t) {
+                html += '<div class="forum-topic-row" onclick="loadTopic(' + t.id + ')">' +
+                    '<div><div class="forum-topic-title">' + t.title + '</div>' +
+                    '<div class="forum-topic-meta">in ' + t.category_name + ' &middot; ' + new Date(t.created_at).toLocaleDateString() + '</div></div>' +
+                    '<div class="forum-topic-stats">' + (t.reply_count || 0) + ' replies</div></div>';
+            });
+            document.getElementById('forum-topics').innerHTML = html;
+        });
+    }, 300);
+});
+</script>
+{% endblock %}

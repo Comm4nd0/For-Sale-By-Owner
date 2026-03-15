@@ -1,9 +1,10 @@
 """Celery tasks for asynchronous processing."""
 import logging
+from datetime import timedelta
 from celery import shared_task
 from django.conf import settings
 from django.core.mail import send_mail
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -435,3 +436,166 @@ def process_property_image(image_id):
             logger.info('Processed image %s', image_id)
     except Exception as e:
         logger.error('Image processing failed for %s: %s', image_id, e)
+
+
+# ── #34 Seller Activity Reminder Tasks ─────────────────────────
+
+@shared_task
+def send_seller_activity_reminders():
+    """Nudge sellers who haven't logged in recently or have stale listings."""
+    from .models import Property, ChatMessage
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    now = timezone.now()
+
+    # 1. Sellers with unread messages who haven't logged in for 7+ days
+    inactive_sellers = User.objects.filter(
+        last_login__lt=now - timedelta(days=7),
+        properties__status='active',
+    ).distinct()
+
+    for seller in inactive_sellers:
+        unread_count = ChatMessage.objects.filter(
+            room__seller=seller,
+            is_read=False,
+        ).exclude(sender=seller).count()
+
+        if unread_count > 0:
+            subject = f'You have {unread_count} unread message{"s" if unread_count > 1 else ""}'
+            message = (
+                f'Hi {seller.first_name or seller.email},\n\n'
+                f'You have {unread_count} unread message{"s" if unread_count > 1 else ""} '
+                f'from interested buyers on For Sale By Owner.\n\n'
+                f'Log in to respond:\n'
+                f'{settings.SITE_URL}/messages/\n\n'
+                f'— For Sale By Owner'
+            )
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [seller.email])
+
+    # 2. Stale listings (60+ days without update)
+    stale_listings = Property.objects.filter(
+        status='active',
+        updated_at__lt=now - timedelta(days=60),
+    ).select_related('owner')
+
+    for prop in stale_listings:
+        days = (now - prop.updated_at).days
+        subject = f'Your listing "{prop.title}" has been active for {days} days'
+        message = (
+            f'Hi {prop.owner.first_name or prop.owner.email},\n\n'
+            f'Your property "{prop.title}" has been listed for {days} days.\n\n'
+            f'Consider:\n'
+            f'- Updating your photos\n'
+            f'- Adjusting your asking price\n'
+            f'- Refreshing the description\n\n'
+            f'Properties that are regularly updated receive more interest.\n\n'
+            f'Update your listing: {settings.SITE_URL}/properties/{prop.id}/edit/\n\n'
+            f'— For Sale By Owner'
+        )
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [prop.owner.email])
+
+
+@shared_task
+def send_weekly_seller_digest():
+    """Send weekly summary to sellers with active listings."""
+    from .models import Property, PropertyView, ChatMessage, Offer, SavedProperty
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    now = timezone.now()
+    week_ago = now - timedelta(days=7)
+
+    sellers_with_listings = User.objects.filter(
+        properties__status='active'
+    ).distinct()
+
+    for seller in sellers_with_listings:
+        active_props = Property.objects.filter(owner=seller, status='active')
+        if not active_props.exists():
+            continue
+
+        total_views = PropertyView.objects.filter(
+            property__in=active_props,
+            viewed_at__gte=week_ago,
+        ).count()
+
+        new_messages = ChatMessage.objects.filter(
+            room__seller=seller,
+            created_at__gte=week_ago,
+        ).exclude(sender=seller).count()
+
+        new_offers = Offer.objects.filter(
+            property__in=active_props,
+            created_at__gte=week_ago,
+        ).count()
+
+        new_saves = SavedProperty.objects.filter(
+            property__in=active_props,
+            created_at__gte=week_ago,
+        ).count()
+
+        subject = 'Your weekly listing summary'
+        message = (
+            f'Hi {seller.first_name or seller.email},\n\n'
+            f'Here\'s your weekly summary for your {active_props.count()} active listing{"s" if active_props.count() > 1 else ""}:\n\n'
+            f'  Views this week: {total_views}\n'
+            f'  New messages: {new_messages}\n'
+            f'  New offers: {new_offers}\n'
+            f'  New saves: {new_saves}\n\n'
+        )
+        for prop in active_props:
+            prop_views = PropertyView.objects.filter(
+                property=prop, viewed_at__gte=week_ago
+            ).count()
+            message += f'  - {prop.title}: {prop_views} views\n'
+
+        message += (
+            f'\nView your dashboard: {settings.SITE_URL}/dashboard/\n\n'
+            f'— For Sale By Owner'
+        )
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [seller.email])
+
+
+# ── #31 Conveyancing Stale Step Nudges ───────────────────────────
+
+@shared_task
+def check_conveyancing_stale_steps(case_id=None):
+    """Check for stale conveyancing steps and send nudge emails."""
+    from .models import ConveyancingCase, ConveyancingStep
+
+    now = timezone.now()
+    stale_threshold = now - timedelta(weeks=2)
+
+    if case_id:
+        cases = ConveyancingCase.objects.filter(pk=case_id, status='active')
+    else:
+        cases = ConveyancingCase.objects.filter(status='active')
+
+    for case in cases.select_related('buyer', 'seller', 'property'):
+        stale_steps = case.steps.filter(
+            status='in_progress',
+            updated_at__lt=stale_threshold,
+        )
+
+        for step in stale_steps:
+            days_stuck = (now - step.updated_at).days
+            step_name = step.get_step_type_display()
+
+            for user in [case.buyer, case.seller]:
+                subject = f'Conveyancing update: {step_name} has been pending for {days_stuck} days'
+                message = (
+                    f'Hi {user.first_name or user.email},\n\n'
+                    f'The "{step_name}" step in the conveyancing process for '
+                    f'"{case.property.title}" has been in progress for {days_stuck} days.\n\n'
+                    f'Consider chasing your solicitor or checking if any action is needed from you.\n\n'
+                    f'View progress: {settings.SITE_URL}/dashboard/\n\n'
+                    f'— For Sale By Owner'
+                )
+                send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+
+
+@shared_task
+def check_all_conveyancing_cases():
+    """Periodic task to check all active conveyancing cases for stale steps."""
+    check_conveyancing_stale_steps(case_id=None)

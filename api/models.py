@@ -1,7 +1,13 @@
+import builtins
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.utils.text import slugify
+
+# Alias for property decorator since some models have a 'property' FK field
+# that shadows the builtin
+python_property = builtins.property
 
 
 class UserManager(BaseUserManager):
@@ -37,6 +43,10 @@ class User(AbstractUser):
     notification_price_drops = models.BooleanField(default=True)
     notification_saved_searches = models.BooleanField(default=True)
 
+    # 2FA (#44)
+    two_fa_enabled = models.BooleanField(default=False, help_text='Two-factor authentication enabled')
+    two_fa_secret = models.CharField(max_length=64, blank=True, help_text='TOTP secret key')
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name']
 
@@ -44,6 +54,11 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    @property
+    def is_verified_buyer(self):
+        """Check if user has any valid buyer verification."""
+        return self.verifications.filter(status='verified').exists()
 
 
 class PropertyFeature(models.Model):
@@ -154,6 +169,82 @@ class Property(models.Model):
                 n += 1
             self.slug = slug
         super().save(*args, **kwargs)
+
+    def listing_quality_score(self):
+        """Calculate listing completeness score (0-100) with tips for improvement."""
+        score = 0
+        tips = []
+
+        # Title & description (20 points)
+        if self.title:
+            score += 5
+        if self.description:
+            score += 10 if len(self.description) > 200 else 5
+        else:
+            tips.append('Add a detailed description — listings with descriptions get 50% more views')
+        if len(self.description) <= 200 and self.description:
+            tips.append('Expand your description to at least 200 characters for better engagement')
+
+        # Images (25 points)
+        image_count = self.images.count()
+        if image_count >= 10:
+            score += 25
+        elif image_count >= 5:
+            score += 15
+            tips.append(f'Add {10 - image_count} more photos — listings with 10+ photos get 3x more enquiries')
+        elif image_count >= 1:
+            score += 5
+            tips.append(f'Add more photos — you only have {image_count}')
+        else:
+            tips.append('Add photos — listings without images rarely receive enquiries')
+
+        # Floorplan (10 points)
+        if self.floorplans.exists():
+            score += 10
+        else:
+            tips.append('Add a floorplan — listings with floorplans get 40% more enquiries')
+
+        # EPC rating (10 points)
+        if self.epc_rating:
+            score += 10
+        else:
+            tips.append('Add your EPC rating — buyers expect to see energy performance')
+
+        # Price (5 points - always set)
+        if self.price:
+            score += 5
+
+        # Location details (10 points)
+        if self.latitude and self.longitude:
+            score += 5
+        else:
+            tips.append('Add map coordinates to appear in map-based searches')
+        if self.county:
+            score += 5
+
+        # Property details (10 points)
+        if self.bedrooms > 0:
+            score += 3
+        if self.bathrooms > 0:
+            score += 3
+        if self.square_feet:
+            score += 4
+        else:
+            tips.append('Add the square footage — buyers use this to compare value')
+
+        # Features (5 points)
+        if self.features.exists():
+            score += 5
+        else:
+            tips.append('Add property features (garden, parking, etc.) to improve search visibility')
+
+        # Video tour (5 points)
+        if self.video_url:
+            score += 5
+        else:
+            tips.append('Add a video tour — virtual tours significantly increase buyer interest')
+
+        return {'score': min(score, 100), 'tips': tips}
 
 
 class PropertyImage(models.Model):
@@ -946,3 +1037,447 @@ class ServiceProviderPhoto(models.Model):
 
     def __str__(self):
         return f"Photo {self.order} for {self.provider.business_name}"
+
+
+# ── #30 Buyer Verification & Proof of Funds ─────────────────────
+
+class BuyerVerification(models.Model):
+    """Buyer identity and financial verification."""
+    VERIFICATION_TYPES = [
+        ('mortgage_aip', 'Mortgage Agreement in Principle'),
+        ('proof_of_funds', 'Proof of Funds'),
+        ('id_verification', 'ID Verification'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending Review'),
+        ('verified', 'Verified'),
+        ('rejected', 'Rejected'),
+        ('expired', 'Expired'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='verifications'
+    )
+    verification_type = models.CharField(max_length=20, choices=VERIFICATION_TYPES)
+    document = models.FileField(upload_to='verifications/')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    admin_notes = models.TextField(blank=True)
+    expires_at = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.email} - {self.get_verification_type_display()} ({self.status})"
+
+    @property
+    def is_valid(self):
+        from django.utils import timezone
+        if self.status != 'verified':
+            return False
+        if self.expires_at and self.expires_at < timezone.now().date():
+            return False
+        return True
+
+
+# ── #31 Conveyancing Progress Tracker ────────────────────────────
+
+class ConveyancingCase(models.Model):
+    """Tracks the conveyancing process after an offer is accepted."""
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('completed', 'Completed'),
+        ('fallen_through', 'Fallen Through'),
+    ]
+
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='conveyancing_cases'
+    )
+    offer = models.OneToOneField(
+        Offer, on_delete=models.CASCADE, related_name='conveyancing_case'
+    )
+    buyer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='buyer_conveyancing_cases'
+    )
+    seller = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='seller_conveyancing_cases'
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    buyer_solicitor = models.CharField(max_length=200, blank=True)
+    seller_solicitor = models.CharField(max_length=200, blank=True)
+    target_completion_date = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name_plural = 'Conveyancing cases'
+
+    def __str__(self):
+        return f"Conveyancing: {self.property.title}"
+
+
+class ConveyancingStep(models.Model):
+    """A step in the conveyancing process."""
+    STEP_CHOICES = [
+        ('offer_accepted', 'Offer Accepted'),
+        ('memorandum_of_sale', 'Memorandum of Sale Issued'),
+        ('solicitors_instructed', 'Solicitors Instructed'),
+        ('draft_contract', 'Draft Contract Received'),
+        ('searches_ordered', 'Searches Ordered'),
+        ('searches_received', 'Searches Received'),
+        ('survey_booked', 'Survey Booked'),
+        ('survey_received', 'Survey Received'),
+        ('mortgage_offer', 'Mortgage Offer Received'),
+        ('enquiries_raised', 'Enquiries Raised'),
+        ('enquiries_answered', 'Enquiries Answered'),
+        ('ready_to_exchange', 'Ready to Exchange'),
+        ('exchanged', 'Contracts Exchanged'),
+        ('completion', 'Completion'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('blocked', 'Blocked'),
+        ('not_applicable', 'Not Applicable'),
+    ]
+
+    case = models.ForeignKey(
+        ConveyancingCase, on_delete=models.CASCADE, related_name='steps'
+    )
+    step_type = models.CharField(max_length=30, choices=STEP_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    notes = models.TextField(blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order']
+        unique_together = ['case', 'step_type']
+
+    def __str__(self):
+        return f"{self.get_step_type_display()} - {self.get_status_display()}"
+
+
+# ── #37 Open House Events ───────────────────────────────────────
+
+class OpenHouseEvent(models.Model):
+    """An open house event for a property."""
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='open_house_events'
+    )
+    title = models.CharField(max_length=200, default='Open House')
+    date = models.DateField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    description = models.TextField(blank=True)
+    max_attendees = models.PositiveIntegerField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['date', 'start_time']
+
+    def __str__(self):
+        return f"{self.title} on {self.date}"
+
+    def get_rsvp_count(self):
+        return self.rsvps.count()
+
+    rsvp_count = python_property(lambda self: self.get_rsvp_count())
+
+    def get_has_capacity(self):
+        if self.max_attendees is None:
+            return True
+        return self.get_rsvp_count() < self.max_attendees
+
+    has_capacity = python_property(lambda self: self.get_has_capacity())
+
+
+class OpenHouseRSVP(models.Model):
+    """RSVP for an open house event."""
+    event = models.ForeignKey(
+        OpenHouseEvent, on_delete=models.CASCADE, related_name='rsvps'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='open_house_rsvps'
+    )
+    attendees = models.PositiveIntegerField(default=1)
+    message = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['event', 'user']
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.email} RSVP to {self.event}"
+
+
+# ── #39 Solicitor / Conveyancer Matching ─────────────────────────
+
+class ConveyancerQuoteRequest(models.Model):
+    """Request for conveyancing quotes from service providers."""
+    STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('quotes_received', 'Quotes Received'),
+        ('accepted', 'Accepted'),
+        ('closed', 'Closed'),
+    ]
+
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='quote_requests'
+    )
+    requester = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='quote_requests'
+    )
+    transaction_type = models.CharField(
+        max_length=20,
+        choices=[('buying', 'Buying'), ('selling', 'Selling')],
+        default='buying'
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
+    additional_info = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Quote request by {self.requester.email} for {self.property.title}"
+
+
+class ConveyancerQuote(models.Model):
+    """A quote from a service provider for conveyancing work."""
+    request = models.ForeignKey(
+        ConveyancerQuoteRequest, on_delete=models.CASCADE, related_name='quotes'
+    )
+    provider = models.ForeignKey(
+        ServiceProvider, on_delete=models.CASCADE, related_name='conveyancer_quotes'
+    )
+    legal_fee = models.DecimalField(max_digits=10, decimal_places=2)
+    disbursements = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total = models.DecimalField(max_digits=10, decimal_places=2)
+    estimated_weeks = models.PositiveIntegerField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    is_accepted = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['total']
+        unique_together = ['request', 'provider']
+
+    def __str__(self):
+        return f"£{self.total} quote from {self.provider.business_name}"
+
+
+# ── #40 Neighbourhood Reviews ───────────────────────────────────
+
+class NeighbourhoodReview(models.Model):
+    """Review of a neighbourhood by a resident."""
+    RATING_CHOICES = [(i, str(i)) for i in range(1, 6)]
+
+    reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='neighbourhood_reviews'
+    )
+    postcode_area = models.CharField(
+        max_length=10,
+        help_text='Postcode district e.g. "BS1", "GL50"'
+    )
+    overall_rating = models.PositiveIntegerField(choices=RATING_CHOICES)
+    community_rating = models.PositiveIntegerField(choices=RATING_CHOICES, null=True, blank=True)
+    noise_rating = models.PositiveIntegerField(choices=RATING_CHOICES, null=True, blank=True)
+    parking_rating = models.PositiveIntegerField(choices=RATING_CHOICES, null=True, blank=True)
+    shops_rating = models.PositiveIntegerField(choices=RATING_CHOICES, null=True, blank=True)
+    safety_rating = models.PositiveIntegerField(choices=RATING_CHOICES, null=True, blank=True)
+    schools_rating = models.PositiveIntegerField(choices=RATING_CHOICES, null=True, blank=True)
+    transport_rating = models.PositiveIntegerField(choices=RATING_CHOICES, null=True, blank=True)
+    comment = models.TextField(blank=True)
+    years_lived = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text='How many years the reviewer has lived in the area'
+    )
+    is_current_resident = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['reviewer', 'postcode_area']
+        indexes = [
+            models.Index(fields=['postcode_area']),
+        ]
+
+    def __str__(self):
+        return f"{self.reviewer.email} review of {self.postcode_area}: {self.overall_rating}/5"
+
+
+# ── #41 "For Sale" Board Ordering ────────────────────────────────
+
+class BoardOrder(models.Model):
+    """Order for a physical "For Sale" board."""
+    STATUS_CHOICES = [
+        ('pending', 'Pending Payment'),
+        ('paid', 'Paid'),
+        ('production', 'In Production'),
+        ('shipped', 'Shipped'),
+        ('delivered', 'Delivered'),
+        ('cancelled', 'Cancelled'),
+    ]
+    BOARD_TYPES = [
+        ('standard', 'Standard Board'),
+        ('premium', 'Premium Board with QR Code'),
+        ('solar_lit', 'Solar-Lit Board'),
+    ]
+
+    property = models.ForeignKey(
+        Property, on_delete=models.CASCADE, related_name='board_orders'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='board_orders'
+    )
+    board_type = models.CharField(max_length=20, choices=BOARD_TYPES, default='standard')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    delivery_address = models.TextField()
+    price = models.DecimalField(max_digits=8, decimal_places=2)
+    stripe_payment_id = models.CharField(max_length=100, blank=True)
+    tracking_number = models.CharField(max_length=100, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_board_type_display()} for {self.property.title} ({self.status})"
+
+
+# ── #43 Buyer Affordability Profile ──────────────────────────────
+
+class BuyerProfile(models.Model):
+    """Buyer's financial profile for affordability matching."""
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='buyer_profile'
+    )
+    max_budget = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    deposit_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    mortgage_approved = models.BooleanField(default=False)
+    mortgage_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    is_first_time_buyer = models.BooleanField(default=False)
+    is_cash_buyer = models.BooleanField(default=False)
+    has_property_to_sell = models.BooleanField(default=False)
+    preferred_areas = models.TextField(
+        blank=True, help_text='Comma-separated postcodes or areas'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        budget = f"£{self.max_budget:,.0f}" if self.max_budget else "No budget set"
+        return f"{self.user.email} - {budget}"
+
+
+# ── #45 Community Forum / Knowledge Base ─────────────────────────
+
+class ForumCategory(models.Model):
+    """Category for forum topics."""
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=110, unique=True, blank=True)
+    description = models.TextField(blank=True)
+    icon = models.CharField(max_length=50, blank=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'name']
+        verbose_name_plural = 'Forum categories'
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    @property
+    def topic_count(self):
+        return self.topics.count()
+
+
+class ForumTopic(models.Model):
+    """A forum topic / thread."""
+    category = models.ForeignKey(
+        ForumCategory, on_delete=models.CASCADE, related_name='topics'
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='forum_topics'
+    )
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=220, unique=True, blank=True)
+    content = models.TextField()
+    is_pinned = models.BooleanField(default=False)
+    is_locked = models.BooleanField(default=False)
+    view_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-is_pinned', '-created_at']
+        indexes = [
+            models.Index(fields=['category', '-created_at']),
+        ]
+
+    def __str__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.title)
+            slug = base
+            n = 1
+            while ForumTopic.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base}-{n}"
+                n += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+    @property
+    def reply_count(self):
+        return self.posts.count()
+
+
+class ForumPost(models.Model):
+    """A reply/post in a forum topic."""
+    topic = models.ForeignKey(
+        ForumTopic, on_delete=models.CASCADE, related_name='posts'
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='forum_posts'
+    )
+    content = models.TextField()
+    is_solution = models.BooleanField(default=False, help_text='Marked as the accepted answer')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Post by {self.author.email} in {self.topic.title}"
