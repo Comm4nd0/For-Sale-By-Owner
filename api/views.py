@@ -1199,6 +1199,7 @@ class ServiceProviderViewSet(viewsets.ModelViewSet):
             ServiceProviderSubscription.objects.create(
                 provider=provider, tier=free_tier,
                 billing_cycle='monthly', status='active',
+                stripe_subscription_id=None,
             )
 
     def perform_update(self, serializer):
@@ -1481,19 +1482,22 @@ def _handle_checkout_completed(session):
     )
     provider.subscriptions.filter(status='active', tier__slug='free').update(status='cancelled')
 
-    ServiceProviderSubscription.objects.create(
-        provider=provider,
-        tier=tier,
-        billing_cycle=billing_cycle,
-        status='active',
+    # Use get_or_create to handle webhook replays idempotently
+    ServiceProviderSubscription.objects.get_or_create(
         stripe_subscription_id=stripe_sub_id,
-        stripe_customer_id=customer_id,
-        current_period_start=timezone.datetime.fromtimestamp(
-            stripe_sub.current_period_start, tz=timezone.utc
-        ),
-        current_period_end=timezone.datetime.fromtimestamp(
-            stripe_sub.current_period_end, tz=timezone.utc
-        ),
+        defaults={
+            'provider': provider,
+            'tier': tier,
+            'billing_cycle': billing_cycle,
+            'status': 'active',
+            'stripe_customer_id': customer_id,
+            'current_period_start': timezone.datetime.fromtimestamp(
+                stripe_sub.current_period_start, tz=timezone.utc
+            ),
+            'current_period_end': timezone.datetime.fromtimestamp(
+                stripe_sub.current_period_end, tz=timezone.utc
+            ),
+        },
     )
 
     if customer_id and not provider.stripe_customer_id:
@@ -1562,6 +1566,7 @@ def _handle_subscription_deleted(sub_data):
         ServiceProviderSubscription.objects.create(
             provider=provider, tier=free_tier,
             billing_cycle='monthly', status='active',
+            stripe_subscription_id=None,
         )
 
     logger.info('Subscription cancelled, free tier assigned: provider=%s', provider.id)

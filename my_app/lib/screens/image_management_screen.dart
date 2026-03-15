@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
+import '../constants/api_constants.dart';
 import '../constants/app_theme.dart';
 import '../widgets/branded_app_bar.dart';
 import '../models/property.dart';
@@ -178,7 +179,7 @@ class _ImageManagementScreenState extends State<ImageManagementScreen> {
         fit: StackFit.expand,
         children: [
           CachedNetworkImage(
-            imageUrl: image.imageUrl,
+            imageUrl: ApiConstants.fullUrl(image.imageUrl),
             fit: BoxFit.cover,
             placeholder: (context, url) => Container(
               color: Colors.grey[200],

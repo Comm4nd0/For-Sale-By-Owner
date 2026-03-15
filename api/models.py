@@ -973,7 +973,7 @@ class ServiceProviderSubscription(models.Model):
 
     # Stripe
     stripe_subscription_id = models.CharField(
-        max_length=100, blank=True, default='', unique=True, null=True,
+        max_length=100, blank=True, default=None, unique=True, null=True,
         help_text='Stripe Subscription ID'
     )
     stripe_customer_id = models.CharField(max_length=100, blank=True, default='')
