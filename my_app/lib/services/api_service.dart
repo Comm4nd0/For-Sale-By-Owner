@@ -1077,4 +1077,566 @@ class ApiService {
       return false;
     }
   }
+
+  // ══════════════════════════════════════════════════════════════════
+  // NEW FEATURES (#28-#45)
+  // ══════════════════════════════════════════════════════════════════
+
+  // ── #28 Listing Quality Score ─────────────────────────────────────
+
+  Future<Map<String, dynamic>> getListingQualityScore(int propertyId) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.propertyQualityScore(propertyId)),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to load quality score');
+  }
+
+  // ── #29 Price Comparison ──────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getPriceComparison(String postcode) async {
+    final uri = Uri.parse(ApiConstants.priceComparison)
+        .replace(queryParameters: {'postcode': postcode});
+    final response = await http.get(uri, headers: _headers);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to load price comparison');
+  }
+
+  // ── #30 Buyer Verification ────────────────────────────────────────
+
+  Future<List<dynamic>> getBuyerVerifications() async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.buyerVerifications),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data is List ? data : (data['results'] ?? []);
+    }
+    throw Exception('Failed to load verifications');
+  }
+
+  Future<Map<String, dynamic>> createBuyerVerification(
+      String type, String filePath) async {
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse(ApiConstants.buyerVerifications),
+    );
+    request.headers.addAll(_authHeaders);
+    request.fields['verification_type'] = type;
+    request.files.add(await http.MultipartFile.fromPath('document', filePath));
+    final streamResponse = await request.send();
+    final response = await http.Response.fromStream(streamResponse);
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to create verification');
+  }
+
+  Future<Map<String, dynamic>> getBuyerVerificationStatus(int userId) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.buyerVerificationStatus(userId)),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to load verification status');
+  }
+
+  // ── #31 Conveyancing Tracker ──────────────────────────────────────
+
+  Future<List<dynamic>> getConveyancingCases() async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.conveyancingCases),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data is List ? data : (data['results'] ?? []);
+    }
+    throw Exception('Failed to load conveyancing cases');
+  }
+
+  Future<Map<String, dynamic>> createConveyancingCase(int offerId) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.conveyancingCases),
+      headers: _authJsonHeaders,
+      body: jsonEncode({'offer': offerId}),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to create conveyancing case');
+  }
+
+  Future<Map<String, dynamic>> updateConveyancingStep(
+      int caseId, int stepId, String status, {String? notes}) async {
+    final body = <String, dynamic>{'status': status};
+    if (notes != null) body['notes'] = notes;
+    final response = await http.patch(
+      Uri.parse(ApiConstants.conveyancingStepUpdate(caseId, stepId)),
+      headers: _authJsonHeaders,
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to update step');
+  }
+
+  // ── #32 AI Description Generator ──────────────────────────────────
+
+  Future<Map<String, dynamic>> generateDescription(
+      Map<String, dynamic> details) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.generateDescription),
+      headers: _authJsonHeaders,
+      body: jsonEncode(details),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to generate description');
+  }
+
+  // ── #35 Stamp Duty Calculator ─────────────────────────────────────
+
+  Future<Map<String, dynamic>> calculateStampDuty({
+    required double price,
+    String country = 'england',
+    bool firstTimeBuyer = false,
+    bool additionalProperty = false,
+  }) async {
+    final uri = Uri.parse(ApiConstants.stampDutyCalculator).replace(
+      queryParameters: {
+        'price': price.toString(),
+        'country': country,
+        'first_time_buyer': firstTimeBuyer.toString(),
+        'additional_property': additionalProperty.toString(),
+      },
+    );
+    final response = await http.get(uri, headers: _headers);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to calculate stamp duty');
+  }
+
+  // ── #36 Property History ──────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getPropertyHistory(int propertyId) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.propertyHistory(propertyId)),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to load property history');
+  }
+
+  // ── #37 Open House Events ─────────────────────────────────────────
+
+  Future<List<dynamic>> getOpenHouseEvents(int propertyId) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.openHouseEvents(propertyId)),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data is List ? data : (data['results'] ?? []);
+    }
+    throw Exception('Failed to load open house events');
+  }
+
+  Future<Map<String, dynamic>> createOpenHouseEvent(
+      int propertyId, Map<String, dynamic> data) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.openHouseEvents(propertyId)),
+      headers: _authJsonHeaders,
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to create open house event');
+  }
+
+  Future<void> deleteOpenHouseEvent(int propertyId, int eventId) async {
+    final response = await http.delete(
+      Uri.parse(ApiConstants.openHouseEventDetail(propertyId, eventId)),
+      headers: _authHeaders,
+    );
+    if (response.statusCode != 204) {
+      throw Exception('Failed to delete open house event');
+    }
+  }
+
+  Future<Map<String, dynamic>> rsvpOpenHouse(int eventId,
+      {int attendees = 1, String message = ''}) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.openHouseRsvp(eventId)),
+      headers: _authJsonHeaders,
+      body: jsonEncode({'attendees': attendees, 'message': message}),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    }
+    throw Exception(jsonDecode(response.body)['error'] ?? 'Failed to RSVP');
+  }
+
+  Future<void> cancelRsvp(int eventId) async {
+    final response = await http.delete(
+      Uri.parse(ApiConstants.openHouseRsvpCancel(eventId)),
+      headers: _authHeaders,
+    );
+    if (response.statusCode != 204) {
+      throw Exception('Failed to cancel RSVP');
+    }
+  }
+
+  // ── #38 QR Code Flyers ────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> generatePropertyFlyer(int propertyId) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.propertyFlyer(propertyId)),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to generate flyer');
+  }
+
+  // ── #39 Solicitor/Conveyancer Matching ────────────────────────────
+
+  Future<List<dynamic>> getQuoteRequests() async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.quoteRequests),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data is List ? data : (data['results'] ?? []);
+    }
+    throw Exception('Failed to load quote requests');
+  }
+
+  Future<Map<String, dynamic>> createQuoteRequest(
+      int propertyId, String transactionType,
+      {String additionalInfo = ''}) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.quoteRequests),
+      headers: _authJsonHeaders,
+      body: jsonEncode({
+        'property': propertyId,
+        'transaction_type': transactionType,
+        'additional_info': additionalInfo,
+      }),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to create quote request');
+  }
+
+  Future<Map<String, dynamic>> submitConveyancerQuote(
+      Map<String, dynamic> data) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.conveyancerQuotes),
+      headers: _authJsonHeaders,
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to submit quote');
+  }
+
+  Future<Map<String, dynamic>> acceptQuote(int quoteId) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.acceptQuote(quoteId)),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to accept quote');
+  }
+
+  // ── #40 Neighbourhood Reviews ─────────────────────────────────────
+
+  Future<List<dynamic>> getNeighbourhoodReviews(
+      {String? postcodeArea}) async {
+    var url = ApiConstants.neighbourhoodReviews;
+    if (postcodeArea != null) {
+      url += '?postcode_area=$postcodeArea';
+    }
+    final response = await http.get(Uri.parse(url), headers: _headers);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data is List ? data : (data['results'] ?? []);
+    }
+    throw Exception('Failed to load neighbourhood reviews');
+  }
+
+  Future<Map<String, dynamic>> createNeighbourhoodReview(
+      Map<String, dynamic> data) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.neighbourhoodReviews),
+      headers: _authJsonHeaders,
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to create review');
+  }
+
+  Future<Map<String, dynamic>> getNeighbourhoodSummary(
+      String postcodeArea) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.neighbourhoodSummary(postcodeArea)),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to load neighbourhood summary');
+  }
+
+  // ── #41 Board Orders ──────────────────────────────────────────────
+
+  Future<List<dynamic>> getBoardOrders() async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.boardOrders),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data is List ? data : (data['results'] ?? []);
+    }
+    throw Exception('Failed to load board orders');
+  }
+
+  Future<Map<String, dynamic>> createBoardOrder(
+      int propertyId, String boardType, String deliveryAddress) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.boardOrders),
+      headers: _authJsonHeaders,
+      body: jsonEncode({
+        'property': propertyId,
+        'board_type': boardType,
+        'delivery_address': deliveryAddress,
+      }),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to create board order');
+  }
+
+  Future<Map<String, dynamic>> getBoardPricing() async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.boardPricing),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to load board pricing');
+  }
+
+  // ── #42 EPC Suggestions ───────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getEpcSuggestions(int propertyId) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.epcSuggestions(propertyId)),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to load EPC suggestions');
+  }
+
+  // ── #43 Buyer Profile ─────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getBuyerProfile() async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.buyerProfile),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to load buyer profile');
+  }
+
+  Future<Map<String, dynamic>> updateBuyerProfile(
+      Map<String, dynamic> data) async {
+    final response = await http.patch(
+      Uri.parse(ApiConstants.buyerProfile),
+      headers: _authJsonHeaders,
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to update buyer profile');
+  }
+
+  Future<List<dynamic>> getAffordableProperties() async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.affordableProperties),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data is List ? data : (data['results'] ?? []);
+    }
+    throw Exception('Failed to load affordable properties');
+  }
+
+  // ── #44 Two-Factor Authentication ─────────────────────────────────
+
+  Future<Map<String, dynamic>> setup2FA() async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.twoFaSetup),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception(
+        jsonDecode(response.body)['error'] ?? 'Failed to set up 2FA');
+  }
+
+  Future<Map<String, dynamic>> confirm2FA(String code) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.twoFaConfirm),
+      headers: _authJsonHeaders,
+      body: jsonEncode({'code': code}),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception(
+        jsonDecode(response.body)['error'] ?? 'Invalid code');
+  }
+
+  Future<Map<String, dynamic>> disable2FA(String code) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.twoFaDisable),
+      headers: _authJsonHeaders,
+      body: jsonEncode({'code': code}),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception(
+        jsonDecode(response.body)['error'] ?? 'Failed to disable 2FA');
+  }
+
+  Future<Map<String, dynamic>> verify2FA(String email, String code) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.twoFaVerify),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'code': code}),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception(
+        jsonDecode(response.body)['error'] ?? 'Verification failed');
+  }
+
+  // ── #45 Community Forum ───────────────────────────────────────────
+
+  Future<List<dynamic>> getForumCategories() async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.forumCategories),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data is List ? data : (data['results'] ?? []);
+    }
+    throw Exception('Failed to load forum categories');
+  }
+
+  Future<List<dynamic>> getForumTopics(
+      {String? category, String? search}) async {
+    var url = ApiConstants.forumTopics;
+    final params = <String, String>{};
+    if (category != null) params['category'] = category;
+    if (search != null) params['search'] = search;
+    if (params.isNotEmpty) {
+      url += '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+    }
+    final response = await http.get(Uri.parse(url), headers: _headers);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data is List ? data : (data['results'] ?? []);
+    }
+    throw Exception('Failed to load forum topics');
+  }
+
+  Future<Map<String, dynamic>> getForumTopic(int id) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.forumTopicDetail(id)),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to load forum topic');
+  }
+
+  Future<Map<String, dynamic>> createForumTopic(
+      int categoryId, String title, String content) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.forumTopics),
+      headers: _authJsonHeaders,
+      body: jsonEncode({
+        'category': categoryId,
+        'title': title,
+        'content': content,
+      }),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to create topic');
+  }
+
+  Future<Map<String, dynamic>> createForumPost(
+      int topicId, String content) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.forumTopicPosts(topicId)),
+      headers: _authJsonHeaders,
+      body: jsonEncode({'content': content}),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to create post');
+  }
+
+  Future<Map<String, dynamic>> markForumSolution(int postId) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.forumMarkSolution(postId)),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to mark solution');
+  }
 }

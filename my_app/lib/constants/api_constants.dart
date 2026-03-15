@@ -150,6 +150,97 @@ class ApiConstants {
   // Health check
   static String get healthCheck => '$apiUrl/health/';
 
+  // ── New Features (#28-#45) ────────────────────────────────────
+
+  // #28 Listing Quality Score
+  static String propertyQualityScore(int propertyId) =>
+      '$apiUrl/properties/$propertyId/quality-score/';
+
+  // #29 Price Comparison
+  static String get priceComparison => '$apiUrl/price-comparison/';
+
+  // #30 Buyer Verification
+  static String get buyerVerifications => '$apiUrl/buyer-verifications/';
+  static String buyerVerificationDetail(int id) =>
+      '$apiUrl/buyer-verifications/$id/';
+  static String buyerVerificationStatus(int userId) =>
+      '$apiUrl/buyers/$userId/verification/';
+
+  // #31 Conveyancing Tracker
+  static String get conveyancingCases => '$apiUrl/conveyancing-cases/';
+  static String conveyancingCaseDetail(int id) =>
+      '$apiUrl/conveyancing-cases/$id/';
+  static String conveyancingStepUpdate(int caseId, int stepId) =>
+      '$apiUrl/conveyancing-cases/$caseId/steps/$stepId/';
+
+  // #32 AI Description Generator
+  static String get generateDescription => '$apiUrl/generate-description/';
+
+  // #33 Similar Properties (already exists above)
+
+  // #35 Stamp Duty Calculator
+  static String get stampDutyCalculator => '$apiUrl/stamp-duty-calculator/';
+
+  // #36 Property History
+  static String propertyHistory(int propertyId) =>
+      '$apiUrl/properties/$propertyId/history/';
+
+  // #37 Open House Events
+  static String openHouseEvents(int propertyId) =>
+      '$apiUrl/properties/$propertyId/open-house/';
+  static String openHouseEventDetail(int propertyId, int eventId) =>
+      '$apiUrl/properties/$propertyId/open-house/$eventId/';
+  static String openHouseRsvp(int eventId) =>
+      '$apiUrl/open-house/$eventId/rsvp/';
+  static String openHouseRsvpCancel(int eventId) =>
+      '$apiUrl/open-house/$eventId/rsvp/cancel/';
+
+  // #38 QR Code Flyers
+  static String propertyFlyer(int propertyId) =>
+      '$apiUrl/properties/$propertyId/flyer/';
+
+  // #39 Solicitor/Conveyancer Matching
+  static String get quoteRequests => '$apiUrl/quote-requests/';
+  static String quoteRequestDetail(int id) =>
+      '$apiUrl/quote-requests/$id/';
+  static String get conveyancerQuotes => '$apiUrl/conveyancer-quotes/';
+  static String acceptQuote(int quoteId) =>
+      '$apiUrl/quotes/$quoteId/accept/';
+
+  // #40 Neighbourhood Reviews
+  static String get neighbourhoodReviews => '$apiUrl/neighbourhood-reviews/';
+  static String neighbourhoodSummary(String postcodeArea) =>
+      '$apiUrl/neighbourhood/$postcodeArea/summary/';
+
+  // #41 Board Orders
+  static String get boardOrders => '$apiUrl/board-orders/';
+  static String get boardPricing => '$apiUrl/board-pricing/';
+
+  // #42 EPC Suggestions
+  static String epcSuggestions(int propertyId) =>
+      '$apiUrl/properties/$propertyId/epc-suggestions/';
+
+  // #43 Buyer Profile
+  static String get buyerProfile => '$apiUrl/buyer-profile/';
+  static String get affordableProperties => '$apiUrl/affordable-properties/';
+
+  // #44 Two-Factor Authentication
+  static String get twoFaSetup => '$apiUrl/2fa/setup/';
+  static String get twoFaConfirm => '$apiUrl/2fa/confirm/';
+  static String get twoFaDisable => '$apiUrl/2fa/disable/';
+  static String get twoFaVerify => '$apiUrl/2fa/verify/';
+
+  // #45 Community Forum
+  static String get forumCategories => '$apiUrl/forum-categories/';
+  static String get forumTopics => '$apiUrl/forum-topics/';
+  static String forumTopicDetail(int id) => '$apiUrl/forum-topics/$id/';
+  static String forumTopicPosts(int topicId) =>
+      '$apiUrl/forum-topics/$topicId/posts/';
+  static String forumPostDetail(int topicId, int postId) =>
+      '$apiUrl/forum-topics/$topicId/posts/$postId/';
+  static String forumMarkSolution(int postId) =>
+      '$apiUrl/forum-posts/$postId/mark-solution/';
+
   // WebSocket
   static String get _wsBaseUrl =>
       baseUrl.replaceFirst('http', 'ws');

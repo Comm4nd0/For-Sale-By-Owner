@@ -3,6 +3,10 @@ import '../constants/app_theme.dart';
 import '../widgets/branded_app_bar.dart';
 import 'mortgage_calculator_screen.dart';
 import 'house_prices_screen.dart';
+import 'price_comparison_screen.dart';
+import 'stamp_duty_screen.dart';
+import 'forum_screen.dart';
+import 'neighbourhood_review_screen.dart';
 
 class ToolsScreen extends StatelessWidget {
   const ToolsScreen({super.key});
@@ -44,6 +48,46 @@ class ToolsScreen extends StatelessWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const HousePricesScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _ToolCard(
+            icon: Icons.compare_arrows,
+            title: 'Price Comparison',
+            subtitle: 'Compare sold prices and local listings in your area.',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PriceComparisonScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _ToolCard(
+            icon: Icons.account_balance,
+            title: 'Stamp Duty Calculator',
+            subtitle: 'Calculate SDLT, LBTT, or LTT for England, Scotland & Wales.',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const StampDutyScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _ToolCard(
+            icon: Icons.location_city,
+            title: 'Neighbourhood Reviews',
+            subtitle: 'Read and write reviews for any UK neighbourhood.',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NeighbourhoodReviewScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _ToolCard(
+            icon: Icons.forum,
+            title: 'Community Forum',
+            subtitle: 'Discuss buying, selling, and property topics.',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ForumScreen()),
             ),
           ),
         ],

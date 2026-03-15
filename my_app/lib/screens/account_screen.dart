@@ -7,6 +7,12 @@ import '../services/auth_service.dart';
 import 'my_listings_screen.dart';
 import 'saved_properties_screen.dart';
 import 'profile_screen.dart';
+import 'buyer_profile_screen.dart';
+import 'buyer_verification_screen.dart';
+import 'two_factor_screen.dart';
+import 'conveyancing_screen.dart';
+import 'board_order_screen.dart';
+import 'solicitor_quotes_screen.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -200,6 +206,85 @@ class _AccountScreenState extends State<AccountScreen> {
 
             const SizedBox(height: 20),
 
+            // Buyer section
+            _buildSectionTitle('Buyer Tools'),
+            const SizedBox(height: 8),
+            Card(
+              margin: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  _buildMenuTile(
+                    icon: Icons.person_search,
+                    title: 'Buyer Profile',
+                    subtitle: 'Budget, mortgage, and preferences',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const BuyerProfileScreen()),
+                    ),
+                  ),
+                  const Divider(height: 1, indent: 56),
+                  _buildMenuTile(
+                    icon: Icons.verified_user,
+                    title: 'Buyer Verification',
+                    subtitle: 'Upload proof of funds or mortgage AIP',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const BuyerVerificationScreen()),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Selling Tools section
+            _buildSectionTitle('Selling Tools'),
+            const SizedBox(height: 8),
+            Card(
+              margin: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  _buildMenuTile(
+                    icon: Icons.gavel,
+                    title: 'Conveyancing',
+                    subtitle: 'Track your sale or purchase progress',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const ConveyancingScreen()),
+                    ),
+                  ),
+                  const Divider(height: 1, indent: 56),
+                  _buildMenuTile(
+                    icon: Icons.request_quote,
+                    title: 'Solicitor Quotes',
+                    subtitle: 'Get and compare conveyancer quotes',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const SolicitorQuotesScreen()),
+                    ),
+                  ),
+                  const Divider(height: 1, indent: 56),
+                  _buildMenuTile(
+                    icon: Icons.signpost,
+                    title: 'For Sale Boards',
+                    subtitle: 'Order a physical For Sale board',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const BoardOrderScreen()),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
             // Settings section
             _buildSectionTitle('Settings'),
             const SizedBox(height: 8),
@@ -215,6 +300,17 @@ class _AccountScreenState extends State<AccountScreen> {
                       context,
                       MaterialPageRoute(
                           builder: (_) => const ProfileScreen()),
+                    ),
+                  ),
+                  const Divider(height: 1, indent: 56),
+                  _buildMenuTile(
+                    icon: Icons.security,
+                    title: 'Two-Factor Authentication',
+                    subtitle: 'Add extra security to your account',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const TwoFactorScreen()),
                     ),
                   ),
                 ],
