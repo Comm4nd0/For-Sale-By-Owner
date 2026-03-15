@@ -1862,8 +1862,11 @@ def update_conveyancing_step(request, case_pk, step_pk):
         step.save()
 
         # Trigger nudge check
-        from .tasks import check_conveyancing_stale_steps
-        check_conveyancing_stale_steps.delay(case.pk)
+        try:
+            from .tasks import check_conveyancing_stale_steps
+            check_conveyancing_stale_steps.delay(case.pk)
+        except Exception:
+            pass
 
     return Response(ConveyancingStepSerializer(step).data)
 
@@ -2206,16 +2209,19 @@ def rsvp_open_house(request, event_pk):
         return Response({'error': 'You have already RSVPd to this event.'}, status=400)
 
     # Notify the seller
-    from .tasks import send_email_task
-    send_email_task.delay(
-        f'New RSVP for {event.title}',
-        f'Hi {event.property.owner.first_name or event.property.owner.email},\n\n'
-        f'{request.user.get_full_name() or request.user.email} has RSVPd to your '
-        f'open house event for "{event.property.title}" on {event.date}.\n\n'
-        f'— For Sale By Owner',
-        settings.DEFAULT_FROM_EMAIL,
-        [event.property.owner.email],
-    )
+    try:
+        from .tasks import send_email_task
+        send_email_task.delay(
+            f'New RSVP for {event.title}',
+            f'Hi {event.property.owner.first_name or event.property.owner.email},\n\n'
+            f'{request.user.get_full_name() or request.user.email} has RSVPd to your '
+            f'open house event for "{event.property.title}" on {event.date}.\n\n'
+            f'— For Sale By Owner',
+            settings.DEFAULT_FROM_EMAIL,
+            [event.property.owner.email],
+        )
+    except Exception:
+        pass
 
     return Response(OpenHouseRSVPSerializer(rsvp).data, status=201)
 
@@ -2317,20 +2323,23 @@ class ConveyancerQuoteRequestViewSet(viewsets.ModelViewSet):
             Q(coverage_counties__icontains=prop.county)
         ).distinct()[:10]
 
-        from .tasks import send_email_task
-        for provider in matching_providers:
-            send_email_task.delay(
-                f'New conveyancing quote request for {prop.city}',
-                f'Hi {provider.business_name},\n\n'
-                f'A new conveyancing quote request has been submitted for a property in '
-                f'{prop.city} ({prop.postcode}).\n\n'
-                f'Transaction type: {quote_request.get_transaction_type_display()}\n\n'
-                f'Submit your quote on the platform:\n'
-                f'{settings.SITE_URL}/my-service/\n\n'
-                f'— For Sale By Owner',
-                settings.DEFAULT_FROM_EMAIL,
-                [provider.contact_email],
-            )
+        try:
+            from .tasks import send_email_task
+            for provider in matching_providers:
+                send_email_task.delay(
+                    f'New conveyancing quote request for {prop.city}',
+                    f'Hi {provider.business_name},\n\n'
+                    f'A new conveyancing quote request has been submitted for a property in '
+                    f'{prop.city} ({prop.postcode}).\n\n'
+                    f'Transaction type: {quote_request.get_transaction_type_display()}\n\n'
+                    f'Submit your quote on the platform:\n'
+                    f'{settings.SITE_URL}/my-service/\n\n'
+                    f'— For Sale By Owner',
+                    settings.DEFAULT_FROM_EMAIL,
+                    [provider.contact_email],
+                )
+        except Exception:
+            pass
 
 
 class ConveyancerQuoteViewSet(viewsets.ModelViewSet):
@@ -2372,16 +2381,19 @@ def accept_conveyancer_quote(request, quote_pk):
     ).exclude(pk=quote.pk).update(is_accepted=False)
 
     # Notify accepted provider
-    from .tasks import send_email_task
-    send_email_task.delay(
-        'Your conveyancing quote has been accepted',
-        f'Hi {quote.provider.business_name},\n\n'
-        f'Your quote of £{quote.total:,.2f} has been accepted.\n\n'
-        f'Please contact the client to proceed.\n\n'
-        f'— For Sale By Owner',
-        settings.DEFAULT_FROM_EMAIL,
-        [quote.provider.contact_email],
-    )
+    try:
+        from .tasks import send_email_task
+        send_email_task.delay(
+            'Your conveyancing quote has been accepted',
+            f'Hi {quote.provider.business_name},\n\n'
+            f'Your quote of £{quote.total:,.2f} has been accepted.\n\n'
+            f'Please contact the client to proceed.\n\n'
+            f'— For Sale By Owner',
+            settings.DEFAULT_FROM_EMAIL,
+            [quote.provider.contact_email],
+        )
+    except Exception:
+        pass
 
     return Response(ConveyancerQuoteSerializer(quote).data)
 
