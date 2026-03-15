@@ -1,6 +1,5 @@
 class Reply {
   final int id;
-  final int? enquiryId;
   final int? viewingRequestId;
   final int authorId;
   final String authorName;
@@ -9,7 +8,6 @@ class Reply {
 
   Reply({
     required this.id,
-    this.enquiryId,
     this.viewingRequestId,
     required this.authorId,
     required this.authorName,
@@ -20,7 +18,6 @@ class Reply {
   factory Reply.fromJson(Map<String, dynamic> json) {
     return Reply(
       id: json['id'],
-      enquiryId: json['enquiry'],
       viewingRequestId: json['viewing_request'],
       authorId: json['author'] ?? 0,
       authorName: json['author_name'] ?? '',

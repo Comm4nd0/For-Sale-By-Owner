@@ -5,13 +5,11 @@ import '../widgets/branded_app_bar.dart';
 import '../widgets/skeleton_loading.dart';
 import '../models/dashboard_stats.dart';
 import '../models/notification_counts.dart';
-import '../models/enquiry.dart';
 import '../models/viewing_request.dart';
 import '../models/offer.dart';
 import '../models/chat_room.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
-import 'enquiry_detail_screen.dart';
 import 'viewing_detail_screen.dart';
 import 'offers_screen.dart';
 import 'edit_offer_screen.dart';
@@ -33,12 +31,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   String? _statsError;
   NotificationCounts? _counts;
 
-  late Future<List<Enquiry>> _enquiriesFuture;
   late Future<List<ViewingRequest>> _viewingsFuture;
   late Future<List<Offer>> _offersFuture;
   late Future<List<ChatRoom>> _messagesFuture;
   late TabController _tabController;
-  final ScrollController _enquiriesScrollController = ScrollController();
   final ScrollController _viewingsScrollController = ScrollController();
   final ScrollController _offersScrollController = ScrollController();
   final ScrollController _messagesScrollController = ScrollController();
@@ -46,7 +42,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) setState(() {});
     });
@@ -54,13 +50,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (authService.isAuthenticated) {
       _loadStats();
       _loadCounts();
-      _loadEnquiries();
       _loadViewings();
       _loadOffers();
       _loadMessages();
     } else {
       _statsLoading = false;
-      _enquiriesFuture = Future.value([]);
       _viewingsFuture = Future.value([]);
       _offersFuture = Future.value([]);
       _messagesFuture = Future.value([]);
@@ -70,7 +64,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void dispose() {
     _tabController.dispose();
-    _enquiriesScrollController.dispose();
     _viewingsScrollController.dispose();
     _offersScrollController.dispose();
     _messagesScrollController.dispose();
@@ -110,13 +103,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     } catch (_) {}
   }
 
-  void _loadEnquiries() {
-    final apiService = context.read<ApiService>();
-    _enquiriesFuture = withRetry(
-      () => apiService.getReceivedEnquiries().then((r) => r.results),
-    );
-  }
-
   void _loadViewings() {
     final apiService = context.read<ApiService>();
     _viewingsFuture = withRetry(
@@ -154,7 +140,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     await _loadStats();
     _loadCounts();
     setState(() {
-      _loadEnquiries();
       _loadViewings();
       _loadOffers();
       _loadMessages();
@@ -207,10 +192,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Scaffold(
       floatingActionButton: ScrollToTopButton(
         scrollController: [
-          _enquiriesScrollController,
+          _messagesScrollController,
           _viewingsScrollController,
           _offersScrollController,
-          _messagesScrollController,
         ][_tabController.index],
       ),
       appBar: BrandedAppBar.build(
@@ -223,10 +207,9 @@ class _DashboardScreenState extends State<DashboardScreen>
           isScrollable: true,
           tabAlignment: TabAlignment.start,
           tabs: [
-            _buildTabLabel('Enquiries', _counts?.unreadEnquiries ?? 0),
+            _buildTabLabel('Messages', _counts?.unreadMessages ?? 0),
             _buildTabLabel('Viewings', _counts?.pendingViewings ?? 0),
             _buildTabLabel('Offers', _counts?.pendingOffers ?? 0),
-            _buildTabLabel('Messages', _counts?.unreadChats ?? 0),
           ],
         ),
       ),
@@ -237,10 +220,9 @@ class _DashboardScreenState extends State<DashboardScreen>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildEnquiriesTab(),
+                _buildMessagesTab(),
                 _buildViewingsTab(),
                 _buildOffersTab(),
-                _buildMessagesTab(),
               ],
             ),
           ),
@@ -296,10 +278,10 @@ class _DashboardScreenState extends State<DashboardScreen>
           _buildStatChip(Icons.home, 'Listings', stats.activeListings, null),
           _buildStatChip(Icons.visibility, 'Views', stats.totalViews, null),
           _buildStatChip(
-            Icons.mail,
-            'Enquiries',
-            stats.totalEnquiries,
-            stats.unreadEnquiries > 0 ? AppTheme.goldEmber : null,
+            Icons.chat,
+            'Messages',
+            stats.totalMessages,
+            stats.unreadMessages > 0 ? AppTheme.goldEmber : null,
           ),
           _buildStatChip(Icons.favorite, 'Saved', stats.totalSaves, null),
           _buildStatChip(
@@ -349,152 +331,6 @@ class _DashboardScreenState extends State<DashboardScreen>
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildEnquiriesTab() {
-    return RefreshIndicator(
-      onRefresh: _refreshAll,
-      child: FutureBuilder<List<Enquiry>>(
-        future: _enquiriesFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const SkeletonList(count: 3);
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: Colors.red[50],
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Icon(Icons.error_outline, size: 32, color: Colors.red[300]),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text('Failed to load enquiries'),
-                    const SizedBox(height: 12),
-                    ElevatedButton.icon(
-                      onPressed: () => setState(() => _loadEnquiries()),
-                      icon: const Icon(Icons.refresh, size: 18),
-                      label: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          final enquiries = snapshot.data ?? [];
-
-          if (enquiries.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: AppTheme.forestMist,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Icon(Icons.mail_outline, size: 36, color: AppTheme.forestMid),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'No Enquiries Yet',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'When buyers send you messages about your properties, they\'ll appear here.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: AppTheme.slate, height: 1.5),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          return ListView.builder(
-            controller: _enquiriesScrollController,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: enquiries.length,
-            itemBuilder: (context, index) {
-              final enquiry = enquiries[index];
-              return Card(
-                child: ListTile(
-                  leading: !enquiry.isRead
-                      ? Container(
-                          width: 10,
-                          height: 10,
-                          decoration: const BoxDecoration(
-                            color: Colors.blue,
-                            shape: BoxShape.circle,
-                          ),
-                        )
-                      : const SizedBox(width: 10),
-                  title: Text(
-                    enquiry.propertyTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontWeight: enquiry.isRead
-                          ? FontWeight.normal
-                          : FontWeight.bold,
-                    ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        enquiry.senderName.isNotEmpty
-                            ? enquiry.senderName
-                            : enquiry.name,
-                        style: TextStyle(
-                            fontSize: 13, color: AppTheme.forestMid),
-                      ),
-                      Text(
-                        enquiry.message,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                  trailing: Text(
-                    _formatDate(enquiry.createdAt),
-                    style: TextStyle(
-                        fontSize: 11, color: Colors.grey[500]),
-                  ),
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            EnquiryDetailScreen(enquiry: enquiry),
-                      ),
-                    );
-                    _refreshAll();
-                  },
-                ),
-              );
-            },
-          );
-        },
       ),
     );
   }

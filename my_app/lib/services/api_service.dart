@@ -9,7 +9,6 @@ import '../models/property_image.dart';
 import '../models/property_feature.dart';
 import '../models/property_floorplan.dart';
 import '../models/saved_property.dart';
-import '../models/enquiry.dart';
 import '../models/viewing_request.dart';
 import '../models/reply.dart';
 import '../models/saved_search.dart';
@@ -323,66 +322,6 @@ class ApiService {
     if (response.statusCode != 204) {
       throw Exception('Failed to remove saved property');
     }
-  }
-
-  // ── Enquiries ───────────────────────────────────────────────────────
-
-  Future<PaginatedResponse<Enquiry>> getReceivedEnquiries(
-      {int page = 1}) async {
-    final uri = Uri.parse(ApiConstants.receivedEnquiries)
-        .replace(queryParameters: {'page': page.toString()});
-    final response = await http.get(uri, headers: _headers);
-
-    if (response.statusCode == 200) {
-      return PaginatedResponse.fromJson(
-        jsonDecode(response.body),
-        (json) => Enquiry.fromJson(json),
-      );
-    }
-    throw Exception('Failed to load enquiries');
-  }
-
-  Future<Enquiry> createEnquiry({
-    required int propertyId,
-    String? phone,
-    required String message,
-  }) async {
-    final response = await http.post(
-      Uri.parse(ApiConstants.enquiries),
-      headers: _headers,
-      body: jsonEncode({
-        'property': propertyId,
-        'phone': phone ?? '',
-        'message': message,
-      }),
-    );
-    if (response.statusCode == 201) {
-      return Enquiry.fromJson(jsonDecode(response.body));
-    }
-    throw Exception('Failed to send enquiry');
-  }
-
-  Future<void> markEnquiryRead(int id) async {
-    final response = await http.patch(
-      Uri.parse(ApiConstants.enquiryDetail(id)),
-      headers: _headers,
-      body: jsonEncode({'is_read': true}),
-    );
-    if (response.statusCode != 200) {
-      throw Exception('Failed to mark enquiry as read');
-    }
-  }
-
-  Future<Reply> replyToEnquiry(int id, String message) async {
-    final response = await http.post(
-      Uri.parse(ApiConstants.enquiryReply(id)),
-      headers: _headers,
-      body: jsonEncode({'message': message}),
-    );
-    if (response.statusCode == 201) {
-      return Reply.fromJson(jsonDecode(response.body));
-    }
-    throw Exception('Failed to send reply');
   }
 
   // ── Viewing Requests ────────────────────────────────────────────────
@@ -772,10 +711,18 @@ class ApiService {
   }
 
   Future<ChatRoom> getOrCreateChatRoom(int propertyId) async {
+    return createChatRoom(propertyId: propertyId);
+  }
+
+  Future<ChatRoom> createChatRoom({required int propertyId, String? message}) async {
+    final body = <String, dynamic>{'property': propertyId};
+    if (message != null && message.isNotEmpty) {
+      body['message'] = message;
+    }
     final response = await http.post(
       Uri.parse(ApiConstants.chatRooms),
       headers: _headers,
-      body: jsonEncode({'property': propertyId}),
+      body: jsonEncode(body),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
       return ChatRoom.fromJson(jsonDecode(response.body));

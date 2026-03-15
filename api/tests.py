@@ -8,8 +8,9 @@ from rest_framework.test import APIClient
 
 from .models import (
     Property, PropertyImage, PropertyFloorplan, PropertyFeature,
-    PriceHistory, SavedProperty, Enquiry, PropertyView,
+    PriceHistory, SavedProperty, PropertyView,
     ViewingRequest, SavedSearch, PushNotificationDevice,
+    ChatRoom, ChatMessage,
 )
 
 User = get_user_model()
@@ -146,17 +147,6 @@ class SavedPropertyModelTest(TestCase):
         from django.db import IntegrityError
         with self.assertRaises(IntegrityError):
             SavedProperty.objects.create(user=buyer, property=prop)
-
-
-class EnquiryModelTest(TestCase):
-    def test_str(self):
-        owner = make_user(email='owner@test.com')
-        buyer = make_user(email='buyer@test.com')
-        prop = make_property(owner)
-        e = Enquiry.objects.create(
-            property=prop, sender=buyer, name='Bob', email='bob@x.com', message='Hi'
-        )
-        self.assertIn('Bob', str(e))
 
 
 class ViewingRequestModelTest(TestCase):
@@ -375,74 +365,6 @@ class SavedPropertyAPITest(TestCase):
     STORAGES=TEST_STORAGES,
     EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
 )
-class EnquiryAPITest(TestCase):
-    def setUp(self):
-        self.owner = make_user(email='owner@test.com')
-        self.buyer = make_user(email='buyer@test.com', first_name='Bob', last_name='Smith')
-        self.prop = make_property(self.owner)
-        self.buyer_client = auth_client(self.buyer)
-        self.owner_client = auth_client(self.owner)
-
-    def test_create_enquiry(self):
-        data = {
-            'property': self.prop.id, 'name': 'Bob Smith',
-            'email': 'bob@test.com', 'message': 'Is this still available?',
-        }
-        res = self.buyer_client.post('/api/enquiries/', data, format='json')
-        self.assertEqual(res.status_code, 201)
-
-    def test_cannot_enquire_own_property(self):
-        data = {
-            'property': self.prop.id, 'name': 'Self', 'email': 'x@x.com', 'message': 'Hi',
-        }
-        res = self.owner_client.post('/api/enquiries/', data, format='json')
-        self.assertEqual(res.status_code, 400)
-
-    def test_received_enquiries(self):
-        Enquiry.objects.create(
-            property=self.prop, sender=self.buyer,
-            name='Bob', email='bob@x.com', message='Hi',
-        )
-        res = self.owner_client.get('/api/enquiries/received/')
-        self.assertEqual(res.status_code, 200)
-        results = res.data['results'] if 'results' in res.data else res.data
-        self.assertEqual(len(results), 1)
-
-    def test_mark_read(self):
-        e = Enquiry.objects.create(
-            property=self.prop, sender=self.buyer,
-            name='Bob', email='bob@x.com', message='Hi',
-        )
-        res = self.owner_client.patch(
-            f'/api/enquiries/{e.id}/', {'is_read': True}, format='json'
-        )
-        self.assertEqual(res.status_code, 200)
-        e.refresh_from_db()
-        self.assertTrue(e.is_read)
-
-    def test_non_owner_cannot_mark_read(self):
-        e = Enquiry.objects.create(
-            property=self.prop, sender=self.buyer,
-            name='Bob', email='bob@x.com', message='Hi',
-        )
-        other = make_user(email='other@test.com')
-        other_client = auth_client(other)
-        res = other_client.patch(
-            f'/api/enquiries/{e.id}/', {'is_read': True}, format='json'
-        )
-        # Other user can't even see the enquiry (not sender or property owner)
-        self.assertEqual(res.status_code, 404)
-
-    def test_enquiry_requires_auth(self):
-        res = APIClient().post('/api/enquiries/', {}, format='json')
-        self.assertEqual(res.status_code, 401)
-
-
-@override_settings(
-    REST_FRAMEWORK=TEST_REST_FRAMEWORK,
-    STORAGES=TEST_STORAGES,
-    EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
-)
 class ViewingRequestAPITest(TestCase):
     def setUp(self):
         self.owner = make_user(email='owner@test.com')
@@ -575,10 +497,10 @@ class DashboardStatsAPITest(TestCase):
 
     def test_dashboard_stats(self):
         # Create some data
-        Enquiry.objects.create(
-            property=self.prop, sender=self.buyer,
-            name='Bob', email='bob@x.com', message='Hi',
+        room = ChatRoom.objects.create(
+            property=self.prop, buyer=self.buyer, seller=self.owner,
         )
+        ChatMessage.objects.create(room=room, sender=self.buyer, message='Hi')
         PropertyView.objects.create(property=self.prop, viewer_ip='127.0.0.1')
         SavedProperty.objects.create(user=self.buyer, property=self.prop)
 
@@ -587,8 +509,8 @@ class DashboardStatsAPITest(TestCase):
         self.assertEqual(res.data['total_listings'], 1)
         self.assertEqual(res.data['active_listings'], 1)
         self.assertEqual(res.data['total_views'], 1)
-        self.assertEqual(res.data['total_enquiries'], 1)
-        self.assertEqual(res.data['unread_enquiries'], 1)
+        self.assertEqual(res.data['total_messages'], 1)
+        self.assertEqual(res.data['unread_messages'], 1)
         self.assertEqual(res.data['total_saves'], 1)
 
     def test_dashboard_requires_auth(self):

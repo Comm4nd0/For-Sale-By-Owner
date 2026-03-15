@@ -456,30 +456,31 @@
         msgEl.style.display = 'none';
 
         try {
-            const res = await fetch('/api/enquiries/', {
+            const message = document.getElementById('enq-message').value;
+            const res = await Auth.authFetch('/api/chat-rooms/', {
                 method: 'POST',
                 headers: Auth.headers(),
                 body: JSON.stringify({
                     property: propertyId,
-                    phone: document.getElementById('enq-phone').value,
-                    message: document.getElementById('enq-message').value,
+                    message: message,
                 }),
             });
             if (!res.ok) {
                 const data = await res.json();
                 throw new Error(data.detail || Object.values(data).flat().join(', '));
             }
+            const room = await res.json();
             msgEl.className = 'alert alert-success';
-            msgEl.textContent = 'Enquiry sent! The seller will receive your message.';
+            msgEl.innerHTML = 'Message sent! <a href="/messages/' + room.id + '/" style="color:#115E66; font-weight:600;">View conversation &rarr;</a>';
             msgEl.style.display = 'block';
             e.target.reset();
         } catch (err) {
             msgEl.className = 'alert alert-error';
-            msgEl.textContent = err.message || 'Failed to send enquiry.';
+            msgEl.textContent = err.message || 'Failed to send message.';
             msgEl.style.display = 'block';
         }
         btn.disabled = false;
-        btn.textContent = 'Send Enquiry';
+        btn.textContent = 'Send Message';
     }
 
     async function submitOffer(e, propertyId) {
@@ -793,12 +794,11 @@
 
             const enquiryFormHtml = Auth.isLoggedIn() ? `
                 <div class="enquiry-form-section">
-                    <h3>Contact Seller</h3>
+                    <h3>Message Seller</h3>
                     <div id="enquiry-msg" class="alert" style="display:none;"></div>
                     <form onsubmit="submitEnquiry(event, ${p.id})">
-                        <div class="form-group"><label>Phone (optional, kept private)</label><input type="tel" id="enq-phone"></div>
                         <div class="form-group"><label>Message</label><textarea id="enq-message" required>I am interested in this property. Please contact me with more details.</textarea></div>
-                        <button type="submit" class="btn btn-primary" style="width:100%;">Send Enquiry</button>
+                        <button type="submit" class="btn btn-primary" style="width:100%;">Send Message</button>
                     </form>
                 </div>` : `
                 <div class="enquiry-form-section" style="text-align:center;">

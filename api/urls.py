@@ -5,7 +5,6 @@ from . import views
 router = DefaultRouter()
 router.register(r'properties', views.PropertyViewSet, basename='property')
 router.register(r'saved', views.SavedPropertyViewSet, basename='saved-property')
-router.register(r'enquiries', views.EnquiryViewSet, basename='enquiry')
 router.register(r'viewings', views.ViewingRequestViewSet, basename='viewing-request')
 router.register(r'saved-searches', views.SavedSearchViewSet, basename='saved-search')
 router.register(r'features', views.PropertyFeatureViewSet, basename='property-feature')

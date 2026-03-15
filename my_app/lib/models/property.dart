@@ -39,7 +39,7 @@ class Property {
   final String? videoThumbnail;
   final int imageCount;
   final int? viewCount;
-  final int? enquiryCount;
+  final int? messageCount;
   final int? offerCount;
   final String createdAt;
   final String updatedAt;
@@ -80,7 +80,7 @@ class Property {
     this.videoThumbnail,
     required this.imageCount,
     this.viewCount,
-    this.enquiryCount,
+    this.messageCount,
     this.offerCount,
     required this.createdAt,
     required this.updatedAt,
@@ -135,7 +135,7 @@ class Property {
       videoThumbnail: json['video_thumbnail'],
       imageCount: json['image_count'] ?? 0,
       viewCount: json['view_count'],
-      enquiryCount: json['enquiry_count'],
+      messageCount: json['message_count'],
       offerCount: json['offer_count'],
       createdAt: json['created_at'] ?? '',
       updatedAt: json['updated_at'] ?? '',
