@@ -414,6 +414,19 @@ class ViewingRequestViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'])
+    def sent(self, request):
+        """Get viewing requests sent by the current user (buyer view)."""
+        qs = ViewingRequest.objects.filter(
+            requester=request.user
+        ).select_related('property', 'requester').prefetch_related('replies__author').order_by('-created_at')
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
     @action(detail=True, methods=['post'])
     def reply(self, request, pk=None):
         """Post a reply to a viewing request."""
@@ -435,12 +448,16 @@ class ViewingRequestViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['patch'])
     def update_status(self, request, pk=None):
-        """Property owner can confirm/decline a viewing request."""
+        """Property owner can confirm/decline, or requester can cancel."""
         viewing = self.get_object()
-        if viewing.property.owner != request.user:
-            raise PermissionDenied()
         new_status = request.data.get('status')
-        if new_status not in ['confirmed', 'declined', 'completed']:
+        # Allow requester to cancel their own request
+        if viewing.requester == request.user:
+            if new_status != 'cancelled':
+                raise PermissionDenied("You can only cancel your own viewing request.")
+        elif viewing.property.owner != request.user:
+            raise PermissionDenied()
+        elif new_status not in ['confirmed', 'declined', 'completed']:
             raise ValidationError("Invalid status.")
         viewing.status = new_status
         if 'seller_notes' in request.data:
@@ -492,6 +509,10 @@ def dashboard_stats(request):
     pending_viewings = ViewingRequest.objects.filter(property__owner=user, status='pending').count()
     total_offers = Offer.objects.filter(property__owner=user).count()
     pending_offers = Offer.objects.filter(property__owner=user, status='submitted').count()
+
+    # Buyer viewing requests stats
+    my_viewing_requests = ViewingRequest.objects.filter(requester=user).count()
+    my_pending_viewing_requests = ViewingRequest.objects.filter(requester=user, status='pending').count()
 
     # Views over last 30 days
     thirty_days_ago = timezone.now() - timedelta(days=30)
@@ -548,6 +569,8 @@ def dashboard_stats(request):
         'message_conversion_rate': message_rate,
         'views_by_day': list(views_by_day),
         'property_stats': property_stats,
+        'my_viewing_requests': my_viewing_requests,
+        'my_pending_viewing_requests': my_pending_viewing_requests,
     }
     return Response(data)
 

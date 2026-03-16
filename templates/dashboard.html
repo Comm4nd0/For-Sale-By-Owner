@@ -126,7 +126,7 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="page-title">Seller Dashboard</h2>
+<h2 class="page-title">Dashboard</h2>
 <div id="dashboard-content"><p>Loading...</p></div>
 {% endblock %}
 
@@ -135,6 +135,7 @@
     if (!Auth.requireAuth()) throw new Error('Not authenticated');
 
     let viewingPage = 1;
+    let myViewingPage = 1;
 
     async function loadDashboard() {
         try {
@@ -159,6 +160,8 @@
                 unreadMessages = (Array.isArray(rooms) ? rooms : []).reduce((sum, r) => sum + (r.unread_count || 0), 0);
             }
 
+            const myPendingViewings = stats.my_pending_viewing_requests || 0;
+
             document.getElementById('dashboard-content').innerHTML = `
                 <div class="stats-grid">
                     <div class="stat-card"><div class="value">${stats.active_listings}</div><div class="label">Listings</div></div>
@@ -166,11 +169,13 @@
                     <div class="stat-card ${unreadMessages > 0 ? 'highlight' : ''}"><div class="value">${unreadMessages}</div><div class="label">Unread Messages</div></div>
                     <div class="stat-card"><div class="value">${stats.total_saves}</div><div class="label">Saved</div></div>
                     <div class="stat-card"><div class="value">${stats.pending_viewings}</div><div class="label">Viewings</div></div>
+                    ${myPendingViewings > 0 ? `<div class="stat-card highlight"><div class="value">${myPendingViewings}</div><div class="label">My Pending Requests</div></div>` : ''}
                 </div>
 
                 <div class="tab-nav">
                     <button class="tab-btn active" onclick="switchTab('messages', this)">Messages ${unreadMessages > 0 ? `<span class="tab-badge unread">${unreadMessages}</span>` : ''}</button>
                     <button class="tab-btn" onclick="switchTab('viewings', this)">Viewings ${stats.pending_viewings > 0 ? `<span class="tab-badge pending">${stats.pending_viewings}</span>` : ''}</button>
+                    <button class="tab-btn" onclick="switchTab('my-viewings', this)">My Requests ${myPendingViewings > 0 ? `<span class="tab-badge pending">${myPendingViewings}</span>` : ''}</button>
                     <button class="tab-btn" onclick="switchTab('offers', this)">Offers ${pendingOffers > 0 ? `<span class="tab-badge pending">${pendingOffers}</span>` : ''}</button>
                 </div>
 
@@ -181,6 +186,10 @@
                     <div id="viewing-list"></div>
                     <div id="viewing-pagination" class="pagination"></div>
                 </div>
+                <div class="tab-content" id="tab-my-viewings">
+                    <div id="my-viewing-list"></div>
+                    <div id="my-viewing-pagination" class="pagination"></div>
+                </div>
                 <div class="tab-content" id="tab-offers">
                     <div id="offers-list"></div>
                 </div>
@@ -188,6 +197,7 @@
 
             loadDashboardMessages();
             loadViewings();
+            loadMyViewingRequests();
             loadDashboardOffers();
         } catch (err) {
             document.getElementById('dashboard-content').innerHTML = '<div class="alert alert-error">Failed to load dashboard.</div>';
@@ -272,6 +282,104 @@
             body: JSON.stringify({ status: newStatus }),
         });
         loadViewings();
+    }
+
+    async function loadMyViewingRequests() {
+        try {
+            const res = await fetch(`/api/viewings/sent/?page=${myViewingPage}`, { headers: Auth.headers() });
+            const data = await res.json();
+            const viewings = data.results || data;
+            const listEl = document.getElementById('my-viewing-list');
+
+            if (!viewings.length) {
+                listEl.innerHTML = '<div class="empty-state"><p>You have not made any viewing requests yet.</p><p>Browse properties and request viewings to see them here.</p></div>';
+                document.getElementById('my-viewing-pagination').innerHTML = '';
+                return;
+            }
+
+            listEl.innerHTML = viewings.map(v => `
+                <div class="viewing-item">
+                    <div class="viewing-header">
+                        <span class="enquiry-from">${escHtml(v.property_title)}</span>
+                        <span class="viewing-status status-${escHtml(v.status)}">${escHtml(v.status_display)}</span>
+                    </div>
+                    <div class="viewing-details">
+                        <strong>Date:</strong> ${new Date(v.preferred_date + 'T00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} at ${escHtml(v.preferred_time)}
+                        ${v.alternative_date ? `<br><strong>Alt:</strong> ${new Date(v.alternative_date + 'T00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} at ${escHtml(v.alternative_time)}` : ''}
+                        ${v.message ? `<br><strong>Message:</strong> ${escHtml(v.message)}` : ''}
+                        ${v.seller_notes ? `<br><strong>Seller notes:</strong> ${escHtml(v.seller_notes)}` : ''}
+                    </div>
+                    <div style="font-size:0.8rem; color:#8FA3A8; margin-top:0.25rem;">Requested ${new Date(v.created_at).toLocaleDateString()}</div>
+                    ${v.replies && v.replies.length ? `
+                    <div class="reply-thread">
+                        ${v.replies.map(r => `
+                            <div class="reply-item">
+                                <span class="reply-author">${escHtml(r.author_name)}</span>
+                                <span class="reply-date">${new Date(r.created_at).toLocaleString()}</span>
+                                <div class="reply-message">${escHtml(r.message)}</div>
+                            </div>
+                        `).join('')}
+                    </div>` : ''}
+                    <div class="viewing-actions">
+                        ${v.status === 'pending' ? `
+                            <button class="btn btn-danger" style="font-size:0.8rem; padding:0.3rem 0.8rem;" onclick="cancelMyViewing(${v.id})">Cancel Request</button>
+                        ` : ''}
+                        <button class="btn btn-primary" style="font-size:0.8rem; padding:0.3rem 0.8rem;" onclick="toggleReplyForm('my-viewing', ${v.id})">Reply</button>
+                    </div>
+                    <div class="reply-form" id="reply-form-my-viewing-${v.id}">
+                        <textarea id="reply-text-my-viewing-${v.id}" placeholder="Type your reply..."></textarea>
+                        <div class="reply-form-actions">
+                            <button class="btn btn-primary" style="font-size:0.8rem; padding:0.3rem 0.8rem;" onclick="sendMyViewingReply(${v.id})">Send Reply</button>
+                            <button class="btn btn-secondary" style="font-size:0.8rem; padding:0.3rem 0.8rem;" onclick="toggleReplyForm('my-viewing', ${v.id})">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            const pagEl = document.getElementById('my-viewing-pagination');
+            pagEl.innerHTML = `
+                <button ${!data.previous ? 'disabled' : ''} onclick="myViewingPage--; loadMyViewingRequests();">&laquo; Prev</button>
+                <span style="padding:0.4rem 0.5rem; color:#4A5C62; font-size:0.9rem;">Page ${myViewingPage}</span>
+                <button ${!data.next ? 'disabled' : ''} onclick="myViewingPage++; loadMyViewingRequests();">Next &raquo;</button>
+            `;
+        } catch (err) {
+            document.getElementById('my-viewing-list').innerHTML = '<div class="empty-state"><p>Failed to load viewing requests.</p></div>';
+        }
+    }
+
+    async function cancelMyViewing(id) {
+        if (!confirm('Are you sure you want to cancel this viewing request?')) return;
+        try {
+            const res = await fetch(`/api/viewings/${id}/update_status/`, {
+                method: 'PATCH',
+                headers: Auth.headers(),
+                body: JSON.stringify({ status: 'cancelled' }),
+            });
+            if (!res.ok) throw new Error('Failed');
+            loadMyViewingRequests();
+        } catch (err) {
+            alert('Failed to cancel viewing request.');
+        }
+    }
+
+    async function sendMyViewingReply(id) {
+        const textarea = document.getElementById(`reply-text-my-viewing-${id}`);
+        const message = textarea.value.trim();
+        if (!message) { alert('Please enter a message.'); return; }
+        try {
+            const res = await fetch(`/api/viewings/${id}/reply/`, {
+                method: 'POST',
+                headers: Auth.headers(),
+                body: JSON.stringify({ message }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.detail || 'Failed to send reply.');
+            }
+            loadMyViewingRequests();
+        } catch (err) {
+            alert(err.message || 'Failed to send reply.');
+        }
     }
 
     function toggleReplyForm(type, id) {
