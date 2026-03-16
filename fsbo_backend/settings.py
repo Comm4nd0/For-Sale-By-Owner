@@ -13,6 +13,11 @@ DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
+# Always allow the www subdomain so it can be redirected to the canonical domain
+_canonical = 'for-sale-by-owner.co.uk'
+if _canonical in ALLOWED_HOSTS and f'www.{_canonical}' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(f'www.{_canonical}')
+
 # Trust X-Forwarded-Proto from reverse proxy (Caddy)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
@@ -49,6 +54,7 @@ except ImportError:
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'fsbo_backend.middleware.WwwRedirectMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -177,6 +183,11 @@ CSRF_TRUSTED_ORIGINS = [
     for origin in os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost,http://127.0.0.1').split(',')
     if origin.strip()
 ]
+# Ensure the www subdomain is trusted so CSRF works during the redirect
+for _origin in list(CSRF_TRUSTED_ORIGINS):
+    _www_origin = _origin.replace('://', '://www.')
+    if '://www.' not in _origin and _www_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_www_origin)
 
 # CORS — restricted in production
 CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'True' if DEBUG else 'False').lower() in ('true', '1', 'yes')
