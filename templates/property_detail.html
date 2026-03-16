@@ -919,24 +919,7 @@
                             <div class="detail-row"><span class="detail-label">Listed</span><span class="detail-value">${new Date(p.created_at).toLocaleDateString()}</span></div>
                         </div>
                         ${enquiryFormHtml}
-                        ${Auth.isLoggedIn() ? `
-                        <div class="viewing-form-section">
-                            <h3>Request a Viewing</h3>
-                            <div id="viewing-msg" class="alert" style="display:none;"></div>
-                            <form onsubmit="submitViewing(event, ${p.id})">
-                                <div class="form-group"><label>Phone (optional, kept private)</label><input type="tel" id="view-phone"></div>
-                                <div class="form-row-2">
-                                    <div class="form-group"><label>Preferred Date</label><input type="date" id="view-date" required></div>
-                                    <div class="form-group"><label>Preferred Time</label><input type="time" id="view-time" required></div>
-                                </div>
-                                <div class="form-row-2">
-                                    <div class="form-group"><label>Alternative Date</label><input type="date" id="view-alt-date"></div>
-                                    <div class="form-group"><label>Alternative Time</label><input type="time" id="view-alt-time"></div>
-                                </div>
-                                <div class="form-group"><label>Message (optional)</label><textarea id="view-message"></textarea></div>
-                                <button type="submit" class="btn btn-primary" style="width:100%;">Request Viewing</button>
-                            </form>
-                        </div>` : ''}
+                        <div id="viewing-request-section"></div>
                         <div id="offer-section"></div>
                         <div id="quick-actions-section"></div>
                         <div id="available-slots-section"></div>
@@ -1058,16 +1041,40 @@
                                 .then(slots => {
                                     const slotList = Array.isArray(slots) ? slots : (slots.results || []);
                                     const available = slotList.filter(s => s.is_available !== false && (s.current_bookings || 0) < s.max_bookings);
-                                    if (!available.length) return;
-                                    const el = document.getElementById('available-slots-section');
-                                    el.innerHTML = '<div class="avail-slots-section"><h3>Available Viewing Times</h3>' +
-                                        available.map(s => {
-                                            const dateStr = s.date
-                                                ? new Date(s.date + 'T00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
-                                                : (s.day_display || 'Recurring');
-                                            return '<div class="avail-slot-item"><div><div class="avail-slot-date">' + escHtml(dateStr) + '</div><div class="avail-slot-time">' + escHtml(s.start_time) + ' - ' + escHtml(s.end_time) + '</div></div><button class="btn btn-primary" style="font-size:0.8rem;padding:0.3rem 0.75rem;" onclick="bookViewingSlot(' + p.id + ',' + s.id + ')">Book</button></div>';
-                                        }).join('') +
-                                        '<a href="/properties/' + p.id + '/viewing-slots/" style="display:inline-block;margin-top:0.5rem;color:#19747E;font-size:0.85rem;">View all slots &rarr;</a></div>';
+                                    if (slotList.length > 0) {
+                                        // Seller has created viewing slots — show slot booking UI
+                                        if (available.length) {
+                                            const el = document.getElementById('available-slots-section');
+                                            el.innerHTML = '<div class="avail-slots-section"><h3>Available Viewing Times</h3>' +
+                                                available.map(s => {
+                                                    const dateStr = s.date
+                                                        ? new Date(s.date + 'T00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+                                                        : (s.day_display || 'Recurring');
+                                                    return '<div class="avail-slot-item"><div><div class="avail-slot-date">' + escHtml(dateStr) + '</div><div class="avail-slot-time">' + escHtml(s.start_time) + ' - ' + escHtml(s.end_time) + '</div></div><button class="btn btn-primary" style="font-size:0.8rem;padding:0.3rem 0.75rem;" onclick="bookViewingSlot(' + p.id + ',' + s.id + ')">Book</button></div>';
+                                                }).join('') +
+                                                '<a href="/properties/' + p.id + '/viewing-slots/" style="display:inline-block;margin-top:0.5rem;color:#19747E;font-size:0.85rem;">View all slots &rarr;</a></div>';
+                                        }
+                                    } else {
+                                        // No viewing slots — show viewing request form
+                                        document.getElementById('viewing-request-section').innerHTML = `
+                                            <div class="viewing-form-section">
+                                                <h3>Request a Viewing</h3>
+                                                <div id="viewing-msg" class="alert" style="display:none;"></div>
+                                                <form onsubmit="submitViewing(event, ${p.id})">
+                                                    <div class="form-group"><label>Phone (optional, kept private)</label><input type="tel" id="view-phone"></div>
+                                                    <div class="form-row-2">
+                                                        <div class="form-group"><label>Preferred Date</label><input type="date" id="view-date" required></div>
+                                                        <div class="form-group"><label>Preferred Time</label><input type="time" id="view-time" required></div>
+                                                    </div>
+                                                    <div class="form-row-2">
+                                                        <div class="form-group"><label>Alternative Date</label><input type="date" id="view-alt-date"></div>
+                                                        <div class="form-group"><label>Alternative Time</label><input type="time" id="view-alt-time"></div>
+                                                    </div>
+                                                    <div class="form-group"><label>Message (optional)</label><textarea id="view-message"></textarea></div>
+                                                    <button type="submit" class="btn btn-primary" style="width:100%;">Request Viewing</button>
+                                                </form>
+                                            </div>`;
+                                    }
                                 }).catch(() => {});
                         }
 
