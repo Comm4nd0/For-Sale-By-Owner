@@ -25,10 +25,11 @@ class _MainShellState extends State<MainShell> {
   NotificationCounts? _notificationCounts;
   Timer? _notificationTimer;
 
-  // Authenticated tabs: Home, Dashboard, Services, Account
+  // Authenticated tabs: Home, Dashboard, Tools, Services, Account
   final List<Widget> _authTabs = const [
     HomeScreen(),
     DashboardScreen(),
+    ToolsScreen(),
     ServicesScreen(),
     AccountScreen(),
   ];
@@ -77,7 +78,7 @@ class _MainShellState extends State<MainShell> {
   }
 
   void _onTabTapped(int index, bool isAuthenticated) {
-    if (isAuthenticated && (index == 1 || index == 3)) {
+    if (isAuthenticated && (index == 1 || index == 4)) {
       // Dashboard and Account require auth (already authenticated here)
     }
     setState(() => _currentIndex = index);
@@ -130,6 +131,11 @@ class _MainShellState extends State<MainShell> {
                         )
                       : const Icon(Icons.dashboard),
                   label: 'Dashboard',
+                ),
+                const BottomNavigationBarItem(
+                  icon: Icon(Icons.calculate_outlined),
+                  activeIcon: Icon(Icons.calculate),
+                  label: 'Tools',
                 ),
                 const BottomNavigationBarItem(
                   icon: Icon(Icons.handyman_outlined),
