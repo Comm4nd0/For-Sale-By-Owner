@@ -824,12 +824,14 @@
                     <div class="mortgage-result" id="mortgage-result"></div>
                 </div>`;
 
+            const mapQuery = p.postcode ? p.postcode : p.city;
+            const mapZoom = p.postcode ? 14 : 12;
             const mapHtml = `
                 <div class="detail-section">
                     <h3>Location</h3>
                     <div class="map-container">
                         <iframe loading="lazy" referrerpolicy="no-referrer-when-downgrade"
-                            src="https://maps.google.com/maps?q=${encodeURIComponent(p.postcode)}&t=&z=14&ie=UTF8&iwloc=&output=embed">
+                            src="https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&t=&z=${mapZoom}&ie=UTF8&iwloc=&output=embed">
                         </iframe>
                     </div>
                 </div>`;
@@ -870,8 +872,8 @@
                         </div>` : ''}
                         <div class="detail-section">
                             <h3>Address</h3>
-                            <p>${escHtml(p.address_line_1)}<br>
-                            ${escHtml(p.city)}</p>
+                            <p>${p.address_line_1 ? escHtml(p.address_line_1) + '<br>' : ''}${escHtml(p.city)}</p>
+                            ${!p.is_owner && !p.address_line_1 ? '<p style="color:#4A5C62; font-size:0.85rem;">Full address available from the seller</p>' : ''}
                         </div>
                         ${epcHtml}
                         ${p.floorplans && p.floorplans.length ? `

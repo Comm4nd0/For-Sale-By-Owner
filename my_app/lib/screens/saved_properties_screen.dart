@@ -259,7 +259,10 @@ class _SavedPropertiesScreenState extends State<SavedPropertiesScreen> with Auto
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${property.addressLine1}, ${property.city}',
+                            [
+                              if (property.addressLine1.isNotEmpty) property.addressLine1,
+                              property.city,
+                            ].join(', '),
                             style: TextStyle(
                                 color: Colors.grey[600], fontSize: 12),
                             maxLines: 1,

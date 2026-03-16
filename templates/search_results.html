@@ -182,7 +182,7 @@
                 <h3>${escHtml(p.title)} ${p.owner_is_verified ? '<span style="color:#19747E; font-size:0.75rem;">&#10003; Verified</span>' : ''}</h3>
                 <div class="property-price">&pound;${Number(p.price).toLocaleString()}</div>
                 <div class="property-details">${p.property_type_display}</div>
-                <div class="property-details">${p.address_line_1}, ${p.city}</div>
+                <div class="property-details">${p.address_line_1 ? p.address_line_1 + ', ' : ''}${p.city}</div>
                 <div class="property-meta">
                     <span>${p.bedrooms} bed</span>
                     <span>${p.bathrooms} bath</span>

@@ -96,6 +96,7 @@ class PropertySerializer(serializers.ModelSerializer):
     price_history = PriceHistorySerializer(many=True, read_only=True)
     primary_image = serializers.SerializerMethodField()
     is_saved = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
     image_count = serializers.SerializerMethodField()
     view_count = serializers.SerializerMethodField()
     message_count = serializers.SerializerMethodField()
@@ -115,6 +116,7 @@ class PropertySerializer(serializers.ModelSerializer):
             'epc_rating', 'epc_rating_display',
             'features', 'feature_list',
             'images', 'floorplans', 'primary_image', 'image_count', 'is_saved',
+            'is_owner',
             'price_history', 'view_count', 'message_count', 'offer_count',
             'listing_quality',
             'video_url', 'video_thumbnail',
@@ -122,8 +124,23 @@ class PropertySerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'owner', 'slug', 'created_at', 'updated_at']
 
+    def _is_owner(self, obj):
+        request = self.context.get('request')
+        return request and request.user.is_authenticated and obj.owner == request.user
+
+    def get_is_owner(self, obj):
+        return self._is_owner(obj)
+
     def get_owner_name(self, obj):
         return obj.owner.get_full_name() or obj.owner.email
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not self._is_owner(instance):
+            data['address_line_1'] = ''
+            data['address_line_2'] = ''
+            data['postcode'] = ''
+        return data
 
     def get_primary_image(self, obj):
         primary = obj.images.filter(is_primary=True).first()
@@ -175,6 +192,7 @@ class PropertyListSerializer(PropertySerializer):
             'bedrooms', 'bathrooms', 'reception_rooms', 'square_feet',
             'epc_rating', 'epc_rating_display',
             'images', 'feature_list', 'primary_image', 'image_count', 'is_saved',
+            'is_owner',
             'view_count', 'video_url',
             'created_at', 'updated_at',
         ]
