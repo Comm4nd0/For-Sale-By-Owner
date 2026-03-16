@@ -588,7 +588,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                         _buildOpenHouseSection(property),
                       ],
 
-                      // Neighbourhood Reviews
+                      // Neighbourhood Reviews (only when postcode is available, i.e. owner)
                       if (property.postcode.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         Card(
@@ -1308,18 +1308,32 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
   }
 
   Widget _buildAddress(Property property) {
+    final parts = <String>[
+      if (property.addressLine1.isNotEmpty) property.addressLine1,
+      property.city,
+    ];
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(Icons.location_on, size: 20, color: Colors.grey[600]),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(
-            [
-              property.addressLine1,
-              property.city,
-            ].join(', '),
-            style: const TextStyle(fontSize: 15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                parts.join(', '),
+                style: const TextStyle(fontSize: 15),
+              ),
+              if (property.addressLine1.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'Full address available from the seller',
+                    style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                  ),
+                ),
+            ],
           ),
         ),
       ],

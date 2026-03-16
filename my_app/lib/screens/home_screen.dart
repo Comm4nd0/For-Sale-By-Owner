@@ -905,7 +905,7 @@ class PropertyCard extends StatelessWidget {
       button: true,
       label: '${property.title}, ${property.formattedPrice}, '
           '${property.bedrooms} bedrooms, ${property.bathrooms} bathrooms, '
-          '${property.addressLine1}, ${property.city}',
+          '${[if (property.addressLine1.isNotEmpty) property.addressLine1, property.city].join(', ')}',
       child: GestureDetector(
         onTap: () => Navigator.push(
           context,
@@ -1018,7 +1018,11 @@ class PropertyCard extends StatelessWidget {
                         ),
                   ),
                   Text(
-                    '${property.addressLine1}, ${property.city} ${property.postcode}',
+                    [
+                      if (property.addressLine1.isNotEmpty) property.addressLine1,
+                      property.city,
+                      if (property.postcode.isNotEmpty) property.postcode,
+                    ].join(', '),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 8),
