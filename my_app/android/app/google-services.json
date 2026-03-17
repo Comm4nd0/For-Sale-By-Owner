@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "654085987807",
+    "project_id": "p4td-ebf6d",
+    "storage_bucket": "p4td-ebf6d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:654085987807:android:406403ab1a59e2c9f6f86a",
+        "android_client_info": {
+          "package_name": "uk.co.paws4thoughtdogs"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtbLd2kVe4QeVzsNUMSEAFwpoBjXG6tso"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:654085987807:android:e26e864a876bfaf6f6f86a",
+        "android_client_info": {
+          "package_name": "uk.co.paws4thoughtdogs.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtbLd2kVe4QeVzsNUMSEAFwpoBjXG6tso"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,53 @@
+name: Build & Deploy Android AAB
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'my_app/**'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > my_app/android/app/upload-keystore.jks
+
+      - name: Create key.properties
+        run: |
+          cat > my_app/android/key.properties << EOF
+          storePassword=${{ secrets.STORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          storeFile=upload-keystore.jks
+          EOF
+
+      - name: Install dependencies
+        working-directory: my_app
+        run: flutter pub get
+
+      - name: Build AAB
+        working-directory: my_app
+        run: flutter build appbundle --release
+
+      - name: Upload AAB to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          file: my_app/build/app/outputs/bundle/release/app-release.aab
+          groups: testers
