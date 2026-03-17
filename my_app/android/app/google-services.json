@@ -1,40 +1,21 @@
 {
   "project_info": {
-    "project_number": "654085987807",
-    "project_id": "p4td-ebf6d",
-    "storage_bucket": "p4td-ebf6d.firebasestorage.app"
+    "project_number": "798437764445",
+    "project_id": "fs-bo-d4477",
+    "storage_bucket": "fs-bo-d4477.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:654085987807:android:406403ab1a59e2c9f6f86a",
+        "mobilesdk_app_id": "1:798437764445:android:3e0a9fd0fb209eaa158cb4",
         "android_client_info": {
-          "package_name": "uk.co.paws4thoughtdogs"
+          "package_name": "uk.co.forsalebyowner.android"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBtbLd2kVe4QeVzsNUMSEAFwpoBjXG6tso"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:654085987807:android:e26e864a876bfaf6f6f86a",
-        "android_client_info": {
-          "package_name": "uk.co.paws4thoughtdogs.app"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBtbLd2kVe4QeVzsNUMSEAFwpoBjXG6tso"
+          "current_key": "AIzaSyDZ9PmxnuzShqGkR1wVlh-gpWxEY6I5pMs"
         }
       ],
       "services": {
