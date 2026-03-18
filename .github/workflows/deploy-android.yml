@@ -13,6 +13,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -45,6 +47,21 @@ jobs:
         working-directory: my_app
         run: flutter build appbundle --release
 
+      - name: Generate release notes
+        id: notes
+        run: |
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$PREVIOUS_TAG" ]; then
+            NOTES=$(git log --oneline -20 --pretty=format:"• %s")
+          else
+            NOTES=$(git log --oneline ${PREVIOUS_TAG}..HEAD --pretty=format:"• %s")
+          fi
+          # Escape for GitHub Actions multiline output
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "notes<<$EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
       - name: Set deploy track
         id: track
         run: |
@@ -54,6 +71,11 @@ jobs:
             echo "track=alpha" >> $GITHUB_OUTPUT
           fi
 
+      - name: Create release notes file
+        run: |
+          mkdir -p distribution/whatsnew
+          echo "${{ steps.notes.outputs.notes }}" | grep -v "Co-Authored-By" > distribution/whatsnew/whatsnew-en-GB
+
       - name: Upload AAB to Google Play (${{ steps.track.outputs.track }})
         uses: r0adkll/upload-google-play@v1
         with:
@@ -61,3 +83,4 @@ jobs:
           packageName: uk.co.forsalebyowner.android
           releaseFiles: my_app/build/app/outputs/bundle/release/app-release.aab
           track: ${{ steps.track.outputs.track }}
+          whatsNewDirectory: distribution/whatsnew
