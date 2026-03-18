@@ -3,7 +3,7 @@ name: Build & Deploy Android AAB
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, development]
     paths:
       - 'my_app/**'
 
@@ -45,10 +45,19 @@ jobs:
         working-directory: my_app
         run: flutter build appbundle --release
 
-      - name: Upload AAB to Google Play (closed testing)
+      - name: Set deploy track
+        id: track
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "track=production" >> $GITHUB_OUTPUT
+          else
+            echo "track=alpha" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload AAB to Google Play (${{ steps.track.outputs.track }})
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
           packageName: uk.co.forsalebyowner.android
           releaseFiles: my_app/build/app/outputs/bundle/release/app-release.aab
-          track: alpha
+          track: ${{ steps.track.outputs.track }}
