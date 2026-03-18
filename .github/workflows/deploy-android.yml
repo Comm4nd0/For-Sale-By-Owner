@@ -44,10 +44,10 @@ jobs:
         working-directory: my_app
         run: flutter build appbundle --release
 
-      - name: Upload AAB to Firebase App Distribution
-        uses: wzieba/Firebase-Distribution-Github-Action@v1
+      - name: Upload AAB to Google Play (closed testing)
+        uses: r0adkll/upload-google-play@v1
         with:
-          appId: ${{ secrets.FIREBASE_APP_ID }}
-          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          file: my_app/build/app/outputs/bundle/release/app-release.aab
-          groups: testers
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+          packageName: uk.co.forsalebyowner.android
+          releaseFiles: my_app/build/app/outputs/bundle/release/app-release.aab
+          track: alpha
