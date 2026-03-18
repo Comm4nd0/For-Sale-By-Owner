@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "798437764445",
-    "project_id": "fs-bo-d4477",
-    "storage_bucket": "fs-bo-d4477.firebasestorage.app"
+    "project_number": "969235054412",
+    "project_id": "fs-bo-6a588",
+    "storage_bucket": "fs-bo-6a588.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:798437764445:android:3e0a9fd0fb209eaa158cb4",
+        "mobilesdk_app_id": "1:969235054412:android:839ffb1dcf36d3865799e9",
         "android_client_info": {
           "package_name": "uk.co.forsalebyowner.android"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDZ9PmxnuzShqGkR1wVlh-gpWxEY6I5pMs"
+          "current_key": "AIzaSyC1_YHTBe42eBgsbDL7O09X76zbRSQGlHg"
         }
       ],
       "services": {
