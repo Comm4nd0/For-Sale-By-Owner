@@ -19,6 +19,12 @@ import 'package:for_sale_by_owner/screens/tools_screen.dart';
 import 'package:for_sale_by_owner/screens/account_screen.dart';
 import 'package:for_sale_by_owner/screens/stamp_duty_screen.dart';
 import 'package:for_sale_by_owner/screens/mortgage_calculator_screen.dart';
+import 'package:for_sale_by_owner/models/notification_counts.dart';
+import 'package:for_sale_by_owner/models/dashboard_stats.dart';
+import 'package:for_sale_by_owner/models/property.dart';
+import 'package:for_sale_by_owner/models/user_profile.dart';
+import 'package:for_sale_by_owner/models/mortgage_calculation.dart';
+import 'package:for_sale_by_owner/widgets/branded_app_bar.dart';
 
 // ─── Test helpers ──────────────────────────────────────────────────────
 
@@ -1033,11 +1039,3 @@ void main() {
     });
   });
 }
-
-// Imports needed for model tests
-import 'package:for_sale_by_owner/models/notification_counts.dart';
-import 'package:for_sale_by_owner/models/dashboard_stats.dart';
-import 'package:for_sale_by_owner/models/property.dart';
-import 'package:for_sale_by_owner/models/user_profile.dart';
-import 'package:for_sale_by_owner/models/mortgage_calculation.dart';
-import 'package:for_sale_by_owner/widgets/branded_app_bar.dart';

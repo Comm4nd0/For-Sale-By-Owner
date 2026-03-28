@@ -1648,4 +1648,15 @@ class ApiService {
     }
     throw Exception('Failed to mark solution');
   }
+
+  // ── Enquiry stubs (backend API not yet implemented) ──────────────
+
+  Future<void> markEnquiryRead(int enquiryId) async {
+    // TODO: implement when backend enquiry endpoints are added
+  }
+
+  Future<Reply> replyToEnquiry(int enquiryId, String message) async {
+    // TODO: implement when backend enquiry endpoints are added
+    throw UnimplementedError('Enquiry replies not yet supported');
+  }
 }
