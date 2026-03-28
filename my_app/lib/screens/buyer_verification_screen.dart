@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
@@ -61,12 +62,12 @@ class _BuyerVerificationScreenState extends State<BuyerVerificationScreen> {
     }
   }
 
-  IconData _statusIcon(String status) {
+  PhosphorDuotoneIconData _statusIcon(String status) {
     switch (status) {
-      case 'verified': return Icons.verified;
-      case 'rejected': return Icons.cancel;
-      case 'expired': return Icons.timer_off;
-      default: return Icons.hourglass_empty;
+      case 'verified': return PhosphorIconsDuotone.sealCheck;
+      case 'rejected': return PhosphorIconsDuotone.xCircle;
+      case 'expired': return PhosphorIconsDuotone.timer;
+      default: return PhosphorIconsDuotone.hourglass;
     }
   }
 
@@ -86,7 +87,7 @@ class _BuyerVerificationScreenState extends State<BuyerVerificationScreen> {
                 const SizedBox(height: 16),
                 ..._verifications.map((v) => Card(
                   child: ListTile(
-                    leading: Icon(_statusIcon(v.status), color: _statusColor(v.status)),
+                    leading: PhosphorIcon(_statusIcon(v.status), color: _statusColor(v.status)),
                     title: Text(v.verificationTypeDisplay),
                     subtitle: Text(v.status.toUpperCase(), style: TextStyle(color: _statusColor(v.status), fontWeight: FontWeight.bold, fontSize: 12)),
                     trailing: v.isValid ? const Chip(label: Text('Valid', style: TextStyle(color: Colors.white, fontSize: 11)), backgroundColor: Colors.green) : null,
@@ -95,21 +96,21 @@ class _BuyerVerificationScreenState extends State<BuyerVerificationScreen> {
                 const SizedBox(height: 24),
                 const Text('Upload Verification', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 8),
-                _uploadCard('Mortgage Agreement in Principle', 'mortgage_aip', Icons.account_balance),
-                _uploadCard('Proof of Funds', 'proof_of_funds', Icons.savings),
-                _uploadCard('ID Verification', 'id_verification', Icons.badge),
+                _uploadCard('Mortgage Agreement in Principle', 'mortgage_aip', PhosphorIconsDuotone.bank),
+                _uploadCard('Proof of Funds', 'proof_of_funds', PhosphorIconsDuotone.piggyBank),
+                _uploadCard('ID Verification', 'id_verification', PhosphorIconsDuotone.identificationBadge),
               ],
             ),
     );
   }
 
-  Widget _uploadCard(String label, String type, IconData icon) {
+  Widget _uploadCard(String label, String type, PhosphorDuotoneIconData icon) {
     return Card(
       child: ListTile(
-        leading: Icon(icon, color: const Color(0xFF115E66)),
+        leading: PhosphorIcon(icon, color: const Color(0xFF115E66)),
         title: Text(label),
         subtitle: const Text('Tap to upload document'),
-        trailing: const Icon(Icons.upload_file),
+        trailing: PhosphorIcon(PhosphorIconsDuotone.uploadSimple),
         onTap: () => _upload(type),
       ),
     );

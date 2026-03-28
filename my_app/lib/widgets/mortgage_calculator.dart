@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../constants/app_theme.dart';
 
 class MortgageCalculator extends StatefulWidget {
@@ -61,7 +62,7 @@ class _MortgageCalculatorState extends State<MortgageCalculator> {
   @override
   Widget build(BuildContext context) {
     return ExpansionTile(
-      leading: const Icon(Icons.calculate, color: AppTheme.forestMid),
+      leading: PhosphorIcon(PhosphorIconsDuotone.calculator, color: AppTheme.forestMid),
       title: const Text(
         'Mortgage Calculator',
         style: TextStyle(fontWeight: FontWeight.w600),

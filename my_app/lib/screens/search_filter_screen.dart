@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../widgets/branded_app_bar.dart';
 import '../widgets/scroll_to_top_button.dart';
 
@@ -112,7 +113,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
               controller: _locationController,
               decoration: const InputDecoration(
                 labelText: 'Location',
-                prefixIcon: Icon(Icons.location_on_outlined),
+                prefixIcon: PhosphorIcon(PhosphorIconsDuotone.mapPin),
               ),
             ),
             const SizedBox(height: 16),

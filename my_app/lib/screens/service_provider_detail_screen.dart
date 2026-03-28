@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import '../constants/api_constants.dart';
 import '../constants/app_theme.dart';
@@ -129,7 +130,7 @@ class _ServiceProviderDetailScreenState
             pinned: true,
             actions: [
               IconButton(
-                icon: const Icon(Icons.home_outlined),
+                icon: PhosphorIcon(PhosphorIconsDuotone.house),
                 tooltip: 'Home',
                 onPressed: () {
                   Navigator.of(context).popUntil((route) => route.isFirst);
@@ -190,7 +191,7 @@ class _ServiceProviderDetailScreenState
                                     child: const Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.verified,
+                                        PhosphorIcon(PhosphorIconsDuotone.sealCheck,
                                             size: 14,
                                             color: AppTheme.forestMid),
                                         SizedBox(width: 4),
@@ -225,12 +226,12 @@ class _ServiceProviderDetailScreenState
                               Row(
                                 children: [
                                   ...List.generate(5, (i) {
-                                    return Icon(
-                                      i < p.averageRating!.round()
-                                          ? Icons.star
-                                          : Icons.star_border,
+                                    return PhosphorIcon(
+                                      PhosphorIconsDuotone.star,
                                       size: 18,
-                                      color: AppTheme.goldEmber,
+                                      color: i < p.averageRating!.round()
+                                          ? AppTheme.goldEmber
+                                          : AppTheme.goldEmber,
                                     );
                                   }),
                                   const SizedBox(width: 6),
@@ -349,16 +350,16 @@ class _ServiceProviderDetailScreenState
                           if (p.contactEmail != null &&
                               p.contactEmail!.isNotEmpty)
                             _contactRow(
-                                Icons.email_outlined, p.contactEmail!),
+                                PhosphorIconsDuotone.envelope, p.contactEmail!),
                           if (p.contactPhone != null &&
                               p.contactPhone!.isNotEmpty)
                             _contactRow(
-                                Icons.phone_outlined, p.contactPhone!),
+                                PhosphorIconsDuotone.phone, p.contactPhone!),
                           if (p.website != null && p.website!.isNotEmpty)
                             _contactRow(
-                                Icons.language_outlined, p.website!),
+                                PhosphorIconsDuotone.globe, p.website!),
                           if (p.yearsEstablished != null)
-                            _contactRow(Icons.calendar_today_outlined,
+                            _contactRow(PhosphorIconsDuotone.calendar,
                                 '${p.yearsEstablished} years established'),
                         ],
                       ),
@@ -392,12 +393,12 @@ class _ServiceProviderDetailScreenState
                                 return GestureDetector(
                                   onTap: () => setState(
                                       () => _selectedRating = i + 1),
-                                  child: Icon(
-                                    i < _selectedRating
-                                        ? Icons.star
-                                        : Icons.star_border,
+                                  child: PhosphorIcon(
+                                    PhosphorIconsDuotone.star,
                                     size: 32,
-                                    color: AppTheme.goldEmber,
+                                    color: i < _selectedRating
+                                        ? AppTheme.goldEmber
+                                        : AppTheme.goldEmber,
                                   ),
                                 );
                               }),
@@ -455,16 +456,16 @@ class _ServiceProviderDetailScreenState
         color: AppTheme.forestMist,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Icon(Icons.business, color: AppTheme.stone, size: size * 0.4),
+      child: PhosphorIcon(PhosphorIconsDuotone.buildings, color: AppTheme.stone, size: size * 0.4),
     );
   }
 
-  Widget _contactRow(IconData icon, String text) {
+  Widget _contactRow(PhosphorDuotoneIconData icon, String text) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: AppTheme.forestMid),
+          PhosphorIcon(icon, size: 18, color: AppTheme.forestMid),
           const SizedBox(width: 12),
           Expanded(
               child: Text(text,
@@ -510,10 +511,10 @@ class _ReviewCard extends StatelessWidget {
             const SizedBox(height: 4),
             Row(
               children: List.generate(5, (i) {
-                return Icon(
-                  i < review.rating ? Icons.star : Icons.star_border,
+                return PhosphorIcon(
+                  PhosphorIconsDuotone.star,
                   size: 16,
-                  color: AppTheme.goldEmber,
+                  color: i < review.rating ? AppTheme.goldEmber : AppTheme.goldEmber,
                 );
               }),
             ),

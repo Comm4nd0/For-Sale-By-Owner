@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../constants/app_theme.dart';
 
 /// A floating "scroll to top" button that appears when the user scrolls
@@ -101,7 +102,7 @@ class _ScrollToTopButtonState extends State<ScrollToTopButton>
           backgroundColor: AppTheme.forestMid,
           foregroundColor: Colors.white,
           tooltip: 'Scroll to top',
-          child: const Icon(Icons.keyboard_arrow_up),
+          child: PhosphorIcon(PhosphorIconsDuotone.caretUp),
         ),
       ),
     );

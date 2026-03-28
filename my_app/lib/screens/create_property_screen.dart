@@ -5,6 +5,7 @@ import '../widgets/branded_app_bar.dart';
 import '../models/property_feature.dart';
 import '../services/api_service.dart';
 import 'image_management_screen.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class CreatePropertyScreen extends StatefulWidget {
   const CreatePropertyScreen({super.key});
@@ -388,7 +389,7 @@ class _CreatePropertyScreenState extends State<CreatePropertyScreen> {
           onPressed: value > 0
               ? () => onChanged(value - 1)
               : null,
-          icon: const Icon(Icons.remove_circle_outline),
+          icon: PhosphorIcon(PhosphorIconsDuotone.minusCircle),
         ),
         Text(
           '$value',
@@ -396,7 +397,7 @@ class _CreatePropertyScreenState extends State<CreatePropertyScreen> {
         ),
         IconButton(
           onPressed: () => onChanged(value + 1),
-          icon: const Icon(Icons.add_circle_outline),
+          icon: PhosphorIcon(PhosphorIconsDuotone.plusCircle),
         ),
       ],
     );

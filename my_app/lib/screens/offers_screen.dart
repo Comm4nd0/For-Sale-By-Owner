@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -179,7 +180,7 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.reply, size: 16, color: Colors.grey[600]),
+                          PhosphorIcon(PhosphorIconsDuotone.arrowBendUpLeft, size: 16, color: Colors.grey[600]),
                           const SizedBox(width: 6),
                           Expanded(child: Text(offer.sellerResponse!, style: TextStyle(color: Colors.grey[700], fontSize: 13))),
                         ],
@@ -211,14 +212,14 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
                         if (offer.status == 'submitted') ...[
                           ElevatedButton.icon(
                             onPressed: () => _editOffer(offer),
-                            icon: const Icon(Icons.edit, size: 16),
+                            icon: PhosphorIcon(PhosphorIconsDuotone.pencilSimple, size: 16),
                             label: const Text('Edit'),
                           ),
                           const SizedBox(width: 8),
                         ],
                         OutlinedButton.icon(
                           onPressed: () => _withdrawOffer(offer),
-                          icon: const Icon(Icons.undo, size: 16),
+                          icon: PhosphorIcon(PhosphorIconsDuotone.arrowCounterClockwise, size: 16),
                           label: const Text('Withdraw'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
@@ -138,14 +139,14 @@ class _ImageManagementScreenState extends State<ImageManagementScreen> {
                   color: Colors.white,
                 ),
               )
-            : const Icon(Icons.add_photo_alternate),
+            : PhosphorIcon(PhosphorIconsDuotone.image),
       ),
       body: _images.isEmpty
           ? const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.photo_library_outlined, size: 64, color: Colors.grey),
+                  PhosphorIcon(PhosphorIconsDuotone.images, size: 64, color: Colors.grey),
                   SizedBox(height: 16),
                   Text('No images yet'),
                   SizedBox(height: 8),
@@ -187,7 +188,7 @@ class _ImageManagementScreenState extends State<ImageManagementScreen> {
             ),
             errorWidget: (context, url, error) => Container(
               color: Colors.grey[200],
-              child: const Icon(Icons.broken_image),
+              child: PhosphorIcon(PhosphorIconsDuotone.imageSquare),
             ),
           ),
           // Primary badge
@@ -226,12 +227,12 @@ class _ImageManagementScreenState extends State<ImageManagementScreen> {
                   if (!image.isPrimary)
                     IconButton(
                       onPressed: () => _setPrimary(image),
-                      icon: const Icon(Icons.star_border, color: Colors.white),
+                      icon: PhosphorIcon(PhosphorIconsDuotone.star, color: Colors.white),
                       tooltip: 'Set as primary',
                     ),
                   IconButton(
                     onPressed: () => _deleteImage(image),
-                    icon: const Icon(Icons.delete_outline, color: Colors.white),
+                    icon: PhosphorIcon(PhosphorIconsDuotone.trash, color: Colors.white),
                     tooltip: 'Delete',
                   ),
                 ],

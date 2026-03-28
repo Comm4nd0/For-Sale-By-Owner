@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import '../models/open_house_event.dart';
 import '../services/api_service.dart';
@@ -151,7 +152,7 @@ class _OpenHouseScreenState extends State<OpenHouseScreen> {
                             setDialogState(() => selectedDate = date);
                           }
                         },
-                        icon: const Icon(Icons.calendar_today, size: 18),
+                        icon: PhosphorIcon(PhosphorIconsDuotone.calendar, size: 18),
                         label: Text(
                           selectedDate != null
                               ? '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
@@ -361,7 +362,7 @@ class _OpenHouseScreenState extends State<OpenHouseScreen> {
           ? FloatingActionButton(
               onPressed: _showCreateEventDialog,
               backgroundColor: _brandColor,
-              child: const Icon(Icons.add, color: Colors.white),
+              child: PhosphorIcon(PhosphorIconsDuotone.plus, color: Colors.white),
             )
           : null,
       body: _buildBody(),
@@ -380,7 +381,7 @@ class _OpenHouseScreenState extends State<OpenHouseScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              PhosphorIcon(PhosphorIconsDuotone.warningCircle, size: 48, color: Colors.red),
               const SizedBox(height: 16),
               Text(
                 'Failed to load events',
@@ -391,7 +392,7 @@ class _OpenHouseScreenState extends State<OpenHouseScreen> {
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: _loadEvents,
-                icon: const Icon(Icons.refresh),
+                icon: PhosphorIcon(PhosphorIconsDuotone.arrowClockwise),
                 label: const Text('Retry'),
                 style: ElevatedButton.styleFrom(backgroundColor: _brandColor),
               ),
@@ -415,7 +416,7 @@ class _OpenHouseScreenState extends State<OpenHouseScreen> {
                   color: _brandColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Icon(Icons.event_busy, size: 36, color: _brandColor),
+                child: PhosphorIcon(PhosphorIconsDuotone.calendarX, size: 36, color: _brandColor),
               ),
               const SizedBox(height: 20),
               const Text(
@@ -472,7 +473,7 @@ class _OpenHouseScreenState extends State<OpenHouseScreen> {
                     color: _brandColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.house_outlined, size: 22, color: _brandColor),
+                  child: PhosphorIcon(PhosphorIconsDuotone.house, size: 22, color: _brandColor),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -505,7 +506,7 @@ class _OpenHouseScreenState extends State<OpenHouseScreen> {
                 ),
                 if (_isSellerView)
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    icon: PhosphorIcon(PhosphorIconsDuotone.trash, color: Colors.red),
                     tooltip: 'Delete event',
                     onPressed: () => _deleteEvent(event),
                   ),
@@ -516,7 +517,7 @@ class _OpenHouseScreenState extends State<OpenHouseScreen> {
             // Date & Time
             Row(
               children: [
-                const Icon(Icons.calendar_today, size: 15, color: _brandColor),
+                PhosphorIcon(PhosphorIconsDuotone.calendar, size: 15, color: _brandColor),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -529,7 +530,7 @@ class _OpenHouseScreenState extends State<OpenHouseScreen> {
             const SizedBox(height: 6),
             Row(
               children: [
-                const Icon(Icons.access_time, size: 15, color: _brandColor),
+                PhosphorIcon(PhosphorIconsDuotone.clock, size: 15, color: _brandColor),
                 const SizedBox(width: 6),
                 Text(
                   '$formattedStart - $formattedEnd',
@@ -553,7 +554,7 @@ class _OpenHouseScreenState extends State<OpenHouseScreen> {
             // RSVP info & action
             Row(
               children: [
-                const Icon(Icons.people_outline, size: 16, color: _brandColor),
+                PhosphorIcon(PhosphorIconsDuotone.users, size: 16, color: _brandColor),
                 const SizedBox(width: 6),
                 Text(
                   event.maxAttendees != null
@@ -575,7 +576,7 @@ class _OpenHouseScreenState extends State<OpenHouseScreen> {
     if (event.userHasRsvpd) {
       return OutlinedButton.icon(
         onPressed: () => _toggleRsvp(event),
-        icon: const Icon(Icons.check_circle, size: 16, color: _brandColor),
+        icon: PhosphorIcon(PhosphorIconsDuotone.checkCircle, size: 16, color: _brandColor),
         label: const Text('Cancel RSVP'),
         style: OutlinedButton.styleFrom(
           foregroundColor: _brandColor,
@@ -597,7 +598,7 @@ class _OpenHouseScreenState extends State<OpenHouseScreen> {
 
     return ElevatedButton.icon(
       onPressed: () => _toggleRsvp(event),
-      icon: const Icon(Icons.event_available, size: 16),
+      icon: PhosphorIcon(PhosphorIconsDuotone.calendarCheck, size: 16),
       label: const Text('RSVP'),
       style: ElevatedButton.styleFrom(
         backgroundColor: _brandColor,

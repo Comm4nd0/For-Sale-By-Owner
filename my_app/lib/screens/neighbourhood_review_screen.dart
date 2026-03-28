@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../models/neighbourhood_review.dart';
@@ -100,7 +101,7 @@ class _NeighbourhoodReviewScreenState extends State<NeighbourhoodReviewScreen> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: _primaryColor,
         onPressed: _openAddReview,
-        child: const Icon(Icons.rate_review, color: Colors.white),
+        child: PhosphorIcon(PhosphorIconsDuotone.chatText, color: Colors.white),
       ),
       body: Column(
         children: [
@@ -115,7 +116,7 @@ class _NeighbourhoodReviewScreenState extends State<NeighbourhoodReviewScreen> {
                     textCapitalization: TextCapitalization.characters,
                     decoration: InputDecoration(
                       hintText: 'Enter postcode area (e.g. SW1)',
-                      prefixIcon: const Icon(Icons.search),
+                      prefixIcon: PhosphorIcon(PhosphorIconsDuotone.magnifyingGlass),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -159,7 +160,7 @@ class _NeighbourhoodReviewScreenState extends State<NeighbourhoodReviewScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.error_outline,
+                              PhosphorIcon(PhosphorIconsDuotone.warningCircle,
                                   size: 48, color: Colors.red),
                               const SizedBox(height: 12),
                               Text('Failed to load reviews',
@@ -183,7 +184,7 @@ class _NeighbourhoodReviewScreenState extends State<NeighbourhoodReviewScreen> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.location_city,
+                                PhosphorIcon(PhosphorIconsDuotone.buildings,
                                     size: 64,
                                     color: Colors.grey.shade400),
                                 const SizedBox(height: 12),
@@ -265,7 +266,7 @@ class _SummaryCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.bar_chart, color: _primaryColor),
+                PhosphorIcon(PhosphorIconsDuotone.chartBar, color: _primaryColor),
                 const SizedBox(width: 8),
                 Text(
                   '${summary.postcodeArea} Summary',
@@ -341,11 +342,11 @@ class _StarBar extends StatelessWidget {
       children: List.generate(5, (i) {
         final starValue = i + 1;
         if (rating >= starValue) {
-          return Icon(Icons.star, color: Colors.amber, size: size);
+          return PhosphorIcon(PhosphorIconsDuotone.star, color: Colors.amber, size: size);
         } else if (rating >= starValue - 0.5) {
-          return Icon(Icons.star_half, color: Colors.amber, size: size);
+          return PhosphorIcon(PhosphorIconsDuotone.starHalf, color: Colors.amber, size: size);
         } else {
-          return Icon(Icons.star_border, color: Colors.amber, size: size);
+          return PhosphorIcon(PhosphorIconsDuotone.star, color: Colors.amber, size: size);
         }
       }),
     );
@@ -768,8 +769,8 @@ class _TappableStarRow extends StatelessWidget {
           onTap: () => onChanged(starValue),
           child: Padding(
             padding: const EdgeInsets.only(right: 4),
-            child: Icon(
-              starValue <= rating ? Icons.star : Icons.star_border,
+            child: PhosphorIcon(
+              PhosphorIconsDuotone.star,
               color: starValue <= rating ? Colors.amber : Colors.grey.shade400,
               size: size,
             ),

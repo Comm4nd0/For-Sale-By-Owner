@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
@@ -144,12 +145,12 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     }
   }
 
-  IconData _docIcon(String type) {
+  PhosphorIconData _docIcon(String type) {
     switch (type) {
-      case 'epc': return Icons.energy_savings_leaf;
-      case 'survey': return Icons.search;
-      case 'floor_plan': return Icons.map;
-      default: return Icons.description;
+      case 'epc': return PhosphorIconsDuotone.leaf;
+      case 'survey': return PhosphorIconsDuotone.magnifyingGlass;
+      case 'floor_plan': return PhosphorIconsDuotone.mapTrifold;
+      default: return PhosphorIconsDuotone.fileText;
     }
   }
 
@@ -160,7 +161,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
       floatingActionButton: widget.isOwner
           ? FloatingActionButton(
               onPressed: _uploadDocument,
-              child: const Icon(Icons.upload_file),
+              child: PhosphorIcon(PhosphorIconsDuotone.uploadSimple),
             )
           : null,
       body: _loading
@@ -174,17 +175,17 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                     itemBuilder: (context, index) {
                       final doc = _documents[index];
                       return ListTile(
-                        leading: Icon(_docIcon(doc.documentType)),
+                        leading: PhosphorIcon(_docIcon(doc.documentType)),
                         title: Text(doc.title.isNotEmpty ? doc.title : doc.documentTypeDisplay),
                         subtitle: Text(doc.documentTypeDisplay),
                         trailing: widget.isOwner
                             ? IconButton(
-                                icon: const Icon(Icons.delete_outline),
+                                icon: PhosphorIcon(PhosphorIconsDuotone.trash),
                                 onPressed: () => _deleteDocument(doc),
                               )
                             : doc.isPublic
-                                ? const Icon(Icons.visibility, size: 20, color: Colors.grey)
-                                : const Icon(Icons.lock, size: 20, color: Colors.grey),
+                                ? PhosphorIcon(PhosphorIconsDuotone.eye, size: 20, color: Colors.grey)
+                                : PhosphorIcon(PhosphorIconsDuotone.lock, size: 20, color: Colors.grey),
                       );
                     },
                   ),

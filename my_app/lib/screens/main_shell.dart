@@ -12,6 +12,7 @@ import 'account_screen.dart';
 import 'tools_screen.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -112,61 +113,61 @@ class _MainShellState extends State<MainShell> {
         unselectedItemColor: AppTheme.stone,
         items: isAuthenticated
             ? [
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.search_outlined),
-                  activeIcon: Icon(Icons.search),
+                BottomNavigationBarItem(
+                  icon: PhosphorIcon(PhosphorIconsDuotone.magnifyingGlass),
+                  activeIcon: PhosphorIcon(PhosphorIconsDuotone.magnifyingGlass),
                   label: 'Home',
                 ),
                 BottomNavigationBarItem(
                   icon: badgeCount > 0
                       ? Badge(
                           label: Text('$badgeCount'),
-                          child: const Icon(Icons.dashboard_outlined),
+                          child: PhosphorIcon(PhosphorIconsDuotone.squaresFour),
                         )
-                      : const Icon(Icons.dashboard_outlined),
+                      : PhosphorIcon(PhosphorIconsDuotone.squaresFour),
                   activeIcon: badgeCount > 0
                       ? Badge(
                           label: Text('$badgeCount'),
-                          child: const Icon(Icons.dashboard),
+                          child: PhosphorIcon(PhosphorIconsDuotone.squaresFour),
                         )
-                      : const Icon(Icons.dashboard),
+                      : PhosphorIcon(PhosphorIconsDuotone.squaresFour),
                   label: 'Dashboard',
                 ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.calculate_outlined),
-                  activeIcon: Icon(Icons.calculate),
+                BottomNavigationBarItem(
+                  icon: PhosphorIcon(PhosphorIconsDuotone.calculator),
+                  activeIcon: PhosphorIcon(PhosphorIconsDuotone.calculator),
                   label: 'Tools',
                 ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.handyman_outlined),
-                  activeIcon: Icon(Icons.handyman),
+                BottomNavigationBarItem(
+                  icon: PhosphorIcon(PhosphorIconsDuotone.wrench),
+                  activeIcon: PhosphorIcon(PhosphorIconsDuotone.wrench),
                   label: 'Services',
                 ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.person_outline),
-                  activeIcon: Icon(Icons.person),
+                BottomNavigationBarItem(
+                  icon: PhosphorIcon(PhosphorIconsDuotone.user),
+                  activeIcon: PhosphorIcon(PhosphorIconsDuotone.user),
                   label: 'Account',
                 ),
               ]
             : [
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.search_outlined),
-                  activeIcon: Icon(Icons.search),
+                BottomNavigationBarItem(
+                  icon: PhosphorIcon(PhosphorIconsDuotone.magnifyingGlass),
+                  activeIcon: PhosphorIcon(PhosphorIconsDuotone.magnifyingGlass),
                   label: 'Home',
                 ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.calculate_outlined),
-                  activeIcon: Icon(Icons.calculate),
+                BottomNavigationBarItem(
+                  icon: PhosphorIcon(PhosphorIconsDuotone.calculator),
+                  activeIcon: PhosphorIcon(PhosphorIconsDuotone.calculator),
                   label: 'Tools',
                 ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.handyman_outlined),
-                  activeIcon: Icon(Icons.handyman),
+                BottomNavigationBarItem(
+                  icon: PhosphorIcon(PhosphorIconsDuotone.wrench),
+                  activeIcon: PhosphorIcon(PhosphorIconsDuotone.wrench),
                   label: 'Services',
                 ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.login_outlined),
-                  activeIcon: Icon(Icons.login),
+                BottomNavigationBarItem(
+                  icon: PhosphorIcon(PhosphorIconsDuotone.signIn),
+                  activeIcon: PhosphorIcon(PhosphorIconsDuotone.signIn),
                   label: 'Login',
                 ),
               ],

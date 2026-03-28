@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import '../constants/app_theme.dart';
 import '../widgets/branded_app_bar.dart';
@@ -156,12 +157,12 @@ class _ViewingDetailScreenState extends State<ViewingDetailScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          _buildDetailRow(Icons.calendar_today,
+                          _buildDetailRow(PhosphorIconsDuotone.calendar,
                               'Preferred: ${widget.viewing.preferredDate} at ${widget.viewing.preferredTime}'),
                           if (widget.viewing.alternativeDate != null &&
                               widget.viewing.alternativeDate!.isNotEmpty) ...[
                             const SizedBox(height: 6),
-                            _buildDetailRow(Icons.event_available,
+                            _buildDetailRow(PhosphorIconsDuotone.calendarCheck,
                                 'Alternative: ${widget.viewing.alternativeDate} at ${widget.viewing.alternativeTime ?? ''}'),
                           ],
                           if (widget.viewing.message.isNotEmpty) ...[
@@ -238,7 +239,7 @@ class _ViewingDetailScreenState extends State<ViewingDetailScreen> {
                             child:
                                 CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.send, color: AppTheme.forestMid),
+                        : PhosphorIcon(PhosphorIconsDuotone.paperPlaneTilt, color: AppTheme.forestMid),
                   ),
                 ],
               ),
@@ -309,10 +310,10 @@ class _ViewingDetailScreenState extends State<ViewingDetailScreen> {
     return const SizedBox.shrink();
   }
 
-  Widget _buildDetailRow(IconData icon, String text) {
+  Widget _buildDetailRow(PhosphorDuotoneIconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: Colors.grey[600]),
+        PhosphorIcon(icon, size: 16, color: Colors.grey[600]),
         const SizedBox(width: 8),
         Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
       ],

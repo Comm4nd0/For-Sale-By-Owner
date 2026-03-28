@@ -15,6 +15,7 @@ import 'search_filter_screen.dart';
 import 'services_screen.dart';
 import 'house_prices_screen.dart';
 import '../utils/auto_retry.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -260,7 +261,7 @@ class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.home, color: Colors.white, size: 26),
+                          child: const PhosphorIcon(PhosphorIconsDuotone.house, color: Colors.white, size: 26),
                         ),
                         const SizedBox(width: 12),
                         Column(
@@ -343,7 +344,7 @@ class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
                             decoration: InputDecoration(
                               labelText: 'Location',
                               hintText: 'e.g. Cheltenham, GL50',
-                              prefixIcon: const Icon(Icons.location_on_outlined),
+                              prefixIcon: PhosphorIcon(PhosphorIconsDuotone.mapPin),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: const BorderSide(color: AppTheme.pebble),
@@ -431,7 +432,7 @@ class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
                             height: 48,
                             child: ElevatedButton.icon(
                               onPressed: _doSearch,
-                              icon: const Icon(Icons.search),
+                              icon: PhosphorIcon(PhosphorIconsDuotone.magnifyingGlass),
                               label: const Text(
                                 'Search Properties',
                                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -555,17 +556,17 @@ class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
           sliver: SliverList(
             delegate: SliverChildListDelegate([
               _featureRow(
-                Icons.savings_outlined,
+                PhosphorIconsDuotone.piggyBank,
                 'Completely Free',
                 'No estate agent fees. No listing charges. No commission. Your sale, your money.',
               ),
               _featureRow(
-                Icons.vpn_key_outlined,
+                PhosphorIconsDuotone.key,
                 'Stay in Control',
                 'Manage your listing, photos, and viewings on your own terms — without paying a penny.',
               ),
               _featureRow(
-                Icons.bolt_outlined,
+                PhosphorIconsDuotone.lightning,
                 'List in Minutes',
                 'Create your free listing quickly with our simple process. No card required.',
               ),
@@ -581,7 +582,7 @@ class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
                 context,
                 MaterialPageRoute(builder: (_) => const HousePricesScreen()),
               ),
-              icon: const Icon(Icons.trending_up),
+              icon: PhosphorIcon(PhosphorIconsDuotone.trendUp),
               label: const Text('House Price Lookup'),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -602,7 +603,7 @@ class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
                 context,
                 MaterialPageRoute(builder: (_) => const ServicesScreen()),
               ),
-              icon: const Icon(Icons.handyman_outlined),
+              icon: PhosphorIcon(PhosphorIconsDuotone.wrench),
               label: const Text('Find Local Services'),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -619,7 +620,7 @@ class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
     );
   }
 
-  Widget _featureRow(IconData icon, String title, String subtitle) {
+  Widget _featureRow(PhosphorIconData icon, String title, String subtitle) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -631,7 +632,7 @@ class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
               color: AppTheme.forestMist,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: AppTheme.forestMid, size: 24),
+            child: PhosphorIcon(icon, color: AppTheme.forestMid, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -667,7 +668,7 @@ class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
       appBar: BrandedAppBar.build(
         context: context,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: PhosphorIcon(PhosphorIconsDuotone.arrowLeft),
           onPressed: () {
             setState(() => _hasSearched = false);
           },
@@ -677,7 +678,7 @@ class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
             icon: Badge(
               isLabelVisible: _filters.isNotEmpty,
               label: Text('${_filters.length}'),
-              child: const Icon(Icons.filter_list),
+              child: PhosphorIcon(PhosphorIconsDuotone.funnel),
             ),
             onPressed: _openFilters,
           ),
@@ -729,7 +730,7 @@ class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
           }
           return Chip(
             label: Text(label, style: const TextStyle(fontSize: 12)),
-            deleteIcon: const Icon(Icons.close, size: 16),
+            deleteIcon: PhosphorIcon(PhosphorIconsDuotone.x, size: 16),
             onDeleted: () => _removeFilter(entry.key),
             visualDensity: VisualDensity.compact,
           );
@@ -757,7 +758,7 @@ class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
                   color: Colors.red[50],
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: Icon(Icons.error_outline, size: 44, color: Colors.red[300]),
+                child: PhosphorIcon(PhosphorIconsDuotone.warningCircle, size: 44, color: Colors.red[300]),
               ),
               const SizedBox(height: 24),
               const Text(
@@ -777,7 +778,7 @@ class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
               const SizedBox(height: 20),
               ElevatedButton.icon(
                 onPressed: _loadProperties,
-                icon: const Icon(Icons.refresh, size: 18),
+                icon: PhosphorIcon(PhosphorIconsDuotone.arrowClockwise, size: 18),
                 label: const Text('Retry'),
               ),
             ],
@@ -800,7 +801,7 @@ class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
                   color: AppTheme.forestMist,
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: const Icon(Icons.search_off, size: 44, color: AppTheme.forestMid),
+                child: PhosphorIcon(PhosphorIconsDuotone.magnifyingGlassMinus, size: 44, color: AppTheme.forestMid),
               ),
               const SizedBox(height: 24),
               Text(
@@ -828,7 +829,7 @@ class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
                     setState(() => _filters.clear());
                     _loadProperties();
                   },
-                  icon: const Icon(Icons.filter_list_off, size: 18),
+                  icon: PhosphorIcon(PhosphorIconsDuotone.funnelX, size: 18),
                   label: const Text('Clear Filters'),
                 ),
               ],
@@ -933,7 +934,7 @@ class PropertyCard extends StatelessWidget {
                       ),
                       errorWidget: (context, url, error) => Container(
                         color: Colors.grey[200],
-                        child: const Icon(Icons.broken_image,
+                        child: PhosphorIcon(PhosphorIconsDuotone.imageSquare,
                             size: 48, color: Colors.grey),
                       ),
                     ),
@@ -944,7 +945,7 @@ class PropertyCard extends StatelessWidget {
                     child: Container(
                       color: Colors.grey[200],
                       child:
-                          const Icon(Icons.home, size: 48, color: Colors.grey),
+                          PhosphorIcon(PhosphorIconsDuotone.house, size: 48, color: Colors.grey),
                     ),
                   ),
                 if (property.imageCount > 0)
@@ -960,7 +961,7 @@ class PropertyCard extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                          PhosphorIcon(PhosphorIconsDuotone.camera, size: 14, color: Colors.white),
                           const SizedBox(width: 4),
                           Text(
                             '${property.imageCount}',
@@ -995,9 +996,9 @@ class PropertyCard extends StatelessWidget {
                         ),
                       ),
                       if (property.ownerIsVerified)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 4),
-                          child: Icon(Icons.verified,
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: PhosphorIcon(PhosphorIconsDuotone.sealCheck,
                               size: 18, color: Colors.blue),
                         ),
                     ],
@@ -1028,16 +1029,16 @@ class PropertyCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      _detail(Icons.bed, '${property.bedrooms} bed'),
+                      _detail(PhosphorIconsDuotone.bed, '${property.bedrooms} bed'),
                       const SizedBox(width: 16),
-                      _detail(Icons.bathtub_outlined,
+                      _detail(PhosphorIconsDuotone.bathtub,
                           '${property.bathrooms} bath'),
                       const SizedBox(width: 16),
-                      _detail(Icons.weekend_outlined,
+                      _detail(PhosphorIconsDuotone.armchair,
                           '${property.receptionRooms} recep'),
                       if (property.epcRating.isNotEmpty) ...[
                         const SizedBox(width: 16),
-                        _detail(Icons.bolt, 'EPC ${property.epcRating}'),
+                        _detail(PhosphorIconsDuotone.lightning, 'EPC ${property.epcRating}'),
                       ],
                     ],
                   ),
@@ -1051,11 +1052,11 @@ class PropertyCard extends StatelessWidget {
     );
   }
 
-  Widget _detail(IconData icon, String text) {
+  Widget _detail(PhosphorIconData icon, String text) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: Colors.grey[600]),
+        PhosphorIcon(icon, size: 16, color: Colors.grey[600]),
         const SizedBox(width: 4),
         Text(text, style: TextStyle(fontSize: 13, color: Colors.grey[600])),
       ],
@@ -1103,8 +1104,8 @@ class _SaveButtonState extends State<_SaveButton> {
             color: Colors.black.withAlpha(100),
             shape: BoxShape.circle,
           ),
-          child: Icon(
-            _isSaved ? Icons.favorite : Icons.favorite_border,
+          child: PhosphorIcon(
+            PhosphorIconsDuotone.heart,
             color: _isSaved ? Colors.red : Colors.white,
             size: 22,
           ),
@@ -1123,7 +1124,7 @@ class _FreePoint extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.check_circle, size: 16, color: AppTheme.forestMid),
+        PhosphorIcon(PhosphorIconsDuotone.checkCircle, size: 16, color: AppTheme.forestMid),
         const SizedBox(width: 4),
         Text(
           text,

@@ -7,6 +7,7 @@ import 'price_comparison_screen.dart';
 import 'stamp_duty_screen.dart';
 import 'forum_screen.dart';
 import 'neighbourhood_review_screen.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class ToolsScreen extends StatelessWidget {
   const ToolsScreen({super.key});
@@ -32,7 +33,7 @@ class ToolsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           _ToolCard(
-            icon: Icons.calculate_outlined,
+            icon: PhosphorIconsDuotone.calculator,
             title: 'Mortgage Calculator',
             subtitle: 'Estimate your monthly payments based on price, deposit, rate, and term.',
             onTap: () => Navigator.push(
@@ -42,7 +43,7 @@ class ToolsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _ToolCard(
-            icon: Icons.trending_up,
+            icon: PhosphorIconsDuotone.trendUp,
             title: 'House Price Lookup',
             subtitle: 'Search sold house prices in any area by postcode.',
             onTap: () => Navigator.push(
@@ -52,7 +53,7 @@ class ToolsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _ToolCard(
-            icon: Icons.compare_arrows,
+            icon: PhosphorIconsDuotone.arrowsLeftRight,
             title: 'Price Comparison',
             subtitle: 'Compare sold prices and local listings in your area.',
             onTap: () => Navigator.push(
@@ -62,7 +63,7 @@ class ToolsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _ToolCard(
-            icon: Icons.account_balance,
+            icon: PhosphorIconsDuotone.bank,
             title: 'Stamp Duty Calculator',
             subtitle: 'Calculate SDLT, LBTT, or LTT for England, Scotland & Wales.',
             onTap: () => Navigator.push(
@@ -72,7 +73,7 @@ class ToolsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _ToolCard(
-            icon: Icons.location_city,
+            icon: PhosphorIconsDuotone.buildings,
             title: 'Neighbourhood Reviews',
             subtitle: 'Read and write reviews for any UK neighbourhood.',
             onTap: () => Navigator.push(
@@ -82,7 +83,7 @@ class ToolsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _ToolCard(
-            icon: Icons.forum,
+            icon: PhosphorIconsDuotone.chatsCircle,
             title: 'Community Forum',
             subtitle: 'Discuss buying, selling, and property topics.',
             onTap: () => Navigator.push(
@@ -97,7 +98,7 @@ class ToolsScreen extends StatelessWidget {
 }
 
 class _ToolCard extends StatelessWidget {
-  final IconData icon;
+  final PhosphorIconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -126,7 +127,7 @@ class _ToolCard extends StatelessWidget {
                   color: AppTheme.forestMist,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: AppTheme.forestMid, size: 24),
+                child: PhosphorIcon(icon, color: AppTheme.forestMid, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -152,7 +153,7 @@ class _ToolCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppTheme.stone),
+              PhosphorIcon(PhosphorIconsDuotone.caretRight, color: AppTheme.stone),
             ],
           ),
         ),

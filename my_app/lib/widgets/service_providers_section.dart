@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import '../constants/api_constants.dart';
 import '../constants/app_theme.dart';
@@ -135,7 +136,7 @@ class _ServiceProvidersSectionState extends State<ServiceProvidersSection> {
                       if (p.averageRating != null)
                         Row(
                           children: [
-                            const Icon(Icons.star,
+                            PhosphorIcon(PhosphorIconsDuotone.star,
                                 size: 13, color: AppTheme.goldEmber),
                             const SizedBox(width: 2),
                             Text(
@@ -164,7 +165,7 @@ class _ServiceProvidersSectionState extends State<ServiceProvidersSection> {
         color: AppTheme.forestMist,
         borderRadius: BorderRadius.circular(6),
       ),
-      child: const Icon(Icons.business, size: 18, color: AppTheme.stone),
+      child: PhosphorIcon(PhosphorIconsDuotone.buildings, size: 18, color: AppTheme.stone),
     );
   }
 }

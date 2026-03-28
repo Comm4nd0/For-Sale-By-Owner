@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -163,7 +164,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 IconButton(
                   icon: _sending
                       ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.send),
+                      : PhosphorIcon(PhosphorIconsDuotone.paperPlaneTilt),
                   onPressed: _sendMessage,
                 ),
               ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import '../constants/app_theme.dart';
 import '../widgets/branded_app_bar.dart';
@@ -180,7 +181,7 @@ class _EnquiryDetailScreenState extends State<EnquiryDetailScreen> {
                             child:
                                 CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.send, color: AppTheme.forestMid),
+                        : PhosphorIcon(PhosphorIconsDuotone.paperPlaneTilt, color: AppTheme.forestMid),
                   ),
                 ],
               ),

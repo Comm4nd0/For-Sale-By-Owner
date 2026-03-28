@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/conveyancer_quote.dart';
@@ -269,7 +270,7 @@ class _SolicitorQuotesScreenState extends State<SolicitorQuotesScreen> {
         context: context,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: PhosphorIcon(PhosphorIconsDuotone.arrowClockwise),
             tooltip: 'Refresh',
             onPressed: _loadRequests,
           ),
@@ -294,7 +295,7 @@ class _SolicitorQuotesScreenState extends State<SolicitorQuotesScreen> {
                 ),
                 ElevatedButton.icon(
                   onPressed: _showCreateRequestDialog,
-                  icon: const Icon(Icons.add, size: 18),
+                  icon: PhosphorIcon(PhosphorIconsDuotone.plus, size: 18),
                   label: const Text('New Request'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _primary,
@@ -327,7 +328,7 @@ class _SolicitorQuotesScreenState extends State<SolicitorQuotesScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 56, color: Colors.red),
+              PhosphorIcon(PhosphorIconsDuotone.warningCircle, size: 56, color: Colors.red),
               const SizedBox(height: 16),
               Text(
                 'Failed to load quote requests',
@@ -345,7 +346,7 @@ class _SolicitorQuotesScreenState extends State<SolicitorQuotesScreen> {
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: _loadRequests,
-                icon: const Icon(Icons.refresh),
+                icon: PhosphorIcon(PhosphorIconsDuotone.arrowClockwise),
                 label: const Text('Retry'),
                 style: ElevatedButton.styleFrom(backgroundColor: _primary),
               ),
@@ -362,7 +363,7 @@ class _SolicitorQuotesScreenState extends State<SolicitorQuotesScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.request_quote_outlined,
+              PhosphorIcon(PhosphorIconsDuotone.fileText,
                   size: 64, color: Colors.grey[400]),
               const SizedBox(height: 16),
               Text(
@@ -461,7 +462,7 @@ class _SolicitorQuotesScreenState extends State<SolicitorQuotesScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.swap_horiz, size: 16, color: Colors.grey[600]),
+                      PhosphorIcon(PhosphorIconsDuotone.arrowsLeftRight, size: 16, color: Colors.grey[600]),
                       const SizedBox(width: 4),
                       Text(
                         request.transactionType == 'buying'
@@ -473,7 +474,7 @@ class _SolicitorQuotesScreenState extends State<SolicitorQuotesScreen> {
                         ),
                       ),
                       const SizedBox(width: 16),
-                      Icon(Icons.calendar_today,
+                      PhosphorIcon(PhosphorIconsDuotone.calendar,
                           size: 14, color: Colors.grey[600]),
                       const SizedBox(width: 4),
                       Text(
@@ -484,7 +485,7 @@ class _SolicitorQuotesScreenState extends State<SolicitorQuotesScreen> {
                         ),
                       ),
                       const SizedBox(width: 16),
-                      Icon(Icons.format_quote,
+                      PhosphorIcon(PhosphorIconsDuotone.quotes,
                           size: 16, color: Colors.grey[600]),
                       const SizedBox(width: 4),
                       Text(
@@ -520,10 +521,10 @@ class _SolicitorQuotesScreenState extends State<SolicitorQuotesScreen> {
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        Icon(
+                        PhosphorIcon(
                           isExpanded
-                              ? Icons.keyboard_arrow_up
-                              : Icons.keyboard_arrow_down,
+                              ? PhosphorIconsDuotone.caretUp
+                              : PhosphorIconsDuotone.caretDown,
                           color: _primary,
                           size: 20,
                         ),
@@ -620,7 +621,7 @@ class _SolicitorQuotesScreenState extends State<SolicitorQuotesScreen> {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check, color: Colors.white, size: 14),
+                        PhosphorIcon(PhosphorIconsDuotone.check, color: Colors.white, size: 14),
                         SizedBox(width: 4),
                         Text(
                           'Accepted',
@@ -653,7 +654,7 @@ class _SolicitorQuotesScreenState extends State<SolicitorQuotesScreen> {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Icon(Icons.schedule, size: 16, color: Colors.grey[600]),
+                  PhosphorIcon(PhosphorIconsDuotone.clockAfternoon, size: 16, color: Colors.grey[600]),
                   const SizedBox(width: 4),
                   Text(
                     'Estimated: ${quote.estimatedWeeks} week${quote.estimatedWeeks == 1 ? '' : 's'}',
@@ -676,7 +677,7 @@ class _SolicitorQuotesScreenState extends State<SolicitorQuotesScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.notes, size: 14, color: Colors.grey[500]),
+                    PhosphorIcon(PhosphorIconsDuotone.notepad, size: 14, color: Colors.grey[500]),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
@@ -697,7 +698,7 @@ class _SolicitorQuotesScreenState extends State<SolicitorQuotesScreen> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () => _acceptQuote(quote),
-                  icon: const Icon(Icons.check_circle_outline, size: 18),
+                  icon: PhosphorIcon(PhosphorIconsDuotone.checkCircle, size: 18),
                   label: const Text('Accept Quote'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _primary,

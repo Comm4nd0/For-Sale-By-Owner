@@ -13,6 +13,7 @@ import '../widgets/tier_badge.dart';
 import '../widgets/branded_app_bar.dart';
 import '../widgets/scroll_to_top_button.dart';
 import '../utils/auto_retry.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class ServicesScreen extends StatefulWidget {
   const ServicesScreen({super.key});
@@ -134,34 +135,34 @@ class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
     _loadProviders();
   }
 
-  IconData _categoryIcon(String iconName) {
-    const iconMap = {
-      'build': Icons.build,
-      'plumbing': Icons.plumbing,
-      'electrical_services': Icons.electrical_services,
-      'format_paint': Icons.format_paint,
-      'roofing': Icons.roofing,
-      'cleaning_services': Icons.cleaning_services,
-      'local_shipping': Icons.local_shipping,
-      'architecture': Icons.architecture,
-      'gavel': Icons.gavel,
-      'account_balance': Icons.account_balance,
-      'camera_alt': Icons.camera_alt,
-      'landscape': Icons.landscape,
-      'lock': Icons.lock,
-      'pest_control': Icons.pest_control,
-      'house': Icons.house,
-      'handyman': Icons.handyman,
-      'engineering': Icons.engineering,
-      'home_repair_service': Icons.home_repair_service,
-      'energy_savings_leaf': Icons.energy_savings_leaf,
-      'window': Icons.window,
-      'garage': Icons.garage,
-      'foundation': Icons.foundation,
-      'payments': Icons.payments,
-      'inventory': Icons.inventory,
+  PhosphorIconData _categoryIcon(String iconName) {
+    final iconMap = {
+      'build': PhosphorIconsDuotone.wrench,
+      'plumbing': PhosphorIconsDuotone.wrench,
+      'electrical_services': PhosphorIconsDuotone.plug,
+      'format_paint': PhosphorIconsDuotone.paintBrush,
+      'roofing': PhosphorIconsDuotone.house,
+      'cleaning_services': PhosphorIconsDuotone.broom,
+      'local_shipping': PhosphorIconsDuotone.truck,
+      'architecture': PhosphorIconsDuotone.compass,
+      'gavel': PhosphorIconsDuotone.gavel,
+      'account_balance': PhosphorIconsDuotone.bank,
+      'camera_alt': PhosphorIconsDuotone.camera,
+      'landscape': PhosphorIconsDuotone.mountains,
+      'lock': PhosphorIconsDuotone.lock,
+      'pest_control': PhosphorIconsDuotone.bug,
+      'house': PhosphorIconsDuotone.house,
+      'handyman': PhosphorIconsDuotone.wrench,
+      'engineering': PhosphorIconsDuotone.hardHat,
+      'home_repair_service': PhosphorIconsDuotone.toolbox,
+      'energy_savings_leaf': PhosphorIconsDuotone.leaf,
+      'window': PhosphorIconsDuotone.browser,
+      'garage': PhosphorIconsDuotone.garage,
+      'foundation': PhosphorIconsDuotone.house,
+      'payments': PhosphorIconsDuotone.creditCard,
+      'inventory': PhosphorIconsDuotone.package,
     };
-    return iconMap[iconName] ?? Icons.build;
+    return iconMap[iconName] ?? PhosphorIconsDuotone.wrench;
   }
 
   @override
@@ -172,7 +173,7 @@ class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
         showHomeButton: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.sell_outlined),
+            icon: PhosphorIcon(PhosphorIconsDuotone.tag),
             tooltip: 'Pricing',
             onPressed: () => Navigator.push(
               context,
@@ -208,7 +209,7 @@ class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
                       hintText: 'Town, county or postcode...',
                       filled: true,
                       fillColor: Colors.white,
-                      prefixIcon: const Icon(Icons.location_on_outlined,
+                      prefixIcon: PhosphorIcon(PhosphorIconsDuotone.mapPin,
                           color: AppTheme.stone),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -228,7 +229,7 @@ class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 14),
                   ),
-                  child: const Icon(Icons.search, color: Colors.white),
+                  child: PhosphorIcon(PhosphorIconsDuotone.magnifyingGlass, color: Colors.white),
                 ),
               ],
             ),
@@ -246,8 +247,8 @@ class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
                   if (index == 0) {
                     final isSelected = _selectedCategory == null;
                     return FilterChip(
-                      avatar: Icon(
-                        Icons.apps,
+                      avatar: PhosphorIcon(
+                        PhosphorIconsDuotone.squaresFour,
                         size: 16,
                         color: isSelected ? Colors.white : AppTheme.forestMid,
                       ),
@@ -268,7 +269,7 @@ class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
                   final cat = _categories[index - 1];
                   final isSelected = _selectedCategory == cat.slug;
                   return FilterChip(
-                    avatar: Icon(
+                    avatar: PhosphorIcon(
                       _categoryIcon(cat.icon),
                       size: 16,
                       color: isSelected ? Colors.white : AppTheme.forestMid,
@@ -305,7 +306,7 @@ class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.cloud_off,
+                              PhosphorIcon(PhosphorIconsDuotone.cloudSlash,
                                   size: 48, color: AppTheme.stone),
                               const SizedBox(height: 12),
                               Text(_error!,
@@ -315,7 +316,7 @@ class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
                               const SizedBox(height: 16),
                               ElevatedButton.icon(
                                 onPressed: _loadProviders,
-                                icon: const Icon(Icons.refresh),
+                                icon: PhosphorIcon(PhosphorIconsDuotone.arrowClockwise),
                                 label: const Text('Retry'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppTheme.forestMid,
@@ -335,7 +336,7 @@ class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.search_off,
+                                  PhosphorIcon(PhosphorIconsDuotone.magnifyingGlassMinus,
                                       size: 48, color: AppTheme.stone),
                                   const SizedBox(height: 12),
                                   const Text('No service providers found',
@@ -438,7 +439,7 @@ class _ProviderCard extends StatelessWidget {
                             ),
                           ),
                         if (provider.isVerified)
-                          const Icon(Icons.verified,
+                          PhosphorIcon(PhosphorIconsDuotone.sealCheck,
                               size: 16, color: AppTheme.forestMid),
                       ],
                     ),
@@ -464,7 +465,7 @@ class _ProviderCard extends StatelessWidget {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(Icons.location_on,
+                          PhosphorIcon(PhosphorIconsDuotone.mapPin,
                               size: 14, color: AppTheme.stone),
                           const SizedBox(width: 4),
                           Expanded(
@@ -483,7 +484,7 @@ class _ProviderCard extends StatelessWidget {
                     Row(
                       children: [
                         if (provider.averageRating != null) ...[
-                          const Icon(Icons.star,
+                          PhosphorIcon(PhosphorIconsDuotone.star,
                               size: 14, color: AppTheme.goldEmber),
                           const SizedBox(width: 2),
                           Text(
@@ -520,7 +521,7 @@ class _ProviderCard extends StatelessWidget {
         color: AppTheme.forestMist,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: const Icon(Icons.business, color: AppTheme.stone, size: 24),
+      child: PhosphorIcon(PhosphorIconsDuotone.buildings, color: AppTheme.stone, size: 24),
     );
   }
 }

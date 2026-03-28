@@ -5,6 +5,7 @@ import '../widgets/branded_app_bar.dart';
 import '../models/property.dart';
 import '../models/property_feature.dart';
 import '../services/api_service.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class EditPropertyScreen extends StatefulWidget {
   final Property property;
@@ -406,7 +407,7 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
         Expanded(child: Text(label)),
         IconButton(
           onPressed: value > 0 ? () => onChanged(value - 1) : null,
-          icon: const Icon(Icons.remove_circle_outline),
+          icon: PhosphorIcon(PhosphorIconsDuotone.minusCircle),
         ),
         Text(
           '$value',
@@ -414,7 +415,7 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
         ),
         IconButton(
           onPressed: () => onChanged(value + 1),
-          icon: const Icon(Icons.add_circle_outline),
+          icon: PhosphorIcon(PhosphorIconsDuotone.plusCircle),
         ),
       ],
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import '../constants/app_theme.dart';
 import '../services/api_service.dart';
@@ -152,7 +153,7 @@ class _HousePricesScreenState extends State<HousePricesScreen> {
                           hintText: 'Enter postcode, e.g. SW1A 1AA',
                           filled: true,
                           fillColor: Colors.white,
-                          prefixIcon: const Icon(Icons.location_on_outlined),
+                          prefixIcon: PhosphorIcon(PhosphorIconsDuotone.mapPin),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide.none,
@@ -216,7 +217,7 @@ class _HousePricesScreenState extends State<HousePricesScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 56, color: AppTheme.stone),
+              PhosphorIcon(PhosphorIconsDuotone.warningCircle, size: 56, color: AppTheme.stone),
               const SizedBox(height: 16),
               Text(
                 _error!,
@@ -241,7 +242,7 @@ class _HousePricesScreenState extends State<HousePricesScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.search_off, size: 56, color: AppTheme.stone),
+              PhosphorIcon(PhosphorIconsDuotone.magnifyingGlassMinus, size: 56, color: AppTheme.stone),
               const SizedBox(height: 16),
               const Text(
                 'No sold prices found for this postcode',
@@ -358,14 +359,14 @@ class _HousePricesScreenState extends State<HousePricesScreen> {
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                Icon(Icons.calendar_today, size: 13, color: AppTheme.stone),
+                                PhosphorIcon(PhosphorIconsDuotone.calendar, size: 13, color: AppTheme.stone),
                                 const SizedBox(width: 4),
                                 Text(
                                   _formatDate(r.date),
                                   style: const TextStyle(fontSize: 12, color: AppTheme.slate),
                                 ),
                                 const SizedBox(width: 12),
-                                Icon(Icons.home_outlined, size: 13, color: AppTheme.stone),
+                                PhosphorIcon(PhosphorIconsDuotone.house, size: 13, color: AppTheme.stone),
                                 const SizedBox(width: 4),
                                 Text(
                                   r.propertyType,
@@ -414,7 +415,7 @@ class _HousePricesScreenState extends State<HousePricesScreen> {
               color: AppTheme.forestMist,
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Icon(Icons.trending_up, size: 40, color: AppTheme.forestMid),
+            child: PhosphorIcon(PhosphorIconsDuotone.trendUp, size: 40, color: AppTheme.forestMid),
           ),
           const SizedBox(height: 20),
           const Text(
@@ -433,17 +434,17 @@ class _HousePricesScreenState extends State<HousePricesScreen> {
           ),
           const SizedBox(height: 32),
           _infoTile(
-            Icons.search,
+            PhosphorIconsDuotone.magnifyingGlass,
             'Search by postcode',
             'Enter any UK postcode to see recent sold prices in that area.',
           ),
           _infoTile(
-            Icons.bar_chart,
+            PhosphorIconsDuotone.chartBar,
             'Average prices',
             'See the average sold price to understand local market values.',
           ),
           _infoTile(
-            Icons.verified_outlined,
+            PhosphorIconsDuotone.sealCheck,
             'Official data',
             'All data comes directly from HM Land Registry public records.',
           ),
@@ -452,7 +453,7 @@ class _HousePricesScreenState extends State<HousePricesScreen> {
     );
   }
 
-  Widget _infoTile(IconData icon, String title, String subtitle) {
+  Widget _infoTile(PhosphorIconData icon, String title, String subtitle) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -464,7 +465,7 @@ class _HousePricesScreenState extends State<HousePricesScreen> {
               color: AppTheme.forestMist,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: AppTheme.forestMid, size: 22),
+            child: PhosphorIcon(icon, color: AppTheme.forestMid, size: 22),
           ),
           const SizedBox(width: 14),
           Expanded(

@@ -474,7 +474,6 @@ void main() {
       // Section titles
       expect(find.text('Your Properties'), findsOneWidget);
       expect(find.text('Buyer Tools'), findsOneWidget);
-      expect(find.text('Selling Tools'), findsOneWidget);
       expect(find.text('Settings'), findsOneWidget);
     });
 
@@ -498,18 +497,6 @@ void main() {
 
       expect(find.text('Buyer Profile'), findsOneWidget);
       expect(find.text('Buyer Verification'), findsOneWidget);
-    });
-
-    testWidgets('shows selling tools', (tester) async {
-      await tester.pumpWidget(buildTestWidget(
-        child: const AccountScreen(),
-        authService: TestAuthService(authenticated: true),
-      ));
-      await tester.pump();
-
-      expect(find.text('Conveyancing'), findsOneWidget);
-      expect(find.text('Solicitor Quotes'), findsOneWidget);
-      expect(find.text('For Sale Boards'), findsOneWidget);
     });
 
     testWidgets('shows settings menu', (tester) async {

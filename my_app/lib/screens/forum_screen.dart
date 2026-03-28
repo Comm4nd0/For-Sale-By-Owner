@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../models/forum.dart';
@@ -9,32 +10,32 @@ const Color _brandColor = Color(0xFF115E66);
 // ---------------------------------------------------------------------------
 // Icon mapping for forum categories
 // ---------------------------------------------------------------------------
-IconData _categoryIcon(String icon) {
+PhosphorIconData _categoryIcon(String icon) {
   switch (icon) {
     case 'gavel':
-      return Icons.gavel;
+      return PhosphorIconsDuotone.gavel;
     case 'home':
-      return Icons.home;
+      return PhosphorIconsDuotone.house;
     case 'attach_money':
-      return Icons.attach_money;
+      return PhosphorIconsDuotone.currencyDollar;
     case 'question_answer':
-      return Icons.question_answer;
+      return PhosphorIconsDuotone.chatDots;
     case 'handshake':
-      return Icons.handshake;
+      return PhosphorIconsDuotone.handshake;
     case 'build':
-      return Icons.build;
+      return PhosphorIconsDuotone.wrench;
     case 'landscape':
-      return Icons.landscape;
+      return PhosphorIconsDuotone.mountains;
     case 'school':
-      return Icons.school;
+      return PhosphorIconsDuotone.graduationCap;
     case 'description':
-      return Icons.description;
+      return PhosphorIconsDuotone.fileText;
     case 'camera_alt':
-      return Icons.camera_alt;
+      return PhosphorIconsDuotone.camera;
     case 'tips_and_updates':
-      return Icons.tips_and_updates;
+      return PhosphorIconsDuotone.lightbulb;
     default:
-      return Icons.forum;
+      return PhosphorIconsDuotone.chatsCircle;
   }
 }
 
@@ -111,7 +112,7 @@ class _ForumScreenState extends State<ForumScreen> {
     }
     if (_categories.isEmpty) {
       return const _EmptyState(
-        icon: Icons.forum_outlined,
+        icon: PhosphorIconsDuotone.chatsCircle,
         title: 'No categories yet',
         subtitle: 'Forum categories will appear here once created.',
       );
@@ -174,7 +175,7 @@ class _CategoryCard extends StatelessWidget {
                   color: _brandColor.withAlpha(25),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
+                child: PhosphorIcon(
                   _categoryIcon(category.icon),
                   color: _brandColor,
                   size: 26,
@@ -300,7 +301,7 @@ class _TopicListScreenState extends State<_TopicListScreen> {
       body: _buildBody(),
       floatingActionButton: FloatingActionButton(
         backgroundColor: _brandColor,
-        child: const Icon(Icons.add, color: Colors.white),
+        child: PhosphorIcon(PhosphorIconsDuotone.plus, color: Colors.white),
         onPressed: _createTopic,
       ),
     );
@@ -317,7 +318,7 @@ class _TopicListScreenState extends State<_TopicListScreen> {
     }
     if (_topics.isEmpty) {
       return const _EmptyState(
-        icon: Icons.topic_outlined,
+        icon: PhosphorIconsDuotone.folders,
         title: 'No topics yet',
         subtitle: 'Be the first to start a discussion!',
       );
@@ -359,12 +360,12 @@ class _TopicTile extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           if (topic.isPinned)
-            const Icon(Icons.push_pin, size: 18, color: _brandColor)
+            PhosphorIcon(PhosphorIconsDuotone.pushPin, size: 18, color: _brandColor)
           else if (topic.isLocked)
-            Icon(Icons.lock, size: 18, color: Colors.grey.shade500)
+            PhosphorIcon(PhosphorIconsDuotone.lock, size: 18, color: Colors.grey.shade500)
           else
-            const Icon(
-                Icons.chat_bubble_outline, size: 18, color: _brandColor),
+            PhosphorIcon(
+                PhosphorIconsDuotone.chat, size: 18, color: _brandColor),
         ],
       ),
       title: Row(
@@ -426,7 +427,7 @@ class _TopicTile extends StatelessWidget {
                   TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
             const SizedBox(width: 10),
-            Icon(Icons.visibility, size: 13, color: Colors.grey.shade400),
+            PhosphorIcon(PhosphorIconsDuotone.eye, size: 13, color: Colors.grey.shade400),
             const SizedBox(width: 3),
             Text(
               '${topic.viewCount}',
@@ -434,7 +435,7 @@ class _TopicTile extends StatelessWidget {
                   TextStyle(fontSize: 12, color: Colors.grey.shade500),
             ),
             const SizedBox(width: 10),
-            Icon(Icons.reply, size: 13, color: Colors.grey.shade400),
+            PhosphorIcon(PhosphorIconsDuotone.arrowBendUpLeft, size: 13, color: Colors.grey.shade400),
             const SizedBox(width: 3),
             Text(
               '${topic.replyCount}',
@@ -581,7 +582,7 @@ class _TopicDetailScreenState extends State<_TopicDetailScreen> {
     }
     if (_topic == null) {
       return const _EmptyState(
-        icon: Icons.topic_outlined,
+        icon: PhosphorIconsDuotone.folders,
         title: 'Topic not found',
         subtitle: 'This topic may have been removed.',
       );
@@ -646,7 +647,7 @@ class _TopicDetailScreenState extends State<_TopicDetailScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.lock,
+                        PhosphorIcon(PhosphorIconsDuotone.lock,
                             size: 18, color: Colors.orange.shade700),
                         const SizedBox(width: 8),
                         Expanded(
@@ -724,7 +725,7 @@ class _TopicDetailScreenState extends State<_TopicDetailScreen> {
                   ),
                 )
               : IconButton(
-                  icon: const Icon(Icons.send_rounded, color: _brandColor),
+                  icon: PhosphorIcon(PhosphorIconsDuotone.paperPlaneTilt, color: _brandColor),
                   onPressed: _submitReply,
                 ),
         ],
@@ -798,7 +799,7 @@ class _TopicHeader extends StatelessWidget {
                     fontSize: 13, fontWeight: FontWeight.w500),
               ),
               const Spacer(),
-              Icon(Icons.visibility,
+              PhosphorIcon(PhosphorIconsDuotone.eye,
                   size: 14, color: Colors.grey.shade500),
               const SizedBox(width: 3),
               Text(
@@ -935,7 +936,7 @@ class _PostCard extends StatelessWidget {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle,
+                        PhosphorIcon(PhosphorIconsDuotone.checkCircle,
                             size: 14, color: Colors.white),
                         SizedBox(width: 4),
                         Text(
@@ -952,7 +953,7 @@ class _PostCard extends StatelessWidget {
                 if (showMarkSolution)
                   TextButton.icon(
                     onPressed: onMarkSolution,
-                    icon: const Icon(Icons.check_circle_outline, size: 16),
+                    icon: PhosphorIcon(PhosphorIconsDuotone.checkCircle, size: 16),
                     label: const Text('Mark Solution',
                         style: TextStyle(fontSize: 12)),
                     style: TextButton.styleFrom(
@@ -1048,7 +1049,7 @@ class _CreateTopicScreenState extends State<_CreateTopicScreen> {
                   ),
                 )
               : IconButton(
-                  icon: const Icon(Icons.check),
+                  icon: PhosphorIcon(PhosphorIconsDuotone.check),
                   tooltip: 'Submit',
                   onPressed: _submit,
                 ),
@@ -1170,7 +1171,7 @@ class _CreateTopicScreenState extends State<_CreateTopicScreen> {
 // ============================================================================
 
 class _EmptyState extends StatelessWidget {
-  final IconData icon;
+  final PhosphorIconData icon;
   final String title;
   final String subtitle;
 
@@ -1188,7 +1189,7 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 64, color: Colors.grey.shade300),
+            PhosphorIcon(icon, size: 64, color: Colors.grey.shade300),
             const SizedBox(height: 16),
             Text(
               title,
@@ -1226,7 +1227,7 @@ class _ErrorRetry extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline,
+            PhosphorIcon(PhosphorIconsDuotone.warningCircle,
                 size: 56, color: Colors.red.shade300),
             const SizedBox(height: 16),
             const Text(
@@ -1246,7 +1247,7 @@ class _ErrorRetry extends StatelessWidget {
             const SizedBox(height: 20),
             OutlinedButton.icon(
               onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
+              icon: PhosphorIcon(PhosphorIconsDuotone.arrowClockwise),
               label: const Text('Retry'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: _brandColor,
