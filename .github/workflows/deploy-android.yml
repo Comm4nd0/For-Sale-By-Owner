@@ -74,7 +74,11 @@ jobs:
       - name: Create release notes file
         run: |
           mkdir -p distribution/whatsnew
-          echo "${{ steps.notes.outputs.notes }}" | grep -v "Co-Authored-By" > distribution/whatsnew/whatsnew-en-GB
+          NOTES=$(echo "${{ steps.notes.outputs.notes }}" | grep -v "Co-Authored-By")
+          if [ ${#NOTES} -gt 500 ]; then
+            NOTES="${NOTES:0:497}..."
+          fi
+          echo "$NOTES" > distribution/whatsnew/whatsnew-en-GB
 
       - name: Upload AAB to Google Play (${{ steps.track.outputs.track }})
         uses: r0adkll/upload-google-play@v1
