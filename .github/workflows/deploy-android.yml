@@ -78,7 +78,7 @@ jobs:
           if [ ${#NOTES} -gt 500 ]; then
             NOTES="${NOTES:0:497}..."
           fi
-          echo "$NOTES" > distribution/whatsnew/whatsnew-en-GB
+          printf "%s" "$NOTES" > distribution/whatsnew/whatsnew-en-GB
 
       - name: Upload AAB to Google Play (${{ steps.track.outputs.track }})
         uses: r0adkll/upload-google-play@v1
