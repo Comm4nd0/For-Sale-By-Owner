@@ -52,6 +52,16 @@
     .review-actions { margin-top: 0.5rem; }
     .review-actions button { background: none; border: none; color: #B03A2E; cursor: pointer; font-size: 0.8rem; }
 
+    /* Staff validation panel */
+    .staff-panel { background: #FFF3CD; border: 1px solid #FFE69C; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .staff-panel h3 { color: #664D03; margin-bottom: 0.75rem; font-size: 1.1rem; }
+    .staff-panel .form-group { margin-bottom: 0.75rem; }
+    .staff-panel label { display: block; margin-bottom: 0.2rem; font-size: 0.85rem; font-weight: 500; color: #664D03; }
+    .staff-panel select { width: 100%; padding: 0.5rem; border: 1px solid #FFE69C; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
+    .staff-panel .checkbox-row { display: flex; align-items: center; gap: 0.5rem; }
+    .staff-panel .btn-validate { background: #115E66; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; width: 100%; }
+    .staff-panel .btn-validate:hover { background: #19747E; }
+
     /* Review form */
     .review-form-section { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
     .review-form-section h3 { color: #115E66; margin-bottom: 0.75rem; font-size: 1.1rem; }
@@ -86,6 +96,7 @@
     let providerData = null;
     let currentUserId = null;
     let selectedRating = 0;
+    let isStaff = false;
 
     function renderStars(rating) {
         if (!rating) return '';
@@ -186,6 +197,15 @@
             .then(r => r.json())
             .then(u => { currentUserId = u.id; })
             .catch(() => {});
+        Auth.authFetch('/api/profile/')
+            .then(r => r.ok ? r.json() : null)
+            .then(u => {
+                if (u && u.is_staff) {
+                    isStaff = true;
+                    renderStaffPanel();
+                }
+            })
+            .catch(() => {});
     }
 
     // Load provider
@@ -279,9 +299,79 @@
             `;
 
             loadReviews();
+            if (isStaff) renderStaffPanel();
         })
         .catch(() => {
             document.getElementById('provider-content').innerHTML = '<div class="alert alert-error">Service provider not found.</div>';
         });
+
+    function renderStaffPanel() {
+        if (!providerData || !isStaff) return;
+        const existing = document.getElementById('staff-panel');
+        if (existing) existing.remove();
+
+        const statusLabels = { draft: 'Draft', pending_review: 'Pending Review', active: 'Active', suspended: 'Suspended', withdrawn: 'Withdrawn' };
+        const statusOptions = Object.entries(statusLabels).map(([val, label]) =>
+            `<option value="${val}" ${providerData.status === val ? 'selected' : ''}>${label}</option>`
+        ).join('');
+
+        const panel = document.createElement('div');
+        panel.id = 'staff-panel';
+        panel.className = 'staff-panel';
+        panel.innerHTML = `
+            <h3>Staff Validation</h3>
+            <div id="staff-msg" class="alert" style="display:none;"></div>
+            <div class="form-group">
+                <label>Status</label>
+                <select id="staff-status">${statusOptions}</select>
+            </div>
+            <div class="form-group">
+                <div class="checkbox-row">
+                    <input type="checkbox" id="staff-verified" ${providerData.is_verified ? 'checked' : ''}>
+                    <label for="staff-verified" style="margin:0;">Verified Business</label>
+                </div>
+            </div>
+            <button class="btn-validate" onclick="submitValidation()">Update Validation</button>
+        `;
+
+        const sidebar = document.querySelector('.detail-grid > div:last-child');
+        if (sidebar) {
+            sidebar.insertBefore(panel, sidebar.firstChild);
+        }
+    }
+
+    async function submitValidation() {
+        const btn = document.querySelector('.btn-validate');
+        const msgEl = document.getElementById('staff-msg');
+        btn.disabled = true;
+        btn.textContent = 'Updating...';
+        msgEl.style.display = 'none';
+
+        try {
+            const res = await Auth.authFetch(`/api/service-providers/${providerData.id}/validate/`, {
+                method: 'POST',
+                headers: Auth.headers(),
+                body: JSON.stringify({
+                    status: document.getElementById('staff-status').value,
+                    is_verified: document.getElementById('staff-verified').checked,
+                }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.detail || Object.values(data).flat().join(', '));
+            }
+            const updated = await res.json();
+            providerData = updated;
+            msgEl.className = 'alert alert-success';
+            msgEl.textContent = 'Validation updated successfully.';
+            msgEl.style.display = 'block';
+        } catch (err) {
+            msgEl.className = 'alert alert-error';
+            msgEl.textContent = err.message || 'Failed to update validation.';
+            msgEl.style.display = 'block';
+        }
+        btn.disabled = false;
+        btn.textContent = 'Update Validation';
+    }
 </script>
 {% endblock %}

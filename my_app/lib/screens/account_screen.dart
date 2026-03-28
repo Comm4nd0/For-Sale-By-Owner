@@ -10,9 +10,6 @@ import 'profile_screen.dart';
 import 'buyer_profile_screen.dart';
 import 'buyer_verification_screen.dart';
 import 'two_factor_screen.dart';
-import 'conveyancing_screen.dart';
-import 'board_order_screen.dart';
-import 'solicitor_quotes_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class AccountScreen extends StatefulWidget {
@@ -233,51 +230,6 @@ class _AccountScreenState extends State<AccountScreen> {
                       context,
                       MaterialPageRoute(
                           builder: (_) => const BuyerVerificationScreen()),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Selling Tools section
-            _buildSectionTitle('Selling Tools'),
-            const SizedBox(height: 8),
-            Card(
-              margin: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  _buildMenuTile(
-                    icon: PhosphorIconsDuotone.gavel,
-                    title: 'Conveyancing',
-                    subtitle: 'Track your sale or purchase progress',
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const ConveyancingScreen()),
-                    ),
-                  ),
-                  const Divider(height: 1, indent: 56),
-                  _buildMenuTile(
-                    icon: PhosphorIconsDuotone.fileText,
-                    title: 'Solicitor Quotes',
-                    subtitle: 'Get and compare conveyancer quotes',
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const SolicitorQuotesScreen()),
-                    ),
-                  ),
-                  const Divider(height: 1, indent: 56),
-                  _buildMenuTile(
-                    icon: PhosphorIconsDuotone.signpost,
-                    title: 'For Sale Boards',
-                    subtitle: 'Order a physical For Sale board',
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const BoardOrderScreen()),
                     ),
                   ),
                 ],
