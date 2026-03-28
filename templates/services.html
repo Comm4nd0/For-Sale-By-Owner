@@ -56,6 +56,15 @@
     .cta-banner h3 { color: #115E66; margin-bottom: 0.5rem; }
     .cta-banner p { color: #4A5C62; margin-bottom: 1rem; }
 
+    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
+    .status-active { background: #D4EDDA; color: #155724; }
+    .status-draft { background: #E2E2E2; color: #4A5C62; }
+    .status-pending_review { background: #FFF3CD; color: #856404; }
+    .status-suspended { background: #F8D7DA; color: #721C24; }
+    .status-withdrawn { background: #E2E2E2; color: #6c757d; }
+    .staff-banner { background: #FFF3CD; border: 1px solid #FFE69C; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.9rem; color: #664D03; display: flex; align-items: center; gap: 0.5rem; }
+    .staff-banner strong { color: #664D03; }
+
     @media (max-width: 768px) {
         .provider-grid { grid-template-columns: 1fr; }
         .search-bar { flex-direction: column; }
@@ -78,6 +87,10 @@
             <button class="btn btn-primary" onclick="applySearch()">Search</button>
         </div>
     </div>
+</div>
+
+<div id="staff-banner" class="staff-banner" style="display:none;">
+    <strong>Staff View:</strong> Showing all services including non-active. You can validate services from their detail page.
 </div>
 
 <div id="categories-strip" class="categories-strip"></div>
@@ -112,6 +125,22 @@
     let loadedCount = 0;
     let isLoading = false;
     let hasMore = true;
+    let isStaff = false;
+
+    // Check if user is staff
+    if (Auth.isLoggedIn()) {
+        Auth.authFetch('/api/profile/')
+            .then(r => r.ok ? r.json() : null)
+            .then(u => {
+                if (u && u.is_staff) {
+                    isStaff = true;
+                    document.getElementById('staff-banner').style.display = 'flex';
+                    // Reload to show all services
+                    resetAndLoad();
+                }
+            })
+            .catch(() => {});
+    }
 
     function renderStars(rating) {
         if (!rating) return '';
@@ -133,6 +162,8 @@
         const ratingHtml = p.average_rating
             ? `<div class="provider-rating">${renderStars(p.average_rating)} ${p.average_rating.toFixed(1)} <span class="count">(${p.review_count} review${p.review_count !== 1 ? 's' : ''})</span></div>`
             : `<div class="provider-rating"><span class="count">No reviews yet</span></div>`;
+        const statusLabels = { draft: 'Draft', pending_review: 'Pending Review', active: 'Active', suspended: 'Suspended', withdrawn: 'Withdrawn' };
+        const statusBadge = isStaff && p.status ? `<span class="status-badge status-${p.status}">${statusLabels[p.status] || p.status}</span>` : '';
 
         return `<a href="${url}" class="provider-card">
             <div class="provider-card-body">
@@ -142,6 +173,7 @@
                         <div class="provider-name">
                             ${escHtml(p.business_name)}
                             ${p.is_verified ? '<span class="verified">&#10003; Verified</span>' : ''}
+                            ${statusBadge}
                         </div>
                         <div class="provider-cats">${catTags}</div>
                     </div>

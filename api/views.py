@@ -1143,6 +1143,8 @@ class IsServiceProviderOwnerOrReadOnly(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
+        if request.user.is_staff:
+            return True
         return obj.owner == request.user
 
 
@@ -1167,6 +1169,8 @@ class ServiceProviderViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
+        if self.action == 'validate':
+            return [permissions.IsAdminUser()]
         return [permissions.IsAuthenticated(), IsServiceProviderOwnerOrReadOnly()]
 
     def get_object(self):
@@ -1187,6 +1191,8 @@ class ServiceProviderViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             if self.request.user.is_authenticated and self.request.query_params.get('mine') == 'true':
                 queryset = queryset.filter(owner=self.request.user)
+            elif self.request.user.is_authenticated and self.request.user.is_staff:
+                pass  # Staff see all services regardless of status
             else:
                 queryset = queryset.filter(status='active')
 
@@ -1242,6 +1248,26 @@ class ServiceProviderViewSet(viewsets.ModelViewSet):
                 f"Your {tier.name} plan does not include logo uploads. Upgrade to add your logo."
             )
         serializer.save()
+
+    @action(detail=True, methods=['post'], url_path='validate')
+    def validate(self, request, pk=None):
+        """Staff-only action to update a service provider's status and verification."""
+        provider = self.get_object()
+        new_status = request.data.get('status')
+        is_verified = request.data.get('is_verified')
+
+        if new_status is not None:
+            valid_statuses = [c[0] for c in ServiceProvider.STATUS_CHOICES]
+            if new_status not in valid_statuses:
+                raise ValidationError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+            provider.status = new_status
+
+        if is_verified is not None:
+            provider.is_verified = bool(is_verified)
+
+        provider.save()
+        serializer = self.get_serializer(provider)
+        return Response(serializer.data)
 
 
 class ServiceProviderReviewViewSet(viewsets.ModelViewSet):

@@ -32,11 +32,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'email', 'first_name', 'last_name', 'phone',
-            'dark_mode',
+            'dark_mode', 'is_staff',
             'notification_enquiries', 'notification_viewings',
             'notification_price_drops', 'notification_saved_searches',
         ]
-        read_only_fields = ['id', 'email']
+        read_only_fields = ['id', 'email', 'is_staff']
 
 
 class RelativeImageField(serializers.ImageField):
@@ -452,7 +452,7 @@ class ServiceProviderListSerializer(serializers.ModelSerializer):
             'logo', 'is_verified', 'pricing_info',
             'average_rating', 'review_count',
             'tier_name', 'tier_slug', 'is_featured',
-            'created_at',
+            'status', 'created_at',
         ]
 
     def get_average_rating(self, obj):
