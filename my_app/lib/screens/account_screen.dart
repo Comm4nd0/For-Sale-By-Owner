@@ -13,6 +13,7 @@ import 'two_factor_screen.dart';
 import 'conveyancing_screen.dart';
 import 'board_order_screen.dart';
 import 'solicitor_quotes_screen.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -83,7 +84,7 @@ class _AccountScreenState extends State<AccountScreen> {
                     color: AppTheme.forestMist,
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: const Icon(Icons.person_outline, size: 44, color: AppTheme.forestMid),
+                  child: PhosphorIcon(PhosphorIconsDuotone.user, size: 44, color: AppTheme.forestMid),
                 ),
                 const SizedBox(height: 24),
                 const Text(
@@ -180,7 +181,7 @@ class _AccountScreenState extends State<AccountScreen> {
               child: Column(
                 children: [
                   _buildMenuTile(
-                    icon: Icons.sell_outlined,
+                    icon: PhosphorIconsDuotone.tag,
                     title: 'My Listings',
                     subtitle: 'Manage your property listings',
                     onTap: () => Navigator.push(
@@ -191,7 +192,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   ),
                   const Divider(height: 1, indent: 56),
                   _buildMenuTile(
-                    icon: Icons.favorite_border,
+                    icon: PhosphorIconsDuotone.heart,
                     title: 'Saved Properties',
                     subtitle: 'Properties you have saved',
                     onTap: () => Navigator.push(
@@ -214,7 +215,7 @@ class _AccountScreenState extends State<AccountScreen> {
               child: Column(
                 children: [
                   _buildMenuTile(
-                    icon: Icons.person_search,
+                    icon: PhosphorIconsDuotone.userFocus,
                     title: 'Buyer Profile',
                     subtitle: 'Budget, mortgage, and preferences',
                     onTap: () => Navigator.push(
@@ -225,7 +226,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   ),
                   const Divider(height: 1, indent: 56),
                   _buildMenuTile(
-                    icon: Icons.verified_user,
+                    icon: PhosphorIconsDuotone.shieldCheck,
                     title: 'Buyer Verification',
                     subtitle: 'Upload proof of funds or mortgage AIP',
                     onTap: () => Navigator.push(
@@ -248,7 +249,7 @@ class _AccountScreenState extends State<AccountScreen> {
               child: Column(
                 children: [
                   _buildMenuTile(
-                    icon: Icons.gavel,
+                    icon: PhosphorIconsDuotone.gavel,
                     title: 'Conveyancing',
                     subtitle: 'Track your sale or purchase progress',
                     onTap: () => Navigator.push(
@@ -259,7 +260,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   ),
                   const Divider(height: 1, indent: 56),
                   _buildMenuTile(
-                    icon: Icons.request_quote,
+                    icon: PhosphorIconsDuotone.fileText,
                     title: 'Solicitor Quotes',
                     subtitle: 'Get and compare conveyancer quotes',
                     onTap: () => Navigator.push(
@@ -270,7 +271,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   ),
                   const Divider(height: 1, indent: 56),
                   _buildMenuTile(
-                    icon: Icons.signpost,
+                    icon: PhosphorIconsDuotone.signpost,
                     title: 'For Sale Boards',
                     subtitle: 'Order a physical For Sale board',
                     onTap: () => Navigator.push(
@@ -293,7 +294,7 @@ class _AccountScreenState extends State<AccountScreen> {
               child: Column(
                 children: [
                   _buildMenuTile(
-                    icon: Icons.person_outline,
+                    icon: PhosphorIconsDuotone.user,
                     title: 'Profile',
                     subtitle: 'Edit your name, phone and password',
                     onTap: () => Navigator.push(
@@ -304,7 +305,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   ),
                   const Divider(height: 1, indent: 56),
                   _buildMenuTile(
-                    icon: Icons.security,
+                    icon: PhosphorIconsDuotone.shieldCheck,
                     title: 'Two-Factor Authentication',
                     subtitle: 'Add extra security to your account',
                     onTap: () => Navigator.push(
@@ -324,7 +325,7 @@ class _AccountScreenState extends State<AccountScreen> {
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: () => authService.logout(),
-                icon: const Icon(Icons.logout),
+                icon: PhosphorIcon(PhosphorIconsDuotone.signOut),
                 label: const Text('Logout'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppTheme.error,
@@ -352,19 +353,19 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   Widget _buildMenuTile({
-    required IconData icon,
+    required PhosphorIconData icon,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: Icon(icon, color: AppTheme.forestMid),
+      leading: PhosphorIcon(icon, color: AppTheme.forestMid),
       title: Text(title),
       subtitle: Text(
         subtitle,
         style: const TextStyle(fontSize: 13, color: AppTheme.slate),
       ),
-      trailing: const Icon(Icons.chevron_right, color: AppTheme.stone),
+      trailing: PhosphorIcon(PhosphorIconsDuotone.caretRight, color: AppTheme.stone),
       onTap: onTap,
     );
   }

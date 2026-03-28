@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import '../constants/app_theme.dart';
 import '../services/api_service.dart';
@@ -61,7 +62,7 @@ class _EnquiryFormState extends State<EnquiryForm> {
   @override
   Widget build(BuildContext context) {
     return ExpansionTile(
-      leading: const Icon(Icons.chat_outlined, color: AppTheme.forestMid),
+      leading: PhosphorIcon(PhosphorIconsDuotone.chatCircle, color: AppTheme.forestMid),
       title: const Text(
         'Message Seller',
         style: TextStyle(fontWeight: FontWeight.w600),

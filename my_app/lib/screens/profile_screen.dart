@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import '../constants/app_theme.dart';
 import '../widgets/branded_app_bar.dart';
@@ -371,7 +372,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
+                      icon: PhosphorIcon(PhosphorIconsDuotone.trash, color: Colors.red),
                       iconSize: 20,
                       onPressed: () => _deleteSavedSearch(search),
                     ),

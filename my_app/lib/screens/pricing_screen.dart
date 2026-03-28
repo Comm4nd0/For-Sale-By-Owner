@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -437,8 +438,8 @@ class _PricingScreenState extends State<PricingScreen> with AutoRetryMixin {
                     padding: const EdgeInsets.symmetric(vertical: 3),
                     child: Row(
                       children: [
-                        Icon(
-                          has ? Icons.check : Icons.remove,
+                        PhosphorIcon(
+                          has ? PhosphorIconsDuotone.check : PhosphorIconsDuotone.minus,
                           size: 18,
                           color: has
                               ? const Color(0xFF19747E)

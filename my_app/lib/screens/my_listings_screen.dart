@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../constants/app_theme.dart';
@@ -111,7 +112,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> with AutoRetryMixin
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.edit),
+              leading: PhosphorIcon(PhosphorIconsDuotone.pencilSimple),
               title: const Text('Edit'),
               onTap: () {
                 Navigator.pop(context);
@@ -119,7 +120,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> with AutoRetryMixin
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
+              leading: PhosphorIcon(PhosphorIconsDuotone.trash, color: Colors.red),
               title:
                   const Text('Delete', style: TextStyle(color: Colors.red)),
               onTap: () {
@@ -180,7 +181,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> with AutoRetryMixin
         context: context,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: PhosphorIcon(PhosphorIconsDuotone.plus),
             onPressed: _navigateToCreate,
           ),
         ],
@@ -194,7 +195,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> with AutoRetryMixin
           FloatingActionButton(
             heroTag: 'createListing',
             onPressed: _navigateToCreate,
-            child: const Icon(Icons.add),
+            child: PhosphorIcon(PhosphorIconsDuotone.plus),
           ),
         ],
       ),
@@ -221,7 +222,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> with AutoRetryMixin
                   color: Colors.red[50],
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Icon(Icons.error_outline, size: 36, color: Colors.red[300]),
+                child: PhosphorIcon(PhosphorIconsDuotone.warningCircle, size: 36, color: Colors.red[300]),
               ),
               const SizedBox(height: 20),
               Text(_error!, style: Theme.of(context).textTheme.titleMedium),
@@ -233,7 +234,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> with AutoRetryMixin
               const SizedBox(height: 20),
               ElevatedButton.icon(
                 onPressed: _loadListings,
-                icon: const Icon(Icons.refresh, size: 18),
+                icon: PhosphorIcon(PhosphorIconsDuotone.arrowClockwise, size: 18),
                 label: const Text('Retry'),
               ),
             ],
@@ -256,7 +257,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> with AutoRetryMixin
                   color: AppTheme.goldSoft,
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: const Icon(Icons.sell_outlined, size: 44, color: AppTheme.goldEmber),
+                child: PhosphorIcon(PhosphorIconsDuotone.tag, size: 44, color: AppTheme.goldEmber),
               ),
               const SizedBox(height: 24),
               const Text(
@@ -276,7 +277,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> with AutoRetryMixin
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: _navigateToCreate,
-                icon: const Icon(Icons.add, size: 18),
+                icon: PhosphorIcon(PhosphorIconsDuotone.plus, size: 18),
                 label: const Text('Create Your First Listing'),
               ),
             ],
@@ -327,13 +328,13 @@ class _MyListingsScreenState extends State<MyListingsScreen> with AutoRetryMixin
                             ),
                             errorWidget: (context, url, error) => Container(
                               color: Colors.grey[200],
-                              child: const Icon(Icons.broken_image,
+                              child: PhosphorIcon(PhosphorIconsDuotone.imageSquare,
                                   color: Colors.grey),
                             ),
                           )
                         : Container(
                             color: Colors.grey[200],
-                            child: const Icon(Icons.home,
+                            child: PhosphorIcon(PhosphorIconsDuotone.house,
                                 size: 32, color: Colors.grey),
                           ),
                   ),
@@ -383,7 +384,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> with AutoRetryMixin
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              Icon(Icons.bed,
+                              PhosphorIcon(PhosphorIconsDuotone.bed,
                                   size: 14, color: Colors.grey[600]),
                               const SizedBox(width: 2),
                               Text('${property.bedrooms}',
@@ -391,7 +392,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> with AutoRetryMixin
                                       fontSize: 12,
                                       color: Colors.grey[600])),
                               const SizedBox(width: 8),
-                              Icon(Icons.bathtub_outlined,
+                              PhosphorIcon(PhosphorIconsDuotone.bathtub,
                                   size: 14, color: Colors.grey[600]),
                               const SizedBox(width: 2),
                               Text('${property.bathrooms}',
@@ -400,7 +401,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> with AutoRetryMixin
                                       color: Colors.grey[600])),
                               if (property.viewCount != null) ...[
                                 const SizedBox(width: 8),
-                                Icon(Icons.visibility,
+                                PhosphorIcon(PhosphorIconsDuotone.eye,
                                     size: 14, color: Colors.grey[600]),
                                 const SizedBox(width: 2),
                                 Text('${property.viewCount}',

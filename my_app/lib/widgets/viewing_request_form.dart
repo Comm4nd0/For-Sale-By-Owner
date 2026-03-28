@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../constants/app_theme.dart';
@@ -157,7 +158,7 @@ class _ViewingRequestFormState extends State<ViewingRequestForm> {
       ),
       decoration: InputDecoration(
         labelText: label,
-        suffixIcon: const Icon(Icons.calendar_today, size: 20),
+        suffixIcon: PhosphorIcon(PhosphorIconsDuotone.calendar, size: 20),
       ),
       onTap: onTap,
     );
@@ -175,7 +176,7 @@ class _ViewingRequestFormState extends State<ViewingRequestForm> {
       ),
       decoration: InputDecoration(
         labelText: label,
-        suffixIcon: const Icon(Icons.access_time, size: 20),
+        suffixIcon: PhosphorIcon(PhosphorIconsDuotone.clock, size: 20),
       ),
       onTap: onTap,
     );
@@ -184,7 +185,7 @@ class _ViewingRequestFormState extends State<ViewingRequestForm> {
   @override
   Widget build(BuildContext context) {
     return ExpansionTile(
-      leading: const Icon(Icons.calendar_today, color: AppTheme.forestMid),
+      leading: PhosphorIcon(PhosphorIconsDuotone.calendar, color: AppTheme.forestMid),
       title: const Text(
         'Request a Viewing',
         style: TextStyle(fontWeight: FontWeight.w600),

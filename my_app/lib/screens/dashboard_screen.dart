@@ -16,6 +16,7 @@ import 'edit_offer_screen.dart';
 import 'chat_screen.dart';
 import '../widgets/scroll_to_top_button.dart';
 import '../utils/auto_retry.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -165,7 +166,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     color: AppTheme.forestMist,
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: const Icon(Icons.login, size: 44, color: AppTheme.forestMid),
+                  child: PhosphorIcon(PhosphorIconsDuotone.signIn, size: 44, color: AppTheme.forestMid),
                 ),
                 const SizedBox(height: 24),
                 const Text(
@@ -275,17 +276,17 @@ class _DashboardScreenState extends State<DashboardScreen>
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
       child: Row(
         children: [
-          _buildStatChip(Icons.home, 'Listings', stats.activeListings, null),
-          _buildStatChip(Icons.visibility, 'Views', stats.totalViews, null),
+          _buildStatChip(PhosphorIconsDuotone.house, 'Listings', stats.activeListings, null),
+          _buildStatChip(PhosphorIconsDuotone.eye, 'Views', stats.totalViews, null),
           _buildStatChip(
-            Icons.chat,
+            PhosphorIconsDuotone.chat,
             'Messages',
             stats.totalMessages,
             stats.unreadMessages > 0 ? AppTheme.goldEmber : null,
           ),
-          _buildStatChip(Icons.favorite, 'Saved', stats.totalSaves, null),
+          _buildStatChip(PhosphorIconsDuotone.heart, 'Saved', stats.totalSaves, null),
           _buildStatChip(
-            Icons.calendar_today,
+            PhosphorIconsDuotone.calendar,
             'Viewings',
             stats.pendingViewings,
             null,
@@ -296,7 +297,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildStatChip(
-      IconData icon, String label, int count, Color? highlight) {
+      PhosphorIconData icon, String label, int count, Color? highlight) {
     return Expanded(
       child: Semantics(
         label: '$label: $count',
@@ -311,7 +312,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 18, color: highlight ?? AppTheme.forestMid),
+              PhosphorIcon(icon, size: 18, color: highlight ?? AppTheme.forestMid),
               const SizedBox(height: 2),
               Text(
                 '$count',
@@ -359,14 +360,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                         color: Colors.red[50],
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Icon(Icons.error_outline, size: 32, color: Colors.red[300]),
+                      child: PhosphorIcon(PhosphorIconsDuotone.warningCircle, size: 32, color: Colors.red[300]),
                     ),
                     const SizedBox(height: 16),
                     const Text('Failed to load viewings'),
                     const SizedBox(height: 12),
                     ElevatedButton.icon(
                       onPressed: () => setState(() => _loadViewings()),
-                      icon: const Icon(Icons.refresh, size: 18),
+                      icon: PhosphorIcon(PhosphorIconsDuotone.arrowClockwise, size: 18),
                       label: const Text('Retry'),
                     ),
                   ],
@@ -391,7 +392,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         color: AppTheme.forestMist,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Icon(Icons.calendar_today, size: 36, color: AppTheme.forestMid),
+                      child: PhosphorIcon(PhosphorIconsDuotone.calendar, size: 36, color: AppTheme.forestMid),
                     ),
                     const SizedBox(height: 20),
                     const Text(
@@ -484,14 +485,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                         color: Colors.red[50],
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Icon(Icons.error_outline, size: 32, color: Colors.red[300]),
+                      child: PhosphorIcon(PhosphorIconsDuotone.warningCircle, size: 32, color: Colors.red[300]),
                     ),
                     const SizedBox(height: 16),
                     const Text('Failed to load offers'),
                     const SizedBox(height: 12),
                     ElevatedButton.icon(
                       onPressed: () => setState(() => _loadOffers()),
-                      icon: const Icon(Icons.refresh, size: 18),
+                      icon: PhosphorIcon(PhosphorIconsDuotone.arrowClockwise, size: 18),
                       label: const Text('Retry'),
                     ),
                   ],
@@ -516,7 +517,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         color: AppTheme.forestMist,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Icon(Icons.gavel, size: 36, color: AppTheme.forestMid),
+                      child: PhosphorIcon(PhosphorIconsDuotone.gavel, size: 36, color: AppTheme.forestMid),
                     ),
                     const SizedBox(height: 20),
                     const Text(
@@ -714,14 +715,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                         color: Colors.red[50],
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Icon(Icons.error_outline, size: 32, color: Colors.red[300]),
+                      child: PhosphorIcon(PhosphorIconsDuotone.warningCircle, size: 32, color: Colors.red[300]),
                     ),
                     const SizedBox(height: 16),
                     const Text('Failed to load messages'),
                     const SizedBox(height: 12),
                     ElevatedButton.icon(
                       onPressed: () => setState(() => _loadMessages()),
-                      icon: const Icon(Icons.refresh, size: 18),
+                      icon: PhosphorIcon(PhosphorIconsDuotone.arrowClockwise, size: 18),
                       label: const Text('Retry'),
                     ),
                   ],
@@ -746,7 +747,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         color: AppTheme.forestMist,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Icon(Icons.chat_bubble_outline, size: 36, color: AppTheme.forestMid),
+                      child: PhosphorIcon(PhosphorIconsDuotone.chat, size: 36, color: AppTheme.forestMid),
                     ),
                     const SizedBox(height: 20),
                     const Text(

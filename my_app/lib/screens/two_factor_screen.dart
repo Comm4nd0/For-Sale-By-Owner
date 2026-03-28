@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
@@ -185,7 +186,7 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
                 message: _error!,
                 color: Colors.red.shade700,
                 backgroundColor: Colors.red.shade50,
-                icon: Icons.error_outline,
+                icon: PhosphorIconsDuotone.warningCircle,
               ),
             ],
             if (_successMessage != null) ...[
@@ -194,7 +195,7 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
                 message: _successMessage!,
                 color: Colors.green.shade700,
                 backgroundColor: Colors.green.shade50,
-                icon: Icons.check_circle_outline,
+                icon: PhosphorIconsDuotone.checkCircle,
               ),
             ],
             if (!_is2FAEnabled && !_setupComplete) ...[
@@ -234,8 +235,8 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
       ),
       child: Row(
         children: [
-          Icon(
-            _is2FAEnabled ? Icons.verified_user : Icons.shield_outlined,
+          PhosphorIcon(
+            _is2FAEnabled ? PhosphorIconsDuotone.shieldCheck : PhosphorIconsDuotone.shield,
             color: _is2FAEnabled ? Colors.green.shade700 : Colors.orange.shade700,
             size: 28,
           ),
@@ -276,7 +277,7 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
     required String message,
     required Color color,
     required Color backgroundColor,
-    required IconData icon,
+    required PhosphorDuotoneIconData icon,
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -287,7 +288,7 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 20),
+          PhosphorIcon(icon, color: color, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -314,7 +315,7 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
                   color: Colors.white,
                 ),
               )
-            : const Icon(Icons.lock_outline),
+            : PhosphorIcon(PhosphorIconsDuotone.lock),
         label: Text(_loading ? 'Setting up...' : 'Set Up 2FA'),
         style: ElevatedButton.styleFrom(
           backgroundColor: _primary,
@@ -342,7 +343,7 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
         children: [
           const Row(
             children: [
-              Icon(Icons.phonelink_setup, color: _accent, size: 22),
+              PhosphorIcon(PhosphorIconsDuotone.deviceMobile, color: _accent, size: 22),
               SizedBox(width: 8),
               Text(
                 'Authenticator Setup',
@@ -428,7 +429,7 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
           const SizedBox(width: 8),
           IconButton(
             onPressed: () => _copyToClipboard(value, label),
-            icon: const Icon(Icons.copy, size: 20),
+            icon: PhosphorIcon(PhosphorIconsDuotone.copy, size: 20),
             color: _accent,
             tooltip: 'Copy $label',
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -547,7 +548,7 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.warning_amber_rounded,
+              PhosphorIcon(PhosphorIconsDuotone.warning,
                   color: Colors.red.shade700, size: 22),
               const SizedBox(width: 8),
               Text(

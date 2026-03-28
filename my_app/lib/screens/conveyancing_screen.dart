@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../models/conveyancing_case.dart';
@@ -132,19 +133,17 @@ class _ConveyancingScreenState extends State<ConveyancingScreen> {
     }
   }
 
-  Icon _statusIcon(String status) {
+  Widget _statusIcon(String status) {
     switch (status) {
       case 'completed':
-        return const Icon(Icons.check_circle, color: Colors.green, size: 22);
+        return PhosphorIcon(PhosphorIconsDuotone.checkCircle, color: Colors.green, size: 22);
       case 'in_progress':
-        return const Icon(Icons.radio_button_checked,
-            color: Colors.amber, size: 22);
+        return PhosphorIcon(PhosphorIconsDuotone.radioButton, color: Colors.amber, size: 22);
       case 'blocked':
-        return const Icon(Icons.cancel, color: Colors.red, size: 22);
+        return PhosphorIcon(PhosphorIconsDuotone.xCircle, color: Colors.red, size: 22);
       case 'pending':
       default:
-        return const Icon(Icons.radio_button_unchecked,
-            color: Colors.grey, size: 22);
+        return const Icon(Icons.circle, color: Colors.grey, size: 22);
     }
   }
 
@@ -181,7 +180,7 @@ class _ConveyancingScreenState extends State<ConveyancingScreen> {
         context: context,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: PhosphorIcon(PhosphorIconsDuotone.arrowClockwise),
             tooltip: 'Refresh',
             onPressed: _loadCases,
           ),
@@ -205,7 +204,7 @@ class _ConveyancingScreenState extends State<ConveyancingScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 56, color: Colors.red),
+              PhosphorIcon(PhosphorIconsDuotone.warningCircle, size: 56, color: Colors.red),
               const SizedBox(height: 16),
               Text(
                 'Failed to load cases',
@@ -223,7 +222,7 @@ class _ConveyancingScreenState extends State<ConveyancingScreen> {
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: _loadCases,
-                icon: const Icon(Icons.refresh),
+                icon: PhosphorIcon(PhosphorIconsDuotone.arrowClockwise),
                 label: const Text('Retry'),
                 style: ElevatedButton.styleFrom(backgroundColor: _primary),
               ),
@@ -240,7 +239,7 @@ class _ConveyancingScreenState extends State<ConveyancingScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.gavel_outlined, size: 64, color: Colors.grey[400]),
+              PhosphorIcon(PhosphorIconsDuotone.gavel, size: 64, color: Colors.grey[400]),
               const SizedBox(height: 16),
               Text(
                 'No Conveyancing Cases',
@@ -335,7 +334,7 @@ class _ConveyancingScreenState extends State<ConveyancingScreen> {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    const Icon(Icons.person_outline,
+                    PhosphorIcon(PhosphorIconsDuotone.user,
                         color: Colors.white70, size: 16),
                     const SizedBox(width: 4),
                     Text(
@@ -344,7 +343,7 @@ class _ConveyancingScreenState extends State<ConveyancingScreen> {
                           const TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                     const SizedBox(width: 16),
-                    const Icon(Icons.person, color: Colors.white70, size: 16),
+                    PhosphorIcon(PhosphorIconsDuotone.user, color: Colors.white70, size: 16),
                     const SizedBox(width: 4),
                     Flexible(
                       child: Text(
@@ -385,7 +384,7 @@ class _ConveyancingScreenState extends State<ConveyancingScreen> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(Icons.calendar_today,
+                    PhosphorIcon(PhosphorIconsDuotone.calendar,
                         color: Colors.white70, size: 14),
                     const SizedBox(width: 6),
                     Text(
@@ -412,10 +411,10 @@ class _ConveyancingScreenState extends State<ConveyancingScreen> {
                             style: const TextStyle(
                                 color: Colors.white, fontSize: 13),
                           ),
-                          Icon(
+                          PhosphorIcon(
                             isExpanded
-                                ? Icons.keyboard_arrow_up
-                                : Icons.keyboard_arrow_down,
+                                ? PhosphorIconsDuotone.caretUp
+                                : PhosphorIconsDuotone.caretDown,
                             color: Colors.white,
                           ),
                         ],
@@ -514,7 +513,7 @@ class _ConveyancingScreenState extends State<ConveyancingScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.note_outlined, size: 18, color: Colors.amber[800]),
+          PhosphorIcon(PhosphorIconsDuotone.noteBlank, size: 18, color: Colors.amber[800]),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -637,7 +636,7 @@ class _ConveyancingScreenState extends State<ConveyancingScreen> {
       buttons.add(
         _buildActionButton(
           label: 'Start',
-          icon: Icons.play_arrow,
+          icon: PhosphorIconsDuotone.play,
           color: _accent,
           onPressed: () =>
               _updateStepStatus(caseItem, step, 'in_progress'),
@@ -649,7 +648,7 @@ class _ConveyancingScreenState extends State<ConveyancingScreen> {
       buttons.add(
         _buildActionButton(
           label: 'Complete',
-          icon: Icons.check,
+          icon: PhosphorIconsDuotone.check,
           color: Colors.green,
           onPressed: () =>
               _updateStepStatus(caseItem, step, 'completed'),
@@ -661,7 +660,7 @@ class _ConveyancingScreenState extends State<ConveyancingScreen> {
       buttons.add(
         _buildActionButton(
           label: 'Blocked',
-          icon: Icons.block,
+          icon: PhosphorIconsDuotone.prohibit,
           color: Colors.red,
           onPressed: () =>
               _updateStepStatus(caseItem, step, 'blocked'),
@@ -673,7 +672,7 @@ class _ConveyancingScreenState extends State<ConveyancingScreen> {
       buttons.add(
         _buildActionButton(
           label: 'Resume',
-          icon: Icons.refresh,
+          icon: PhosphorIconsDuotone.arrowClockwise,
           color: _accent,
           onPressed: () =>
               _updateStepStatus(caseItem, step, 'in_progress'),
@@ -694,7 +693,7 @@ class _ConveyancingScreenState extends State<ConveyancingScreen> {
 
   Widget _buildActionButton({
     required String label,
-    required IconData icon,
+    required PhosphorDuotoneIconData icon,
     required Color color,
     required VoidCallback onPressed,
   }) {
@@ -702,7 +701,7 @@ class _ConveyancingScreenState extends State<ConveyancingScreen> {
       height: 30,
       child: OutlinedButton.icon(
         onPressed: onPressed,
-        icon: Icon(icon, size: 14),
+        icon: PhosphorIcon(icon, size: 14),
         label: Text(label, style: const TextStyle(fontSize: 12)),
         style: OutlinedButton.styleFrom(
           foregroundColor: color,

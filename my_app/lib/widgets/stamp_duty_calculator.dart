@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../constants/app_theme.dart';
 
 enum BuyerType { standard, firstTime, additional }
@@ -68,7 +69,7 @@ class _StampDutyCalculatorState extends State<StampDutyCalculator> {
   @override
   Widget build(BuildContext context) {
     return ExpansionTile(
-      leading: const Icon(Icons.receipt_long, color: AppTheme.forestMid),
+      leading: PhosphorIcon(PhosphorIconsDuotone.receipt, color: AppTheme.forestMid),
       title: const Text(
         'Stamp Duty Calculator',
         style: TextStyle(fontWeight: FontWeight.w600),

@@ -31,6 +31,7 @@ import 'open_house_screen.dart';
 import 'neighbourhood_review_screen.dart';
 import '../models/offer.dart';
 import '../utils/auto_retry.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class PropertyDetailScreen extends StatefulWidget {
   final int propertyId;
@@ -140,7 +141,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline,
+                    PhosphorIcon(PhosphorIconsDuotone.warningCircle,
                         size: 48, color: Colors.grey),
                     const SizedBox(height: 16),
                     const Text('Failed to load property'),
@@ -168,15 +169,15 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                 actions: [
                   if (authService.isAuthenticated) ...[
                     IconButton(
-                      icon: Icon(
-                        _isSaved ? Icons.favorite : Icons.favorite_border,
+                      icon: PhosphorIcon(
+                        PhosphorIconsDuotone.heart,
                         color: _isSaved ? Colors.red : Colors.white,
                       ),
                       onPressed: _toggleSave,
                     ),
                   ],
                   IconButton(
-                    icon: const Icon(Icons.share),
+                    icon: PhosphorIcon(PhosphorIconsDuotone.shareFat),
                     onPressed: () => _shareProperty(property),
                   ),
                 ],
@@ -223,7 +224,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                                 label: Text('Verified',
                                     style: TextStyle(fontSize: 11)),
                                 avatar:
-                                    Icon(Icons.verified, size: 16, color: Colors.blue),
+                                    PhosphorIcon(PhosphorIconsDuotone.sealCheck, size: 16, color: Colors.blue),
                                 visualDensity: VisualDensity.compact,
                               ),
                             ),
@@ -323,7 +324,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                                           imageUrl: ApiConstants.fullUrl(fp.fileUrl),
                                           fit: BoxFit.contain,
                                           errorWidget: (_, __, ___) =>
-                                              const Icon(Icons.description, size: 40),
+                                              PhosphorIcon(PhosphorIconsDuotone.fileText, size: 40),
                                         ),
                                       ),
                                       Padding(
@@ -370,10 +371,10 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                             child: Row(
                               children: [
                                 if (isUp)
-                                  const Icon(Icons.arrow_upward,
+                                  PhosphorIcon(PhosphorIconsDuotone.arrowUp,
                                       size: 16, color: Colors.red)
                                 else if (isDown)
-                                  const Icon(Icons.arrow_downward,
+                                  PhosphorIcon(PhosphorIconsDuotone.arrowDown,
                                       size: 16, color: Colors.green)
                                 else
                                   const SizedBox(width: 16),
@@ -413,7 +414,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                                     setState(() => _loadProperty());
                                   }
                                 },
-                                icon: const Icon(Icons.edit),
+                                icon: PhosphorIcon(PhosphorIconsDuotone.pencilSimple),
                                 label: const Text('Edit'),
                               ),
                             ),
@@ -430,7 +431,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                                   );
                                   setState(() => _loadProperty());
                                 },
-                                icon: const Icon(Icons.photo_library),
+                                icon: PhosphorIcon(PhosphorIconsDuotone.images),
                                 label: Text(
                                     'Photos (${property.images.length})'),
                               ),
@@ -451,7 +452,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                                     ),
                                   ),
                                 ),
-                                icon: const Icon(Icons.calendar_month),
+                                icon: PhosphorIcon(PhosphorIconsDuotone.calendar),
                                 label: const Text('Viewing Slots'),
                               ),
                             ),
@@ -465,7 +466,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                                         const OffersScreen(received: true),
                                   ),
                                 ),
-                                icon: const Icon(Icons.local_offer_outlined),
+                                icon: PhosphorIcon(PhosphorIconsDuotone.tag),
                                 label: const Text('Offers'),
                               ),
                             ),
@@ -484,7 +485,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                                     ),
                                   ),
                                 ),
-                                icon: const Icon(Icons.event),
+                                icon: PhosphorIcon(PhosphorIconsDuotone.calendarCheck),
                                 label: const Text('Open House'),
                               ),
                             ),
@@ -492,7 +493,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                             Expanded(
                               child: OutlinedButton.icon(
                                 onPressed: () => _showListingQuality(property.id),
-                                icon: const Icon(Icons.star_rate),
+                                icon: PhosphorIcon(PhosphorIconsDuotone.star),
                                 label: const Text('Quality Score'),
                               ),
                             ),
@@ -534,17 +535,17 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                                 ),
                                 const SizedBox(height: 12),
                                 _buildLoginFeatureRow(
-                                  Icons.chat_bubble_outline,
+                                  PhosphorIconsDuotone.chat,
                                   'Message the seller',
                                 ),
                                 const SizedBox(height: 8),
                                 _buildLoginFeatureRow(
-                                  Icons.calendar_today_outlined,
+                                  PhosphorIconsDuotone.calendar,
                                   'Book a viewing',
                                 ),
                                 const SizedBox(height: 8),
                                 _buildLoginFeatureRow(
-                                  Icons.local_offer_outlined,
+                                  PhosphorIconsDuotone.tag,
                                   'Make an offer',
                                 ),
                                 const SizedBox(height: 16),
@@ -554,7 +555,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                                     MaterialPageRoute(
                                         builder: (_) => const LoginScreen()),
                                   ),
-                                  icon: const Icon(Icons.login),
+                                  icon: PhosphorIcon(PhosphorIconsDuotone.signIn),
                                   label: const Text('Log in'),
                                   style: ElevatedButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(
@@ -569,7 +570,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                                         builder: (_) =>
                                             const RegisterScreen()),
                                   ),
-                                  icon: const Icon(Icons.person_add_outlined),
+                                  icon: PhosphorIcon(PhosphorIconsDuotone.userPlus),
                                   label: const Text('Create a free account'),
                                   style: OutlinedButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(
@@ -593,10 +594,10 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                         const SizedBox(height: 16),
                         Card(
                           child: ListTile(
-                            leading: const Icon(Icons.location_city, color: AppTheme.forestMid),
+                            leading: PhosphorIcon(PhosphorIconsDuotone.buildings, color: AppTheme.forestMid),
                             title: const Text('Neighbourhood Reviews'),
                             subtitle: Text('See what residents say about ${property.postcode.split(' ').first}'),
-                            trailing: const Icon(Icons.chevron_right),
+                            trailing: PhosphorIcon(PhosphorIconsDuotone.caretRight),
                             onTap: () => Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -686,10 +687,10 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
     }
   }
 
-  Widget _buildLoginFeatureRow(IconData icon, String text) {
+  Widget _buildLoginFeatureRow(PhosphorIconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: AppTheme.forestMid),
+        PhosphorIcon(icon, size: 20, color: AppTheme.forestMid),
         const SizedBox(width: 12),
         Text(text, style: const TextStyle(fontSize: 14)),
       ],
@@ -761,7 +762,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.reply, size: 16, color: Colors.grey[600]),
+                          PhosphorIcon(PhosphorIconsDuotone.arrowBendUpLeft, size: 16, color: Colors.grey[600]),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
@@ -790,7 +791,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                           );
                           if (result == true) _loadExistingOffer();
                         },
-                        icon: const Icon(Icons.edit, size: 16),
+                        icon: PhosphorIcon(PhosphorIconsDuotone.pencilSimple, size: 16),
                         label: const Text('Edit Offer'),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -801,7 +802,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () => _withdrawExistingOffer(),
-                        icon: const Icon(Icons.undo, size: 16),
+                        icon: PhosphorIcon(PhosphorIconsDuotone.arrowCounterClockwise, size: 16),
                         label: const Text('Withdraw'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.red,
@@ -815,7 +816,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
               ] else if (_existingOffer!.status == 'under_review' || _existingOffer!.status == 'countered') ...[
                 OutlinedButton.icon(
                   onPressed: () => _withdrawExistingOffer(),
-                  icon: const Icon(Icons.undo, size: 16),
+                  icon: PhosphorIcon(PhosphorIconsDuotone.arrowCounterClockwise, size: 16),
                   label: const Text('Withdraw Offer'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.red,
@@ -838,7 +839,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                     );
                     if (result == true) _loadExistingOffer();
                   },
-                  icon: const Icon(Icons.local_offer),
+                  icon: PhosphorIcon(PhosphorIconsDuotone.tag),
                   label: const Text('Make New Offer'),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -861,7 +862,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                   );
                   if (result == true) _loadExistingOffer();
                 },
-                icon: const Icon(Icons.local_offer),
+                icon: PhosphorIcon(PhosphorIconsDuotone.tag),
                 label: const Text('Make an Offer'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
@@ -871,7 +872,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
             const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: () => _startChat(property),
-              icon: const Icon(Icons.chat_bubble_outline),
+              icon: PhosphorIcon(PhosphorIconsDuotone.chat),
               label: const Text('Message Seller'),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -930,7 +931,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
         builder: (ctx) => AlertDialog(
           title: Row(
             children: [
-              const Icon(Icons.star_rate, color: Color(0xFF115E66)),
+              PhosphorIcon(PhosphorIconsDuotone.star, color: const Color(0xFF115E66)),
               const SizedBox(width: 8),
               Text('Quality Score: $score/100'),
             ],
@@ -955,7 +956,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.lightbulb_outline, size: 16, color: Colors.orange),
+                      PhosphorIcon(PhosphorIconsDuotone.lightbulb, size: 16, color: Colors.orange),
                       const SizedBox(width: 8),
                       Expanded(child: Text(t, style: const TextStyle(fontSize: 13))),
                     ],
@@ -997,7 +998,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                   final event = e is Map<String, dynamic> ? e : {};
                   return ListTile(
                     dense: true,
-                    leading: const Icon(Icons.event, color: AppTheme.forestMid),
+                    leading: PhosphorIcon(PhosphorIconsDuotone.calendarCheck, color: AppTheme.forestMid),
                     title: Text(event['title'] ?? 'Open House'),
                     subtitle: Text('${event['date'] ?? ''} ${event['start_time'] ?? ''} - ${event['end_time'] ?? ''}'),
                     trailing: (event['user_has_rsvpd'] == true)
@@ -1069,7 +1070,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Row(
                           children: [
-                            const Icon(Icons.calendar_today,
+                            PhosphorIcon(PhosphorIconsDuotone.calendar,
                                 size: 16, color: AppTheme.forestMid),
                             const SizedBox(width: 8),
                             Expanded(
@@ -1140,8 +1141,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
     if (property.images.isEmpty) {
       return Container(
         color: Colors.grey[200],
-        child: const Center(
-            child: Icon(Icons.home, size: 64, color: Colors.grey)),
+        child: Center(
+            child: PhosphorIcon(PhosphorIconsDuotone.house, size: 64, color: Colors.grey)),
       );
     }
 
@@ -1165,7 +1166,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                 ),
                 errorWidget: (context, url, error) => Container(
                   color: Colors.grey[200],
-                  child: const Icon(Icons.broken_image,
+                  child: PhosphorIcon(PhosphorIconsDuotone.imageSquare,
                       size: 48, color: Colors.grey),
                 ),
               ),
@@ -1265,7 +1266,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                 top: 40,
                 right: 16,
                 child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                  icon: PhosphorIcon(PhosphorIconsDuotone.x, color: Colors.white, size: 30),
                   onPressed: () => Navigator.pop(context),
                 ),
               ),
@@ -1289,7 +1290,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                 automaticallyImplyLeading: false,
                 actions: [
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: PhosphorIcon(PhosphorIconsDuotone.x),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -1315,7 +1316,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.location_on, size: 20, color: Colors.grey[600]),
+        PhosphorIcon(PhosphorIconsDuotone.mapPin, size: 20, color: Colors.grey[600]),
         const SizedBox(width: 8),
         Expanded(
           child: Column(
@@ -1344,22 +1345,22 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        _detailChip(Icons.bed, '${property.bedrooms}', 'Beds'),
+        _detailChip(PhosphorIconsDuotone.bed, '${property.bedrooms}', 'Beds'),
         _detailChip(
-            Icons.bathtub_outlined, '${property.bathrooms}', 'Baths'),
-        _detailChip(Icons.weekend_outlined, '${property.receptionRooms}',
+            PhosphorIconsDuotone.bathtub, '${property.bathrooms}', 'Baths'),
+        _detailChip(PhosphorIconsDuotone.armchair, '${property.receptionRooms}',
             'Recep'),
         if (property.squareFeet != null)
           _detailChip(
-              Icons.square_foot, '${property.squareFeet}', 'sq ft'),
+              PhosphorIconsDuotone.ruler, '${property.squareFeet}', 'sq ft'),
       ],
     );
   }
 
-  Widget _detailChip(IconData icon, String value, String label) {
+  Widget _detailChip(PhosphorIconData icon, String value, String label) {
     return Column(
       children: [
-        Icon(icon, size: 24, color: Colors.grey[700]),
+        PhosphorIcon(icon, size: 24, color: Colors.grey[700]),
         const SizedBox(height: 4),
         Text(value,
             style:
@@ -1398,7 +1399,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                     fit: BoxFit.cover,
                     errorWidget: (_, __, ___) => Container(
                       color: Colors.grey[200],
-                      child: const Icon(Icons.home, color: Colors.grey),
+                      child: PhosphorIcon(PhosphorIconsDuotone.house, color: Colors.grey),
                     ),
                   ),
                 )
@@ -1407,7 +1408,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> with AutoRe
                   aspectRatio: 16 / 9,
                   child: Container(
                     color: Colors.grey[200],
-                    child: const Icon(Icons.home, color: Colors.grey),
+                    child: PhosphorIcon(PhosphorIconsDuotone.house, color: Colors.grey),
                   ),
                 ),
               Padding(

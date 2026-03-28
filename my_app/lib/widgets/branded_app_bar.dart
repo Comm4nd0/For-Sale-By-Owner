@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../constants/app_theme.dart';
 
 /// Compact logo widget for use in AppBars across the app.
@@ -19,7 +20,7 @@ class AppBarLogo extends StatelessWidget {
             ),
             borderRadius: BorderRadius.circular(7),
           ),
-          child: const Icon(Icons.home, color: Colors.white, size: 18),
+          child: const PhosphorIcon(PhosphorIconsDuotone.house, color: Colors.white, size: 18),
         ),
         const SizedBox(width: 10),
         Column(
@@ -79,7 +80,7 @@ class BrandedAppBar {
     if (showHomeButton) {
       allActions.add(
         IconButton(
-          icon: const Icon(Icons.home_outlined),
+          icon: PhosphorIcon(PhosphorIconsDuotone.house),
           tooltip: 'Home',
           onPressed: () {
             Navigator.of(context).popUntil((route) => route.isFirst);

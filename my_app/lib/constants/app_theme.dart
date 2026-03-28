@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // Primary - Cyan palette
@@ -36,6 +37,7 @@ class AppTheme {
 
   static final ThemeData lightTheme = ThemeData(
     useMaterial3: true,
+    textTheme: GoogleFonts.nunitoTextTheme(),
     colorScheme: ColorScheme.fromSeed(
       seedColor: forestDeep,
       primary: forestDeep,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
@@ -74,14 +75,14 @@ class _BoardOrderScreenState extends State<BoardOrderScreen> {
     }
   }
 
-  IconData _boardTypeIcon(String type) {
+  PhosphorDuotoneIconData _boardTypeIcon(String type) {
     switch (type) {
       case 'premium':
-        return Icons.star;
+        return PhosphorIconsDuotone.star;
       case 'solar_lit':
-        return Icons.wb_sunny;
+        return PhosphorIconsDuotone.sun;
       default:
-        return Icons.signpost;
+        return PhosphorIconsDuotone.signpost;
     }
   }
 
@@ -104,7 +105,7 @@ class _BoardOrderScreenState extends State<BoardOrderScreen> {
         context: context,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: PhosphorIcon(PhosphorIconsDuotone.arrowClockwise),
             onPressed: _loadOrders,
           ),
         ],
@@ -112,7 +113,7 @@ class _BoardOrderScreenState extends State<BoardOrderScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openNewOrderForm,
         backgroundColor: _brandColor,
-        icon: const Icon(Icons.add, color: Colors.white),
+        icon: PhosphorIcon(PhosphorIconsDuotone.plus, color: Colors.white),
         label: const Text(
           'Order Board',
           style: TextStyle(color: Colors.white),
@@ -132,7 +133,7 @@ class _BoardOrderScreenState extends State<BoardOrderScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            PhosphorIcon(PhosphorIconsDuotone.warningCircle, size: 48, color: Colors.red),
             const SizedBox(height: 12),
             Text('Failed to load orders', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 4),
@@ -149,7 +150,7 @@ class _BoardOrderScreenState extends State<BoardOrderScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.signpost_outlined, size: 64, color: Colors.grey.shade400),
+            PhosphorIcon(PhosphorIconsDuotone.signpost, size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 16),
             Text(
               'No board orders yet',
@@ -163,7 +164,7 @@ class _BoardOrderScreenState extends State<BoardOrderScreen> {
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _openNewOrderForm,
-              icon: const Icon(Icons.add),
+              icon: PhosphorIcon(PhosphorIconsDuotone.plus),
               label: const Text('Order Board'),
               style: ElevatedButton.styleFrom(backgroundColor: _brandColor),
             ),
@@ -196,7 +197,7 @@ class _BoardOrderScreenState extends State<BoardOrderScreen> {
           children: [
             Row(
               children: [
-                Icon(_boardTypeIcon(order.boardType), color: _brandColor, size: 20),
+                PhosphorIcon(_boardTypeIcon(order.boardType), color: _brandColor, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -232,7 +233,7 @@ class _BoardOrderScreenState extends State<BoardOrderScreen> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Icon(Icons.home_outlined, size: 16, color: Colors.grey),
+                  PhosphorIcon(PhosphorIconsDuotone.house, size: 16, color: Colors.grey),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -246,7 +247,7 @@ class _BoardOrderScreenState extends State<BoardOrderScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
+                PhosphorIcon(PhosphorIconsDuotone.mapPin, size: 16, color: Colors.grey),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -272,7 +273,7 @@ class _BoardOrderScreenState extends State<BoardOrderScreen> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.local_shipping_outlined, size: 16, color: Colors.grey),
+                      PhosphorIcon(PhosphorIconsDuotone.truck, size: 16, color: Colors.grey),
                       const SizedBox(width: 4),
                       Text(
                         order.trackingNumber,
@@ -456,14 +457,14 @@ class _NewBoardOrderFormState extends State<_NewBoardOrderForm> {
     }
   }
 
-  IconData _boardTypeIcon(String type) {
+  PhosphorDuotoneIconData _boardTypeIcon(String type) {
     switch (type) {
       case 'premium':
-        return Icons.star;
+        return PhosphorIconsDuotone.star;
       case 'solar_lit':
-        return Icons.wb_sunny;
+        return PhosphorIconsDuotone.sun;
       default:
-        return Icons.signpost;
+        return PhosphorIconsDuotone.signpost;
     }
   }
 
@@ -604,7 +605,7 @@ class _NewBoardOrderFormState extends State<_NewBoardOrderForm> {
                           ),
                           child: const Row(
                             children: [
-                              Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                              PhosphorIcon(PhosphorIconsDuotone.info, color: Colors.orange, size: 20),
                               SizedBox(width: 12),
                               Expanded(
                                 child: Text(
@@ -621,7 +622,7 @@ class _NewBoardOrderFormState extends State<_NewBoardOrderForm> {
                         value: _selectedProperty?.id,
                         decoration: const InputDecoration(
                           labelText: 'Select Property',
-                          prefixIcon: Icon(Icons.home),
+                          prefixIcon: PhosphorIcon(PhosphorIconsDuotone.house),
                           border: OutlineInputBorder(),
                         ),
                         items: _userProperties.map((property) {
@@ -686,7 +687,7 @@ class _NewBoardOrderFormState extends State<_NewBoardOrderForm> {
                       controller: _addressController,
                       decoration: const InputDecoration(
                         labelText: 'Delivery Address',
-                        prefixIcon: Icon(Icons.location_on),
+                        prefixIcon: PhosphorIcon(PhosphorIconsDuotone.mapPin),
                         border: OutlineInputBorder(),
                       ),
                       maxLines: 2,
@@ -704,7 +705,7 @@ class _NewBoardOrderFormState extends State<_NewBoardOrderForm> {
                       controller: _notesController,
                       decoration: const InputDecoration(
                         labelText: 'Notes (optional)',
-                        prefixIcon: Icon(Icons.notes),
+                        prefixIcon: PhosphorIcon(PhosphorIconsDuotone.notepad),
                         border: OutlineInputBorder(),
                       ),
                       maxLines: 3,
@@ -800,7 +801,7 @@ class _NewBoardOrderFormState extends State<_NewBoardOrderForm> {
         ),
         child: Row(
           children: [
-            Icon(
+            PhosphorIcon(
               _boardTypeIcon(option.type),
               color: isSelected ? _brandColor : Colors.grey,
               size: 28,
@@ -837,8 +838,8 @@ class _NewBoardOrderFormState extends State<_NewBoardOrderForm> {
               ),
             ),
             const SizedBox(width: 8),
-            Icon(
-              isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+            PhosphorIcon(
+              isSelected ? PhosphorIconsDuotone.radioButton : PhosphorIconsDuotone.circle,
               color: isSelected ? _brandColor : Colors.grey,
             ),
           ],

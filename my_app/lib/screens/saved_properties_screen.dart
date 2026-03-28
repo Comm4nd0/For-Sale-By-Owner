@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../constants/app_theme.dart';
@@ -110,7 +111,7 @@ class _SavedPropertiesScreenState extends State<SavedPropertiesScreen> with Auto
                   color: Colors.red[50],
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Icon(Icons.error_outline, size: 36, color: Colors.red[300]),
+                child: PhosphorIcon(PhosphorIconsDuotone.warningCircle, size: 36, color: Colors.red[300]),
               ),
               const SizedBox(height: 20),
               Text(_error!, style: Theme.of(context).textTheme.titleMedium),
@@ -122,7 +123,7 @@ class _SavedPropertiesScreenState extends State<SavedPropertiesScreen> with Auto
               const SizedBox(height: 20),
               ElevatedButton.icon(
                 onPressed: _loadSavedProperties,
-                icon: const Icon(Icons.refresh, size: 18),
+                icon: PhosphorIcon(PhosphorIconsDuotone.arrowClockwise, size: 18),
                 label: const Text('Retry'),
               ),
             ],
@@ -145,7 +146,7 @@ class _SavedPropertiesScreenState extends State<SavedPropertiesScreen> with Auto
                   color: AppTheme.forestMist,
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: const Icon(Icons.favorite_border, size: 44, color: AppTheme.forestMid),
+                child: PhosphorIcon(PhosphorIconsDuotone.heart, size: 44, color: AppTheme.forestMid),
               ),
               const SizedBox(height: 24),
               const Text(
@@ -168,7 +169,7 @@ class _SavedPropertiesScreenState extends State<SavedPropertiesScreen> with Auto
                   // Navigate back to home/search tab
                   Navigator.popUntil(context, (route) => route.isFirst);
                 },
-                icon: const Icon(Icons.search, size: 18),
+                icon: PhosphorIcon(PhosphorIconsDuotone.magnifyingGlass, size: 18),
                 label: const Text('Browse Properties'),
               ),
             ],
@@ -221,13 +222,13 @@ class _SavedPropertiesScreenState extends State<SavedPropertiesScreen> with Auto
                             ),
                             errorWidget: (context, url, error) => Container(
                               color: Colors.grey[200],
-                              child: const Icon(Icons.broken_image,
+                              child: PhosphorIcon(PhosphorIconsDuotone.imageSquare,
                                   color: Colors.grey),
                             ),
                           )
                         : Container(
                             color: Colors.grey[200],
-                            child: const Icon(Icons.home,
+                            child: PhosphorIcon(PhosphorIconsDuotone.house,
                                 size: 32, color: Colors.grey),
                           ),
                   ),
@@ -271,7 +272,7 @@ class _SavedPropertiesScreenState extends State<SavedPropertiesScreen> with Auto
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              Icon(Icons.bed,
+                              PhosphorIcon(PhosphorIconsDuotone.bed,
                                   size: 14, color: Colors.grey[600]),
                               const SizedBox(width: 2),
                               Text('${property.bedrooms}',
@@ -279,7 +280,7 @@ class _SavedPropertiesScreenState extends State<SavedPropertiesScreen> with Auto
                                       fontSize: 12,
                                       color: Colors.grey[600])),
                               const SizedBox(width: 8),
-                              Icon(Icons.bathtub_outlined,
+                              PhosphorIcon(PhosphorIconsDuotone.bathtub,
                                   size: 14, color: Colors.grey[600]),
                               const SizedBox(width: 2),
                               Text('${property.bathrooms}',
@@ -293,7 +294,7 @@ class _SavedPropertiesScreenState extends State<SavedPropertiesScreen> with Auto
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.grey),
+                    icon: PhosphorIcon(PhosphorIconsDuotone.x, color: Colors.grey),
                     onPressed: () => _removeSaved(saved),
                   ),
                 ],

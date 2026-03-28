@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import '../constants/app_theme.dart';
 import '../services/api_service.dart';
@@ -115,7 +116,7 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
     return Scaffold(
       appBar: AppBar(title: const Text('Viewing Slots')),
       floatingActionButton: widget.isOwner
-          ? FloatingActionButton(onPressed: _addSlot, child: const Icon(Icons.add))
+          ? FloatingActionButton(onPressed: _addSlot, child: PhosphorIcon(PhosphorIconsDuotone.plus))
           : null,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -133,7 +134,7 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
                             color: AppTheme.forestMist,
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Icon(Icons.calendar_today, size: 36, color: AppTheme.forestMid),
+                          child: PhosphorIcon(PhosphorIconsDuotone.calendar, size: 36, color: AppTheme.forestMid),
                         ),
                         const SizedBox(height: 20),
                         const Text(
@@ -158,11 +159,11 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
                     padding: const EdgeInsets.only(bottom: 80),
                     children: [
                       if (recurring.isNotEmpty) ...[
-                        _buildSectionHeader('Weekly Schedule', Icons.repeat),
+                        _buildSectionHeader('Weekly Schedule', PhosphorIconsDuotone.repeat),
                         ...recurring.map((slot) => _buildSlotCard(slot)),
                       ],
                       if (oneOff.isNotEmpty) ...[
-                        _buildSectionHeader('Specific Dates', Icons.event),
+                        _buildSectionHeader('Specific Dates', PhosphorIconsDuotone.calendarCheck),
                         ...oneOff.map((slot) => _buildSlotCard(slot)),
                       ],
                     ],
@@ -171,12 +172,12 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon) {
+  Widget _buildSectionHeader(String title, PhosphorDuotoneIconData icon) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: AppTheme.forestMid),
+          PhosphorIcon(icon, size: 18, color: AppTheme.forestMid),
           const SizedBox(width: 8),
           Text(
             title,
@@ -202,8 +203,8 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
             color: slot.isRecurring ? Colors.blue[50] : Colors.orange[50],
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            slot.isRecurring ? Icons.repeat : Icons.event,
+          child: PhosphorIcon(
+            slot.isRecurring ? PhosphorIconsDuotone.repeat : PhosphorIconsDuotone.calendarCheck,
             size: 20,
             color: slot.isRecurring ? Colors.blue[700] : Colors.orange[700],
           ),
@@ -220,7 +221,7 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
               )
             : widget.isOwner
                 ? IconButton(
-                    icon: const Icon(Icons.delete_outline),
+                    icon: PhosphorIcon(PhosphorIconsDuotone.trash),
                     onPressed: () async {
                       final confirmed = await showDialog<bool>(
                         context: context,
@@ -341,12 +342,12 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
               segments: const [
                 ButtonSegment(
                   value: false,
-                  icon: Icon(Icons.event, size: 18),
+                  icon: PhosphorIcon(PhosphorIconsDuotone.calendarCheck, size: 18),
                   label: Text('One-off'),
                 ),
                 ButtonSegment(
                   value: true,
-                  icon: Icon(Icons.repeat, size: 18),
+                  icon: PhosphorIcon(PhosphorIconsDuotone.repeat, size: 18),
                   label: Text('Weekly'),
                 ),
               ],
@@ -393,7 +394,7 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
                   );
                   if (date != null) setState(() => _selectedDate = date);
                 },
-                icon: const Icon(Icons.calendar_today, size: 18),
+                icon: PhosphorIcon(PhosphorIconsDuotone.calendar, size: 18),
                 label: Text(
                   _selectedDate != null
                       ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
@@ -441,7 +442,7 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
               children: [
                 IconButton(
                   onPressed: _maxBookings > 1 ? () => setState(() => _maxBookings--) : null,
-                  icon: const Icon(Icons.remove_circle_outline),
+                  icon: PhosphorIcon(PhosphorIconsDuotone.minusCircle),
                 ),
                 Text(
                   '$_maxBookings',
@@ -449,7 +450,7 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
                 ),
                 IconButton(
                   onPressed: _maxBookings < 10 ? () => setState(() => _maxBookings++) : null,
-                  icon: const Icon(Icons.add_circle_outline),
+                  icon: PhosphorIcon(PhosphorIconsDuotone.plusCircle),
                 ),
                 const SizedBox(width: 8),
                 Text(
