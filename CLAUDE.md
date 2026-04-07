@@ -127,11 +127,28 @@ USE_SQLITE=True python manage.py test api --verbosity=2
 - **Local dev:** SQLite (set `USE_SQLITE=True`)
 - **Cache:** Redis in production, in-memory in dev
 
+## Production Server
+
+The app runs on a shared Hetzner server (`178.104.29.66`, hostname `Luma001`) that hosts multiple apps. Caddy reverse-proxies traffic to each app by domain.
+
+```bash
+# SSH access
+ssh -i ~/.ssh/hetzner_key root@178.104.29.66
+
+# Caddy config: ~/caddy/Caddyfile
+# - paws4thoughtdogs.com       → 172.17.0.1:8000 (another app)
+# - for-sale-by-owner.co.uk    → 172.17.0.1:8002 (this app)
+```
+
+**Important:** This is a shared server. Port 8000 is taken by another app. This app runs on **port 8002**. Be careful not to disrupt other services when deploying or modifying Docker/Caddy config.
+
 ## Deployment
 
 ### Production (Docker Compose)
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
+# On server
+cd /root/for-sale-by-owner && git pull && bash deploy.sh
+# deploy.sh: migrates, collectstatic, restarts docker services (port 8002)
 ```
 
 Services: web (Gunicorn), db (PostgreSQL), redis, celery, celery-beat
@@ -168,6 +185,10 @@ Services: web (Gunicorn), db (PostgreSQL), redis, celery, celery-beat
 - `development` branch: staging/alpha
 - Feature branches for new work
 - No pre-commit hooks configured
+
+## Version Bumping
+
+The app version must be bumped for every code change. Update the version in `my_app/pubspec.yaml` (e.g. `version: 1.0.8+10` — increment the build number `+N` for every change, bump the semantic version for releases).
 
 ## Environment Variables
 
