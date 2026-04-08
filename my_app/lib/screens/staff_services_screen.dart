@@ -115,7 +115,7 @@ class _StaffServicesScreenState extends State<StaffServicesScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: BrandedAppBar.build(context: context, title: 'Service Management'),
+      appBar: BrandedAppBar.build(context: context),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

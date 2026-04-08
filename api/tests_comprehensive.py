@@ -1318,9 +1318,9 @@ class ServiceProviderAPITest(TestCase):
             'coverage_counties': 'London',
         }, format='json')
         self.assertEqual(res.status_code, 201)
-        # Free tier auto-assigned
+        # Provider created without automatic subscription — must choose a paid tier
         provider = ServiceProvider.objects.get(owner=self.user)
-        self.assertTrue(provider.subscriptions.filter(tier=self.free_tier, status='active').exists())
+        self.assertFalse(provider.subscriptions.exists())
 
     def test_list_service_providers(self):
         ServiceProvider.objects.create(

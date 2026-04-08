@@ -66,6 +66,8 @@ class TestAuthService extends ChangeNotifier implements AuthService {
   @override
   bool get isAuthenticated => _isAuthenticated;
   @override
+  bool get isStaff => false;
+  @override
   bool get isLoading => _isLoading;
 
   @override
