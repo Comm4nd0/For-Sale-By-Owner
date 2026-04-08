@@ -4,8 +4,6 @@ import '../constants/app_theme.dart';
 import '../widgets/branded_app_bar.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
-import 'my_listings_screen.dart';
-import 'saved_properties_screen.dart';
 import 'profile_screen.dart';
 import 'buyer_profile_screen.dart';
 import 'buyer_verification_screen.dart';
@@ -166,40 +164,6 @@ class _AccountScreenState extends State<AccountScreen> {
                         ),
                       ],
                     ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Your Properties section
-            _buildSectionTitle('Your Properties'),
-            const SizedBox(height: 8),
-            Card(
-              margin: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  _buildMenuTile(
-                    icon: PhosphorIconsDuotone.tag,
-                    title: 'My Listings',
-                    subtitle: 'Manage your property listings',
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const MyListingsScreen()),
-                    ),
-                  ),
-                  const Divider(height: 1, indent: 56),
-                  _buildMenuTile(
-                    icon: PhosphorIconsDuotone.heart,
-                    title: 'Saved Properties',
-                    subtitle: 'Properties you have saved',
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const SavedPropertiesScreen()),
-                    ),
-                  ),
-                ],
-              ),
             ),
 
             const SizedBox(height: 20),
