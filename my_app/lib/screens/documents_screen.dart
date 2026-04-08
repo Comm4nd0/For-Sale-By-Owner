@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
 import '../models/property_document.dart';
-import '../constants/api_constants.dart';
 
 class DocumentsScreen extends StatefulWidget {
   final int propertyId;
