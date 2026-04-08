@@ -11,6 +11,7 @@ class AuthService extends ChangeNotifier {
   String? _email;
   String? _firstName;
   String? _lastName;
+  bool _isStaff = false;
   bool _isLoading = false;
 
   String? get token => _token;
@@ -18,6 +19,7 @@ class AuthService extends ChangeNotifier {
   String? get email => _email;
   String? get firstName => _firstName;
   String? get lastName => _lastName;
+  bool get isStaff => _isStaff;
   bool get isAuthenticated => _token != null;
   bool get isLoading => _isLoading;
 
@@ -44,6 +46,18 @@ class AuthService extends ChangeNotifier {
         _email = data['email'];
         _firstName = data['first_name'];
         _lastName = data['last_name'];
+      }
+      // Fetch profile for is_staff flag
+      final profileResponse = await http.get(
+        Uri.parse(ApiConstants.profile),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Token $_token',
+        },
+      );
+      if (profileResponse.statusCode == 200) {
+        final profileData = jsonDecode(profileResponse.body);
+        _isStaff = profileData['is_staff'] ?? false;
       }
     } catch (e) {
       debugPrint('Fetch user error: $e');
@@ -129,6 +143,7 @@ class AuthService extends ChangeNotifier {
     _email = null;
     _firstName = null;
     _lastName = null;
+    _isStaff = false;
     await _storage.delete(key: 'auth_token');
     notifyListeners();
   }

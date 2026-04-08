@@ -72,7 +72,7 @@
 <div class="pricing-hero" style="margin-left:-20px; margin-right:-20px; padding-left:20px; padding-right:20px;">
     <div style="max-width:800px; margin:0 auto;">
         <h1>Simple, Transparent Pricing</h1>
-        <p>Grow your business with premium features. Start free, upgrade when you're ready.</p>
+        <p>Grow your business with premium features. Start with a free trial today.</p>
         <div class="billing-toggle">
             <span id="monthly-label" class="active-label">Monthly</span>
             <label class="toggle-switch">
@@ -140,24 +140,29 @@
     function renderTiers() {
         if (!pricingData) return;
         const container = document.getElementById('tiers-container');
-        const tiers = pricingData.tiers;
+        // Filter out inactive/free tiers
+        const tiers = pricingData.tiers.filter(t => t.slug !== 'free');
 
         container.innerHTML = tiers.map(tier => {
-            const price = isAnnual ? tier.annual_price : tier.monthly_price;
-            const isFree = parseFloat(price) === 0;
             const isHighlighted = tier.slug === 'pro';
             const features = tier.features || {};
             const limits = tier.limits || {};
+            const trialDays = tier.trial_period_days || 0;
 
             let priceHtml;
-            if (isFree) {
-                priceHtml = `<span class="amount">&pound;0</span> <span class="period">forever</span>`;
-            } else if (isAnnual) {
+            if (isAnnual) {
                 const monthlyEquiv = (parseFloat(tier.annual_price) / 12).toFixed(2);
                 priceHtml = `<span class="amount">&pound;${monthlyEquiv}</span> <span class="period">/month</span>
                     <div class="annual-note">Billed &pound;${parseFloat(tier.annual_price).toFixed(0)}/year</div>`;
             } else {
                 priceHtml = `<span class="amount">&pound;${parseFloat(tier.monthly_price).toFixed(0)}</span> <span class="period">/month</span>`;
+            }
+
+            let trialHtml = '';
+            if (trialDays > 0) {
+                const trialMonths = Math.round(trialDays / 30);
+                const trialLabel = trialMonths > 0 ? `${trialMonths} month${trialMonths > 1 ? 's' : ''}` : `${trialDays} days`;
+                trialHtml = `<div class="trial-note" style="color:#19747E; font-weight:600; font-size:0.9rem; margin-top:0.5rem;">First ${trialLabel} free</div>`;
             }
 
             const limitsHtml = `
@@ -176,19 +181,18 @@
             }).join('');
 
             let ctaHtml;
-            if (isFree) {
-                ctaHtml = `<a href="/services/register/" class="btn btn-secondary">Get Started Free</a>`;
-            } else if (isHighlighted) {
-                ctaHtml = `<button class="btn btn-gold" onclick="subscribe('${tier.slug}')">${escHtml(tier.cta_text || 'Upgrade to ' + tier.name)}</button>`;
+            const ctaLabel = trialDays > 0 ? 'Start Free Trial' : (tier.cta_text || 'Choose ' + tier.name);
+            if (isHighlighted) {
+                ctaHtml = `<button class="btn btn-gold" onclick="subscribe('${tier.slug}')">${escHtml(ctaLabel)}</button>`;
             } else {
-                ctaHtml = `<button class="btn btn-primary" onclick="subscribe('${tier.slug}')">${escHtml(tier.cta_text || 'Choose ' + tier.name)}</button>`;
+                ctaHtml = `<button class="btn btn-primary" onclick="subscribe('${tier.slug}')">${escHtml(ctaLabel)}</button>`;
             }
 
             return `<div class="tier-card ${isHighlighted ? 'highlighted' : ''}">
                 ${tier.badge_text ? `<div class="tier-badge">${escHtml(tier.badge_text)}</div>` : ''}
                 <div class="tier-name">${escHtml(tier.name)}</div>
                 <div class="tier-tagline">${escHtml(tier.tagline)}</div>
-                <div class="tier-price">${priceHtml}</div>
+                <div class="tier-price">${priceHtml}${trialHtml}</div>
                 <div class="tier-limits">${limitsHtml}</div>
                 <div class="tier-features">${featuresHtml}</div>
                 <div class="tier-cta">${ctaHtml}</div>

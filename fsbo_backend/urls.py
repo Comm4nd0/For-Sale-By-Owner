@@ -46,6 +46,9 @@ urlpatterns = [
     path('dashboard/', CSRFTemplateView.as_view(template_name='dashboard.html'), name='dashboard'),
     path('saved/', CSRFTemplateView.as_view(template_name='saved_properties.html'), name='saved-properties'),
 
+    # Staff management
+    path('staff/services/', CSRFTemplateView.as_view(template_name='staff_services.html'), name='staff-services'),
+
     # Service providers
     path('services/', CSRFTemplateView.as_view(template_name='services.html'), name='services'),
     path('services/register/', CSRFTemplateView.as_view(template_name='service_provider_register.html'), name='service-provider-register'),

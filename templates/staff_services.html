@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}Staff - Service Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .staff-hero { background: linear-gradient(135deg, #115E66 0%, #19747E 100%); color: white; padding: 2.5rem 0; margin: -2rem 0 2rem; }
+    .staff-hero h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+    .staff-hero p { opacity: 0.85; font-size: 1rem; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card {
+        background: white; border-radius: 10px; padding: 1.25rem; text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid #f0f0f0;
+    }
+    .stat-card .stat-value { font-size: 2rem; font-weight: 700; color: #115E66; }
+    .stat-card .stat-label { font-size: 0.85rem; color: #6B7280; margin-top: 0.25rem; }
+    .stat-card.pending .stat-value { color: #D97706; }
+    .stat-card.suspended .stat-value { color: #DC2626; }
+
+    .section-title { font-size: 1.3rem; font-weight: 700; color: #115E66; margin-bottom: 1rem; }
+
+    .provider-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .provider-table th { background: #F9FAFB; padding: 0.75rem 1rem; text-align: left; font-size: 0.85rem; color: #6B7280; font-weight: 600; border-bottom: 1px solid #E5E7EB; }
+    .provider-table td { padding: 0.75rem 1rem; border-bottom: 1px solid #F3F4F6; font-size: 0.9rem; vertical-align: middle; }
+    .provider-table tr:hover td { background: #F9FAFB; }
+
+    .status-badge {
+        display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px;
+        font-size: 0.75rem; font-weight: 600; text-transform: capitalize;
+    }
+    .status-badge.active { background: #D1FAE5; color: #065F46; }
+    .status-badge.pending_review { background: #FEF3C7; color: #92400E; }
+    .status-badge.draft { background: #E5E7EB; color: #374151; }
+    .status-badge.suspended { background: #FEE2E2; color: #991B1B; }
+    .status-badge.withdrawn { background: #F3F4F6; color: #6B7280; }
+
+    .verified-badge { color: #059669; font-size: 0.85rem; }
+
+    .action-btn {
+        padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.8rem;
+        border: none; cursor: pointer; font-weight: 500; transition: all 0.15s;
+    }
+    .action-btn.approve { background: #D1FAE5; color: #065F46; }
+    .action-btn.approve:hover { background: #A7F3D0; }
+    .action-btn.suspend { background: #FEE2E2; color: #991B1B; }
+    .action-btn.suspend:hover { background: #FECACA; }
+    .action-btn.reject { background: #F3F4F6; color: #6B7280; }
+    .action-btn.reject:hover { background: #E5E7EB; }
+    .action-btn.verify { background: #DBEAFE; color: #1E40AF; }
+    .action-btn.verify:hover { background: #BFDBFE; }
+
+    .actions-cell { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+    .filter-bar { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center; }
+    .filter-bar select, .filter-bar input {
+        padding: 0.5rem 0.75rem; border: 1px solid #D1D5DB; border-radius: 6px;
+        font-size: 0.9rem; font-family: inherit;
+    }
+    .filter-bar input { flex: 1; min-width: 200px; }
+
+    .sub-breakdown { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem; }
+    .sub-chip { background: white; border: 1px solid #E5E7EB; border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.85rem; }
+    .sub-chip strong { color: #115E66; }
+
+    .empty-state { text-align: center; padding: 2rem; color: #9CA3AF; }
+
+    .bulk-bar {
+        display: none; background: #115E66; color: white; padding: 0.75rem 1rem;
+        border-radius: 8px; margin-bottom: 1rem; align-items: center; gap: 1rem;
+    }
+    .bulk-bar.visible { display: flex; }
+    .bulk-bar .bulk-count { font-weight: 600; }
+    .bulk-bar .action-btn { color: white; }
+    .bulk-bar .action-btn.approve { background: #059669; }
+    .bulk-bar .action-btn.suspend { background: #DC2626; }
+
+    @media (max-width: 768px) {
+        .provider-table { display: block; overflow-x: auto; }
+        .stats-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="staff-hero">
+    <div class="container">
+        <h1>Service Management</h1>
+        <p>Review, approve, and manage service provider listings</p>
+    </div>
+</section>
+
+<div class="container" id="staff-app">
+    <div id="access-denied" style="display:none;">
+        <div class="empty-state">
+            <h2>Access Denied</h2>
+            <p>You must be a staff member to view this page.</p>
+        </div>
+    </div>
+
+    <div id="staff-content" style="display:none;">
+        <!-- Stats cards -->
+        <div class="stats-grid" id="stats-grid"></div>
+
+        <!-- Subscription breakdown -->
+        <div id="sub-breakdown-section" style="display:none;">
+            <h3 class="section-title">Subscription Breakdown</h3>
+            <div class="sub-breakdown" id="sub-breakdown"></div>
+        </div>
+
+        <!-- Pending providers -->
+        <div id="pending-section">
+            <h3 class="section-title">Pending Approval <span id="pending-count" style="font-weight:400; color:#6B7280;"></span></h3>
+            <div id="pending-table-wrap"></div>
+        </div>
+
+        <!-- All providers -->
+        <div style="margin-top: 2rem;">
+            <h3 class="section-title">All Service Providers</h3>
+            <div class="filter-bar">
+                <select id="filter-status" onchange="filterAll()">
+                    <option value="">All Statuses</option>
+                    <option value="active">Active</option>
+                    <option value="pending_review">Pending Review</option>
+                    <option value="draft">Draft</option>
+                    <option value="suspended">Suspended</option>
+                    <option value="withdrawn">Withdrawn</option>
+                </select>
+                <input type="text" id="filter-search" placeholder="Search by name..." oninput="filterAll()">
+            </div>
+            <div class="bulk-bar" id="bulk-bar">
+                <span class="bulk-count"><span id="selected-count">0</span> selected</span>
+                <button class="action-btn approve" onclick="bulkAction('approve')">Approve</button>
+                <button class="action-btn suspend" onclick="bulkAction('suspend')">Suspend</button>
+                <button class="action-btn reject" onclick="bulkAction('reject')">Reject</button>
+            </div>
+            <div id="all-table-wrap"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    let allProviders = [];
+    let selectedIds = new Set();
+
+    async function init() {
+        if (!Auth.isLoggedIn()) {
+            document.getElementById('access-denied').style.display = 'block';
+            return;
+        }
+        try {
+            const resp = await fetch('/api/staff/service-stats/', {
+                headers: { 'Authorization': `Token ${Auth.token()}`, 'Content-Type': 'application/json' }
+            });
+            if (resp.status === 403 || resp.status === 401) {
+                document.getElementById('access-denied').style.display = 'block';
+                return;
+            }
+            const data = await resp.json();
+            document.getElementById('staff-content').style.display = 'block';
+            renderStats(data.counts);
+            renderSubBreakdown(data.subscription_breakdown);
+            renderPending(data.pending_providers);
+            allProviders = data.recent_providers;
+            renderAllTable(allProviders);
+        } catch (e) {
+            console.error('Failed to load staff data:', e);
+            document.getElementById('staff-content').innerHTML = '<div class="empty-state"><p>Failed to load data. Please try again.</p></div>';
+            document.getElementById('staff-content').style.display = 'block';
+        }
+    }
+
+    function renderStats(counts) {
+        const grid = document.getElementById('stats-grid');
+        const items = [
+            { label: 'Total', value: counts.total, cls: '' },
+            { label: 'Pending Review', value: counts.pending_review, cls: 'pending' },
+            { label: 'Active', value: counts.active, cls: '' },
+            { label: 'Suspended', value: counts.suspended, cls: 'suspended' },
+            { label: 'Draft', value: counts.draft, cls: '' },
+            { label: 'Withdrawn', value: counts.withdrawn, cls: '' },
+            { label: 'Verified', value: counts.verified, cls: '' },
+        ];
+        grid.innerHTML = items.map(i =>
+            `<div class="stat-card ${i.cls}"><div class="stat-value">${i.value}</div><div class="stat-label">${i.label}</div></div>`
+        ).join('');
+    }
+
+    function renderSubBreakdown(breakdown) {
+        if (!breakdown || breakdown.length === 0) return;
+        document.getElementById('sub-breakdown-section').style.display = 'block';
+        document.getElementById('sub-breakdown').innerHTML = breakdown.map(s =>
+            `<div class="sub-chip"><strong>${s.count}</strong> ${s.tier__name}</div>`
+        ).join('');
+    }
+
+    function renderPending(providers) {
+        const wrap = document.getElementById('pending-table-wrap');
+        const countEl = document.getElementById('pending-count');
+        countEl.textContent = `(${providers.length})`;
+        if (providers.length === 0) {
+            wrap.innerHTML = '<div class="empty-state">No providers pending approval.</div>';
+            return;
+        }
+        wrap.innerHTML = buildTable(providers, true);
+    }
+
+    function buildTable(providers, showActions) {
+        if (providers.length === 0) return '<div class="empty-state">No providers found.</div>';
+        let html = `<table class="provider-table"><thead><tr>`;
+        if (!showActions) html += `<th><input type="checkbox" onchange="window.staffApp.toggleAll(this)"></th>`;
+        html += `<th>Business</th><th>Owner</th><th>Categories</th><th>Status</th><th>Verified</th><th>Tier</th><th>Created</th>`;
+        if (showActions) html += `<th>Actions</th>`;
+        html += `</tr></thead><tbody>`;
+        for (const p of providers) {
+            const cats = (p.categories || []).map(c => c.name).join(', ') || '-';
+            const date = p.created_at ? new Date(p.created_at).toLocaleDateString() : '-';
+            const statusLabel = (p.status || 'draft').replace('_', ' ');
+            html += `<tr>`;
+            if (!showActions) html += `<td><input type="checkbox" data-id="${p.id}" onchange="window.staffApp.toggleSelect(${p.id}, this.checked)"></td>`;
+            html += `<td><a href="/services/${p.slug}/" style="color:#115E66; font-weight:600;">${esc(p.business_name)}</a></td>`;
+            html += `<td>${esc(p.owner_name || '-')}</td>`;
+            html += `<td>${esc(cats)}</td>`;
+            html += `<td><span class="status-badge ${p.status || 'draft'}">${statusLabel}</span></td>`;
+            html += `<td>${p.is_verified ? '<span class="verified-badge">&#10003; Verified</span>' : '-'}</td>`;
+            html += `<td>${esc(p.tier_name || '-')}</td>`;
+            html += `<td>${date}</td>`;
+            if (showActions) {
+                html += `<td class="actions-cell">`;
+                if (p.status !== 'active') html += `<button class="action-btn approve" onclick="window.staffApp.quickAction(${p.id}, 'approve')">Approve</button>`;
+                if (p.status !== 'suspended') html += `<button class="action-btn suspend" onclick="window.staffApp.quickAction(${p.id}, 'suspend')">Suspend</button>`;
+                if (!p.is_verified) html += `<button class="action-btn verify" onclick="window.staffApp.verify(${p.id})">Verify</button>`;
+                html += `</td>`;
+            }
+            html += `</tr>`;
+        }
+        html += `</tbody></table>`;
+        return html;
+    }
+
+    function renderAllTable(providers) {
+        document.getElementById('all-table-wrap').innerHTML = buildTable(providers, false);
+    }
+
+    function esc(str) {
+        const div = document.createElement('div');
+        div.textContent = str || '';
+        return div.innerHTML;
+    }
+
+    window.filterAll = function() {
+        const statusFilter = document.getElementById('filter-status').value;
+        const search = document.getElementById('filter-search').value.toLowerCase();
+        let filtered = allProviders;
+        if (statusFilter) filtered = filtered.filter(p => p.status === statusFilter);
+        if (search) filtered = filtered.filter(p => (p.business_name || '').toLowerCase().includes(search));
+        renderAllTable(filtered);
+    };
+
+    window.staffApp = {
+        async quickAction(providerId, action) {
+            try {
+                const resp = await fetch('/api/staff/service-actions/', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Token ${Auth.token()}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider_ids: [providerId], action })
+                });
+                if (resp.ok) location.reload();
+                else alert('Action failed.');
+            } catch { alert('Network error.'); }
+        },
+        async verify(providerId) {
+            try {
+                const resp = await fetch(`/api/service-providers/${providerId}/validate/`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Token ${Auth.token()}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_verified: true })
+                });
+                if (resp.ok) location.reload();
+                else alert('Verification failed.');
+            } catch { alert('Network error.'); }
+        },
+        toggleAll(checkbox) {
+            const checkboxes = document.querySelectorAll('#all-table-wrap input[type="checkbox"][data-id]');
+            checkboxes.forEach(cb => { cb.checked = checkbox.checked; this.toggleSelect(parseInt(cb.dataset.id), cb.checked); });
+        },
+        toggleSelect(id, checked) {
+            if (checked) selectedIds.add(id); else selectedIds.delete(id);
+            document.getElementById('selected-count').textContent = selectedIds.size;
+            document.getElementById('bulk-bar').classList.toggle('visible', selectedIds.size > 0);
+        }
+    };
+
+    window.bulkAction = async function(action) {
+        if (selectedIds.size === 0) return;
+        if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} ${selectedIds.size} provider(s)?`)) return;
+        try {
+            const resp = await fetch('/api/staff/service-actions/', {
+                method: 'POST',
+                headers: { 'Authorization': `Token ${Auth.token()}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ provider_ids: Array.from(selectedIds), action })
+            });
+            if (resp.ok) location.reload();
+            else alert('Action failed.');
+        } catch { alert('Network error.'); }
+    };
+
+    init();
+})();
+</script>
+{% endblock %}

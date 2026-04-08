@@ -89,6 +89,12 @@ class ApiConstants {
   static String serviceProviderPhoto(int providerId, int photoId) =>
       '$apiUrl/service-providers/$providerId/photos/$photoId/';
 
+  // Staff service management
+  static String get staffServiceStats => '$apiUrl/staff/service-stats/';
+  static String get staffServiceActions => '$apiUrl/staff/service-actions/';
+  static String serviceProviderValidate(dynamic idOrSlug) =>
+      '$apiUrl/service-providers/$idOrSlug/validate/';
+
   // Subscriptions / Pricing
   static String get pricing => '$apiUrl/pricing/';
   static String get mySubscription => '$apiUrl/my-subscription/';

@@ -585,6 +585,7 @@
                     </div>
                     <a href="/forum/">Forum</a>
                     <a href="/dashboard/" id="nav-dashboard-link">Dashboard</a>
+                    <a href="/staff/services/" id="nav-staff-link" style="display:none;">Staff</a>
                     <div class="nav-dropdown nav-dropdown-end">
                         <button class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true">Account</button>
                         <div class="nav-dropdown-menu" role="menu">
@@ -610,6 +611,19 @@
                 `;
             }
             initNavDropdowns();
+
+            // Show staff link if user is staff
+            if (Auth.isLoggedIn()) {
+                fetch('/api/profile/', { headers: Auth.headers() })
+                    .then(r => r.ok ? r.json() : null)
+                    .then(data => {
+                        if (data && data.is_staff) {
+                            const staffLink = document.getElementById('nav-staff-link');
+                            if (staffLink) staffLink.style.display = '';
+                        }
+                    })
+                    .catch(() => {});
+            }
         })();
 
         // Dropdown menu interactions (mobile accordion, keyboard nav, click-outside)

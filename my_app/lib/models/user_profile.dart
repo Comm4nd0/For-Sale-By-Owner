@@ -5,6 +5,7 @@ class UserProfile {
   final String lastName;
   final String phone;
   final bool darkMode;
+  final bool isStaff;
   final bool notificationEnquiries;
   final bool notificationViewings;
   final bool notificationPriceDrops;
@@ -17,6 +18,7 @@ class UserProfile {
     required this.lastName,
     required this.phone,
     required this.darkMode,
+    this.isStaff = false,
     required this.notificationEnquiries,
     required this.notificationViewings,
     required this.notificationPriceDrops,
@@ -31,6 +33,7 @@ class UserProfile {
       lastName: json['last_name'] ?? '',
       phone: json['phone'] ?? '',
       darkMode: json['dark_mode'] ?? false,
+      isStaff: json['is_staff'] ?? false,
       notificationEnquiries: json['notification_enquiries'] ?? true,
       notificationViewings: json['notification_viewings'] ?? true,
       notificationPriceDrops: json['notification_price_drops'] ?? true,

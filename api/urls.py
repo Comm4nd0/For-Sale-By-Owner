@@ -162,6 +162,9 @@ urlpatterns = [
     # Bulk import/export
     path('properties/bulk-import/', views.bulk_import_properties, name='bulk-import'),
     path('properties/export/', views.export_properties, name='export-properties'),
+    # Staff service management
+    path('staff/service-stats/', views.service_provider_stats, name='service-provider-stats'),
+    path('staff/service-actions/', views.bulk_provider_action, name='service-provider-actions'),
     # Health check
     path('health/', views.health_check, name='health-check'),
 

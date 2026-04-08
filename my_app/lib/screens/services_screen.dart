@@ -430,7 +430,7 @@ class _ProviderCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        if (provider.isPaidTier)
+                        if (provider.hasSubscription)
                           Padding(
                             padding: const EdgeInsets.only(right: 4),
                             child: TierBadge(

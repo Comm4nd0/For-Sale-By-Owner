@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 class TierBadge extends StatelessWidget {
-  final String tierSlug;
-  final String tierName;
+  final String? tierSlug;
+  final String? tierName;
   final double fontSize;
 
   const TierBadge({
@@ -14,7 +14,7 @@ class TierBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (tierSlug == 'free') return const SizedBox.shrink();
+    if (tierSlug == null) return const SizedBox.shrink();
 
     Color bgColor;
     Color textColor;
@@ -34,7 +34,7 @@ class TierBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        tierName,
+        tierName ?? '',
         style: TextStyle(
           color: textColor,
           fontSize: fontSize,

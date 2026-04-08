@@ -58,6 +58,7 @@ class _ServiceProviderDetailScreenState
         });
       }
     } catch (e) {
+      debugPrint('ServiceProviderDetailScreen load error: $e');
       if (mounted) {
         setState(() {
           _error = 'Failed to load service provider';
