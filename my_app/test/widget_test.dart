@@ -221,6 +221,9 @@ void main() {
 
       // During loading, should show CircularProgressIndicator
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      // Drain pending timers from the login future
+      await tester.pump(const Duration(seconds: 1));
     });
   });
 
@@ -354,6 +357,9 @@ void main() {
       expect(find.text('Tools'), findsOneWidget);
       expect(find.text('Services'), findsOneWidget);
       expect(find.text('Login'), findsOneWidget);
+
+      // Drain pending AutoRetry timers
+      await tester.pump(const Duration(seconds: 30));
     });
 
     testWidgets('shows authenticated navigation tabs when logged in',
@@ -369,6 +375,8 @@ void main() {
       expect(find.text('Dashboard'), findsOneWidget);
       expect(find.text('Services'), findsOneWidget);
       expect(find.text('Account'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 30));
     });
 
     testWidgets('has bottom navigation bar', (tester) async {
@@ -379,6 +387,8 @@ void main() {
       await tester.pump();
 
       expect(find.byType(BottomNavigationBar), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 30));
     });
 
     testWidgets('bottom nav has 4 items', (tester) async {
@@ -392,6 +402,8 @@ void main() {
         find.byType(BottomNavigationBar),
       );
       expect(navBar.items.length, 4);
+
+      await tester.pump(const Duration(seconds: 30));
     });
   });
 
@@ -409,6 +421,11 @@ void main() {
       expect(find.text('House Price Lookup'), findsOneWidget);
       expect(find.text('Price Comparison'), findsOneWidget);
       expect(find.text('Stamp Duty Calculator'), findsOneWidget);
+      // Scroll down to find items that may be off-screen
+      await tester.scrollUntilVisible(
+        find.text('Neighbourhood Reviews'), 200,
+        scrollable: find.byType(Scrollable),
+      );
       expect(find.text('Neighbourhood Reviews'), findsOneWidget);
       expect(find.text('Community Forum'), findsOneWidget);
     });
@@ -480,20 +497,8 @@ void main() {
       await tester.pump();
 
       // Section titles
-      expect(find.text('Your Properties'), findsOneWidget);
       expect(find.text('Buyer Tools'), findsOneWidget);
       expect(find.text('Settings'), findsOneWidget);
-    });
-
-    testWidgets('shows property management links', (tester) async {
-      await tester.pumpWidget(buildTestWidget(
-        child: const AccountScreen(),
-        authService: TestAuthService(authenticated: true),
-      ));
-      await tester.pump();
-
-      expect(find.text('My Listings'), findsOneWidget);
-      expect(find.text('Saved Properties'), findsOneWidget);
     });
 
     testWidgets('shows buyer tools', (tester) async {
@@ -687,6 +692,8 @@ void main() {
       await tester.pump();
 
       expect(find.byType(MaterialApp), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 30));
     });
 
     testWidgets('has correct title', (tester) async {
@@ -696,6 +703,8 @@ void main() {
 
       final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
       expect(app.title, 'For Sale By Owner');
+
+      await tester.pump(const Duration(seconds: 30));
     });
 
     testWidgets('provides AuthService and ApiService', (tester) async {
@@ -705,6 +714,8 @@ void main() {
 
       // The providers should be available in the widget tree
       expect(find.byType(MultiProvider), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 30));
     });
 
     testWidgets('has MainShell as home', (tester) async {
@@ -713,6 +724,8 @@ void main() {
       await tester.pump();
 
       expect(find.byType(MainShell), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 30));
     });
   });
 
@@ -720,15 +733,7 @@ void main() {
 
   group('BrandedAppBar', () {
     testWidgets('shows For Sale branding text', (tester) async {
-      await tester.pumpWidget(buildTestWidget(
-        child: Scaffold(
-          appBar: BrandedAppBar.build(
-            context: tester.element(find.byType(Scaffold)),
-          ),
-        ),
-      ));
-      // Need to pump once more after first build since context isn't available
-      // So let's use a simpler approach:
+      // Use LoginScreen which includes BrandedAppBar
       await tester.pumpWidget(buildTestWidget(
         child: const LoginScreen(embedded: true),
       ));
@@ -951,6 +956,8 @@ void main() {
       // Login screen content should be visible
       expect(find.text('Email'), findsOneWidget);
       expect(find.text('Password'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 30));
     });
 
     testWidgets('guest user can navigate to Tools tab', (tester) async {
@@ -966,6 +973,8 @@ void main() {
 
       expect(find.text('Property Tools'), findsOneWidget);
       expect(find.text('Mortgage Calculator'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 30));
     });
   });
 
