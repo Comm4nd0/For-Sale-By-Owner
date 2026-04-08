@@ -443,6 +443,7 @@ class ServiceProviderListSerializer(serializers.ModelSerializer):
     tier_name = serializers.SerializerMethodField()
     tier_slug = serializers.SerializerMethodField()
     is_featured = serializers.SerializerMethodField()
+    owner_name = serializers.SerializerMethodField()
 
     class Meta:
         model = ServiceProvider
@@ -452,7 +453,7 @@ class ServiceProviderListSerializer(serializers.ModelSerializer):
             'logo', 'is_verified', 'pricing_info',
             'average_rating', 'review_count',
             'tier_name', 'tier_slug', 'is_featured',
-            'status', 'created_at',
+            'status', 'created_at', 'owner_name',
         ]
 
     def get_average_rating(self, obj):
@@ -463,15 +464,18 @@ class ServiceProviderListSerializer(serializers.ModelSerializer):
 
     def get_tier_name(self, obj):
         tier = obj.current_tier
-        return tier.name if tier else 'Free'
+        return tier.name if tier else None
 
     def get_tier_slug(self, obj):
         tier = obj.current_tier
-        return tier.slug if tier else 'free'
+        return tier.slug if tier else None
 
     def get_is_featured(self, obj):
         tier = obj.current_tier
         return tier.feature_featured_placement if tier else False
+
+    def get_owner_name(self, obj):
+        return obj.owner.get_full_name() or obj.owner.email
 
 
 class ServiceProviderPhotoSerializer(serializers.ModelSerializer):
@@ -578,7 +582,7 @@ class SubscriptionTierSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'slug', 'tagline', 'cta_text', 'badge_text',
             'monthly_price', 'annual_price', 'currency',
-            'limits', 'features', 'display_order',
+            'limits', 'features', 'display_order', 'trial_period_days',
         ]
 
     def get_limits(self, obj):
@@ -622,6 +626,7 @@ class SubscriptionAddOnSerializer(serializers.ModelSerializer):
 
 class ServiceProviderSubscriptionSerializer(serializers.ModelSerializer):
     tier = SubscriptionTierSerializer(read_only=True)
+    is_on_trial = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = ServiceProviderSubscription
@@ -629,6 +634,7 @@ class ServiceProviderSubscriptionSerializer(serializers.ModelSerializer):
             'id', 'tier', 'billing_cycle', 'status',
             'current_period_start', 'current_period_end',
             'cancel_at_period_end', 'started_at',
+            'trial_end', 'is_on_trial',
         ]
 
 

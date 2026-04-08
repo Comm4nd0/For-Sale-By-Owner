@@ -840,11 +840,11 @@ class ServiceProvider(models.Model):
 
     @property
     def current_tier(self):
-        """Return the current SubscriptionTier, defaulting to free."""
+        """Return the current SubscriptionTier, or None if no active subscription."""
         sub = self.active_subscription
         if sub:
             return sub.tier
-        return SubscriptionTier.objects.filter(slug='free', is_active=True).first()
+        return None
 
 
 class ServiceProviderReview(models.Model):
@@ -914,6 +914,12 @@ class SubscriptionTier(models.Model):
     feature_account_manager = models.BooleanField(default=False)
     feature_photo_gallery = models.BooleanField(default=False)
     feature_early_access = models.BooleanField(default=False)
+
+    # Trial
+    trial_period_days = models.PositiveIntegerField(
+        default=0,
+        help_text='Number of days free trial for new subscribers. 0 = no trial.'
+    )
 
     # Display
     display_order = models.PositiveIntegerField(default=0)
@@ -985,6 +991,10 @@ class ServiceProviderSubscription(models.Model):
 
     started_at = models.DateTimeField(auto_now_add=True)
     cancelled_at = models.DateTimeField(null=True, blank=True)
+    trial_end = models.DateTimeField(
+        null=True, blank=True,
+        help_text='When the trial period ends (from Stripe)'
+    )
     admin_notes = models.TextField(blank=True)
 
     class Meta:
@@ -998,9 +1008,16 @@ class ServiceProviderSubscription(models.Model):
         if self.status != 'active':
             return False
         if self.current_period_end is None:
-            return True  # Free tier never expires
+            return True
         from django.utils import timezone
         return self.current_period_end > timezone.now()
+
+    @property
+    def is_on_trial(self):
+        if self.trial_end is None:
+            return False
+        from django.utils import timezone
+        return self.trial_end > timezone.now() and self.status == 'active'
 
 
 class ServiceProviderAddOn(models.Model):

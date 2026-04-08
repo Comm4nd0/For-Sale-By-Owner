@@ -342,8 +342,8 @@
 
         const tier = sub.tier;
         const usage = sub.usage || {};
-        const isFree = tier.slug === 'free';
-        const badgeClass = tier.slug === 'pro' ? 'badge-pro' : tier.slug === 'growth' ? 'badge-growth' : 'badge-free';
+        const hasSubscription = !!tier;
+        const badgeClass = !hasSubscription ? 'badge-free' : tier.slug === 'pro' ? 'badge-pro' : 'badge-growth';
 
         function usageBar(used, max) {
             if (max === -1) return { pct: 0, text: `${used} used (unlimited)` };
@@ -357,8 +357,13 @@
         const photoUsage = usageBar(usage.photos_used || 0, usage.photos_max || 0);
 
         let billingInfo = '';
-        if (!isFree && sub.subscription) {
+        let trialInfo = '';
+        if (hasSubscription && sub.subscription) {
             const s = sub.subscription;
+            if (s.is_on_trial) {
+                const trialEnd = new Date(s.trial_end).toLocaleDateString();
+                trialInfo = `<div style="color:#19747E; font-weight:600; font-size:0.9rem; margin-top:0.5rem;">Free trial until ${trialEnd}</div>`;
+            }
             const cycle = s.billing_cycle === 'annual' ? 'Annual' : 'Monthly';
             billingInfo = `<div class="detail-row" style="color:rgba(255,255,255,0.8);"><span>${cycle} billing</span>`;
             if (s.current_period_end) {
@@ -371,6 +376,22 @@
             }
         }
 
+        if (!hasSubscription) {
+            section.innerHTML = `
+                <div class="upgrade-cta">
+                    <h3>Choose a Plan</h3>
+                    <p>Select a subscription to activate your listing and start reaching customers.</p>
+                    <div class="benefits">
+                        <span class="benefit">&#10003; Get discovered locally</span>
+                        <span class="benefit">&#10003; Logo &amp; photos</span>
+                        <span class="benefit">&#10003; Featured placement</span>
+                        <span class="benefit">&#10003; Analytics &amp; reports</span>
+                    </div>
+                    <a href="/pricing/" class="btn btn-primary">View Plans &amp; Pricing</a>
+                </div>`;
+            return;
+        }
+
         section.innerHTML = `
             <div class="plan-card">
                 <h3>Your Plan</h3>
@@ -378,6 +399,7 @@
                     <span class="plan-name">${escHtml(tier.name)}</span>
                     <span class="plan-tier-badge ${badgeClass}">${escHtml(tier.name)} Plan</span>
                 </div>
+                ${trialInfo}
                 ${billingInfo}
                 <div class="usage-meters">
                     <div class="usage-meter">
@@ -397,25 +419,10 @@
                     </div>
                 </div>
                 <div class="plan-actions">
-                    ${isFree ? `<a href="/pricing/" class="btn btn-primary">Upgrade Plan</a>` : `
-                        <a href="/pricing/" class="btn btn-outline-light">Change Plan</a>
-                        <button class="btn btn-outline-light" onclick="openBillingPortal()">Manage Billing</button>
-                    `}
+                    <a href="/pricing/" class="btn btn-outline-light">Change Plan</a>
+                    <button class="btn btn-outline-light" onclick="openBillingPortal()">Manage Billing</button>
                 </div>
             </div>
-            ${isFree ? `
-                <div class="upgrade-cta">
-                    <h3>Unlock Premium Features</h3>
-                    <p>Upgrade to Growth or Pro to stand out and reach more customers.</p>
-                    <div class="benefits">
-                        <span class="benefit">&#10003; More categories</span>
-                        <span class="benefit">&#10003; Logo &amp; photos</span>
-                        <span class="benefit">&#10003; Featured placement</span>
-                        <span class="benefit">&#10003; Analytics &amp; reports</span>
-                    </div>
-                    <a href="/pricing/" class="btn btn-primary">View Plans &amp; Pricing</a>
-                </div>
-            ` : ''}
         `;
     }
 

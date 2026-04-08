@@ -1223,14 +1223,8 @@ class ServiceProviderViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         if ServiceProvider.objects.filter(owner=self.request.user).exists():
             raise ValidationError("You already have a service provider listing.")
-        provider = serializer.save(owner=self.request.user)
-        free_tier = SubscriptionTier.objects.filter(slug='free', is_active=True).first()
-        if free_tier:
-            ServiceProviderSubscription.objects.create(
-                provider=provider, tier=free_tier,
-                billing_cycle='monthly', status='active',
-                stripe_subscription_id=None,
-            )
+        serializer.save(owner=self.request.user)
+        # Provider must choose a paid tier — no automatic subscription created
 
     def perform_update(self, serializer):
         instance = serializer.instance
@@ -1395,9 +1389,6 @@ def create_checkout(request):
     if not tier:
         return Response({'detail': 'Tier not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-    if tier.slug == 'free':
-        return Response({'detail': 'Free tier does not require payment.'}, status=status.HTTP_400_BAD_REQUEST)
-
     price_id = tier.stripe_annual_price_id if billing_cycle == 'annual' else tier.stripe_monthly_price_id
     if not price_id:
         return Response({'detail': 'Stripe price not configured for this tier/billing cycle.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -1421,18 +1412,23 @@ def create_checkout(request):
 
     site_url = request.build_absolute_uri('/').rstrip('/')
 
-    session = stripe.checkout.Session.create(
-        customer=customer_id,
-        mode='subscription',
-        line_items=[{'price': price_id, 'quantity': 1}],
-        success_url=f'{site_url}/my-service/?subscription=success',
-        cancel_url=f'{site_url}/pricing/?cancelled=true',
-        metadata={
+    session_params = {
+        'customer': customer_id,
+        'mode': 'subscription',
+        'line_items': [{'price': price_id, 'quantity': 1}],
+        'success_url': f'{site_url}/my-service/?subscription=success',
+        'cancel_url': f'{site_url}/pricing/?cancelled=true',
+        'metadata': {
             'provider_id': provider.id,
             'tier_slug': tier.slug,
             'billing_cycle': billing_cycle,
         },
-    )
+    }
+    if tier.trial_period_days > 0:
+        session_params['subscription_data'] = {
+            'trial_period_days': tier.trial_period_days,
+        }
+    session = stripe.checkout.Session.create(**session_params)
 
     return Response({'checkout_url': session.url})
 
@@ -1527,10 +1523,17 @@ def _handle_checkout_completed(session):
     stripe.api_key = settings.STRIPE_SECRET_KEY
     stripe_sub = stripe.Subscription.retrieve(stripe_sub_id)
 
-    provider.subscriptions.filter(status='active').exclude(tier__slug='free').update(
+    # Cancel any existing active subscriptions
+    provider.subscriptions.filter(status='active').update(
         status='cancelled', cancelled_at=timezone.now()
     )
-    provider.subscriptions.filter(status='active', tier__slug='free').update(status='cancelled')
+
+    # Build trial_end from Stripe subscription data
+    trial_end_ts = getattr(stripe_sub, 'trial_end', None)
+    trial_end = (
+        timezone.datetime.fromtimestamp(trial_end_ts, tz=timezone.utc)
+        if trial_end_ts else None
+    )
 
     # Use get_or_create to handle webhook replays idempotently
     ServiceProviderSubscription.objects.get_or_create(
@@ -1547,6 +1550,7 @@ def _handle_checkout_completed(session):
             'current_period_end': timezone.datetime.fromtimestamp(
                 stripe_sub.current_period_end, tz=timezone.utc
             ),
+            'trial_end': trial_end,
         },
     )
 
@@ -1610,16 +1614,7 @@ def _handle_subscription_deleted(sub_data):
     sub.cancelled_at = timezone.now()
     sub.save(update_fields=['status', 'cancelled_at'])
 
-    provider = sub.provider
-    free_tier = SubscriptionTier.objects.filter(slug='free', is_active=True).first()
-    if free_tier and not provider.subscriptions.filter(status='active').exists():
-        ServiceProviderSubscription.objects.create(
-            provider=provider, tier=free_tier,
-            billing_cycle='monthly', status='active',
-            stripe_subscription_id=None,
-        )
-
-    logger.info('Subscription cancelled, free tier assigned: provider=%s', provider.id)
+    logger.info('Subscription cancelled: provider=%s', sub.provider.id)
 
 
 def _handle_payment_failed(invoice_data):
@@ -2933,3 +2928,81 @@ def mark_solution(request, post_pk):
     post.is_solution = True
     post.save(update_fields=['is_solution'])
     return Response(ForumPostSerializer(post).data)
+
+
+# ── Staff Service Management ────────────────────────────────────
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAdminUser])
+def service_provider_stats(request):
+    """Return aggregate statistics for staff service management dashboard."""
+    stats = ServiceProvider.objects.aggregate(
+        total=Count('id'),
+        draft=Count('id', filter=Q(status='draft')),
+        pending_review=Count('id', filter=Q(status='pending_review')),
+        active=Count('id', filter=Q(status='active')),
+        suspended=Count('id', filter=Q(status='suspended')),
+        withdrawn=Count('id', filter=Q(status='withdrawn')),
+        verified=Count('id', filter=Q(is_verified=True)),
+    )
+
+    subscription_stats = list(
+        ServiceProviderSubscription.objects.filter(status='active')
+        .values('tier__name')
+        .annotate(count=Count('id'))
+    )
+
+    pending_providers = (
+        ServiceProvider.objects.filter(status='pending_review')
+        .select_related('owner')
+        .prefetch_related('categories', 'subscriptions__tier')
+        .order_by('created_at')
+    )
+
+    recent_providers = (
+        ServiceProvider.objects.all()
+        .select_related('owner')
+        .prefetch_related('categories', 'subscriptions__tier')
+        .order_by('-created_at')[:20]
+    )
+
+    return Response({
+        'counts': stats,
+        'subscription_breakdown': subscription_stats,
+        'pending_providers': ServiceProviderListSerializer(
+            pending_providers, many=True, context={'request': request}
+        ).data,
+        'recent_providers': ServiceProviderListSerializer(
+            recent_providers, many=True, context={'request': request}
+        ).data,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAdminUser])
+def bulk_provider_action(request):
+    """Bulk status update for service providers (staff-only)."""
+    provider_ids = request.data.get('provider_ids', [])
+    action_name = request.data.get('action')
+
+    action_map = {
+        'approve': 'active',
+        'suspend': 'suspended',
+        'reject': 'withdrawn',
+    }
+    new_status = action_map.get(action_name)
+    if not new_status:
+        return Response(
+            {'detail': f'Invalid action. Must be one of: {", ".join(action_map.keys())}'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not provider_ids:
+        return Response(
+            {'detail': 'No provider IDs provided.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    updated = ServiceProvider.objects.filter(id__in=provider_ids).update(status=new_status)
+    return Response({'updated': updated, 'new_status': new_status})

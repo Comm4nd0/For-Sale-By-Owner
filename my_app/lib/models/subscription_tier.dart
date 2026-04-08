@@ -11,6 +11,7 @@ class SubscriptionTier {
   final Map<String, dynamic> limits;
   final Map<String, bool> features;
   final int displayOrder;
+  final int trialPeriodDays;
 
   SubscriptionTier({
     required this.id,
@@ -25,6 +26,7 @@ class SubscriptionTier {
     required this.limits,
     required this.features,
     required this.displayOrder,
+    this.trialPeriodDays = 0,
   });
 
   factory SubscriptionTier.fromJson(Map<String, dynamic> json) {
@@ -46,10 +48,11 @@ class SubscriptionTier {
             .map((k, v) => MapEntry(k.toString(), v == true)),
       ),
       displayOrder: json['display_order'] ?? 0,
+      trialPeriodDays: json['trial_period_days'] ?? 0,
     );
   }
 
-  bool get isFree => monthlyPrice == 0;
+  bool get hasTrial => trialPeriodDays > 0;
 
   int get maxCategories => limits['max_service_categories'] ?? 1;
   int get maxLocations => limits['max_locations'] ?? 1;

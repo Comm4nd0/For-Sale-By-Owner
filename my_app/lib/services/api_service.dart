@@ -564,7 +564,7 @@ class ApiService {
     final response = await http.get(
       Uri.parse(ApiConstants.serviceProviderDetail(idOrSlug)),
       headers: _headers,
-    );
+    ).timeout(_timeout);
     if (response.statusCode == 200) {
       return ServiceProvider.fromJson(jsonDecode(response.body));
     }
@@ -604,7 +604,7 @@ class ApiService {
     final response = await http.get(
       Uri.parse(ApiConstants.serviceProviderReviews(providerId)),
       headers: _headers,
-    );
+    ).timeout(_timeout);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as List;
       return data
@@ -647,6 +647,47 @@ class ApiService {
       return data.map((json) => ServiceProvider.fromJson(json)).toList();
     }
     throw Exception('Failed to load property services');
+  }
+
+  // ── Staff Service Management ────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getServiceProviderStats() async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.staffServiceStats),
+      headers: _headers,
+    ).timeout(_timeout);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to load service provider stats');
+  }
+
+  Future<int> bulkProviderAction(List<int> providerIds, String action) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.staffServiceActions),
+      headers: _headers,
+      body: jsonEncode({'provider_ids': providerIds, 'action': action}),
+    ).timeout(_timeout);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body)['updated'];
+    }
+    throw Exception('Failed to perform action');
+  }
+
+  Future<ServiceProvider> validateServiceProvider(
+      int providerId, {String? status, bool? isVerified}) async {
+    final body = <String, dynamic>{};
+    if (status != null) body['status'] = status;
+    if (isVerified != null) body['is_verified'] = isVerified;
+    final response = await http.post(
+      Uri.parse(ApiConstants.serviceProviderValidate(providerId)),
+      headers: _headers,
+      body: jsonEncode(body),
+    ).timeout(_timeout);
+    if (response.statusCode == 200) {
+      return ServiceProvider.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to validate provider');
   }
 
   // ── Subscriptions / Pricing ─────────────────────────────────────────

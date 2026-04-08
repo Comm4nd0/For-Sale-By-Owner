@@ -246,8 +246,8 @@ class ServiceProviderReviewAdmin(admin.ModelAdmin):
 
 @admin.register(SubscriptionTier)
 class SubscriptionTierAdmin(admin.ModelAdmin):
-    list_display = ['name', 'monthly_price', 'annual_price', 'display_order', 'is_active']
-    list_editable = ['display_order', 'is_active']
+    list_display = ['name', 'monthly_price', 'annual_price', 'trial_period_days', 'display_order', 'is_active']
+    list_editable = ['display_order', 'is_active', 'trial_period_days']
     prepopulated_fields = {'slug': ('name',)}
 
 @admin.register(SubscriptionAddOn)

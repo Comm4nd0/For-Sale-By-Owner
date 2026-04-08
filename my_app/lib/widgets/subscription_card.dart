@@ -19,9 +19,9 @@ class SubscriptionCard extends StatelessWidget {
     final subscription =
         subscriptionData?['subscription'] as Map<String, dynamic>?;
 
-    final tierName = tier?['name'] ?? 'Free';
-    final tierSlug = tier?['slug'] ?? 'free';
-    final isFree = tierSlug == 'free';
+    final tierName = tier?['name'];
+    final tierSlug = tier?['slug'];
+    final hasSubscription = tierSlug != null;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -49,13 +49,13 @@ class SubscriptionCard extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              _buildTierBadge(tierName, tierSlug),
+              if (hasSubscription) _buildTierBadge(tierName!, tierSlug!),
             ],
           ),
           const SizedBox(height: 12),
 
           // Billing info
-          if (!isFree && subscription != null) ...[
+          if (hasSubscription && subscription != null) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -115,7 +115,7 @@ class SubscriptionCard extends StatelessWidget {
           // Actions
           Row(
             children: [
-              if (isFree)
+              if (!hasSubscription)
                 Expanded(
                   child: ElevatedButton(
                     onPressed: onUpgrade,
@@ -123,7 +123,7 @@ class SubscriptionCard extends StatelessWidget {
                       backgroundColor: const Color(0xFF19747E),
                       foregroundColor: Colors.white,
                     ),
-                    child: const Text('Upgrade Plan'),
+                    child: const Text('Choose a Plan'),
                   ),
                 )
               else ...[

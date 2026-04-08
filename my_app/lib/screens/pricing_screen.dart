@@ -292,8 +292,7 @@ class _PricingScreenState extends State<PricingScreen> with AutoRetryMixin {
 
   Widget _buildTierCard(SubscriptionTier tier) {
     final isHighlighted = tier.slug == 'pro';
-    final price = _isAnnual ? tier.annualPrice : tier.monthlyPrice;
-    final isFree = price == 0;
+    if (tier.slug == 'free') return const SizedBox.shrink();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -366,57 +365,47 @@ class _PricingScreenState extends State<PricingScreen> with AutoRetryMixin {
                 const SizedBox(height: 12),
 
                 // Price
-                if (isFree)
-                  const Text.rich(
-                    TextSpan(children: [
-                      TextSpan(
-                        text: '\u00A30',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF115E66),
-                        ),
-                      ),
-                      TextSpan(
-                        text: ' forever',
-                        style: TextStyle(
-                          color: Color(0xFF8FA3A8),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ]),
-                  )
-                else ...[
-                  Text.rich(
-                    TextSpan(children: [
-                      TextSpan(
-                        text: _isAnnual
-                            ? '\u00A3${(tier.annualPrice / 12).toStringAsFixed(0)}'
-                            : '\u00A3${tier.monthlyPrice.toStringAsFixed(0)}',
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF115E66),
-                        ),
-                      ),
-                      const TextSpan(
-                        text: '/month',
-                        style: TextStyle(
-                          color: Color(0xFF8FA3A8),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ]),
-                  ),
-                  if (_isAnnual)
-                    Text(
-                      'Billed \u00A3${tier.annualPrice.toStringAsFixed(0)}/year',
+                Text.rich(
+                  TextSpan(children: [
+                    TextSpan(
+                      text: _isAnnual
+                          ? '\u00A3${(tier.annualPrice / 12).toStringAsFixed(0)}'
+                          : '\u00A3${tier.monthlyPrice.toStringAsFixed(0)}',
                       style: const TextStyle(
-                        color: Color(0xFF4A5C62),
-                        fontSize: 12,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF115E66),
                       ),
                     ),
-                ],
+                    const TextSpan(
+                      text: '/month',
+                      style: TextStyle(
+                        color: Color(0xFF8FA3A8),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ]),
+                ),
+                if (_isAnnual)
+                  Text(
+                    'Billed \u00A3${tier.annualPrice.toStringAsFixed(0)}/year',
+                    style: const TextStyle(
+                      color: Color(0xFF4A5C62),
+                      fontSize: 12,
+                    ),
+                  ),
+                if (tier.hasTrial)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'First ${tier.trialPeriodDays >= 30 ? '${(tier.trialPeriodDays / 30).round()} month${(tier.trialPeriodDays / 30).round() > 1 ? 's' : ''}' : '${tier.trialPeriodDays} days'} free',
+                      style: const TextStyle(
+                        color: Color(0xFF19747E),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 16),
 
                 // Limits
@@ -465,25 +454,19 @@ class _PricingScreenState extends State<PricingScreen> with AutoRetryMixin {
                 // CTA
                 SizedBox(
                   width: double.infinity,
-                  child: isFree
-                      ? OutlinedButton(
-                          onPressed: () =>
-                              Navigator.push(context, MaterialPageRoute(builder: (_) => const ServiceProviderFormScreen())),
-                          child: const Text('Get Started Free'),
-                        )
-                      : ElevatedButton(
+                  child: ElevatedButton(
                           onPressed: () => _subscribe(tier),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: isHighlighted
-                                ? const Color(0xFF19747E)
-                                : const Color(0xFF19747E),
+                            backgroundColor: const Color(0xFF19747E),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                           child: Text(
-                            tier.ctaText.isNotEmpty
-                                ? tier.ctaText
-                                : 'Choose ${tier.name}',
+                            tier.hasTrial
+                                ? 'Start Free Trial'
+                                : tier.ctaText.isNotEmpty
+                                    ? tier.ctaText
+                                    : 'Choose ${tier.name}',
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ),

@@ -14,8 +14,8 @@ class ServiceProvider {
   final String pricingInfo;
   final double? averageRating;
   final int reviewCount;
-  final String tierName;
-  final String tierSlug;
+  final String? tierName;
+  final String? tierSlug;
   final bool isFeatured;
   final String createdAt;
 
@@ -43,8 +43,8 @@ class ServiceProvider {
     required this.pricingInfo,
     this.averageRating,
     required this.reviewCount,
-    this.tierName = 'Free',
-    this.tierSlug = 'free',
+    this.tierName,
+    this.tierSlug,
     this.isFeatured = false,
     required this.createdAt,
     this.ownerId,
@@ -76,8 +76,8 @@ class ServiceProvider {
           ? double.tryParse(json['average_rating'].toString())
           : null,
       reviewCount: json['review_count'] ?? 0,
-      tierName: json['tier_name'] ?? 'Free',
-      tierSlug: json['tier_slug'] ?? 'free',
+      tierName: json['tier_name'],
+      tierSlug: json['tier_slug'],
       isFeatured: json['is_featured'] ?? false,
       createdAt: json['created_at'] ?? '',
       ownerId: json['owner'],
@@ -107,6 +107,5 @@ class ServiceProvider {
 
   bool get isProTier => tierSlug == 'pro';
   bool get isGrowthTier => tierSlug == 'growth';
-  bool get isFreeTier => tierSlug == 'free';
-  bool get isPaidTier => !isFreeTier;
+  bool get hasSubscription => tierSlug != null;
 }
