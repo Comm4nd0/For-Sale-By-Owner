@@ -2,19 +2,19 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, development]
   pull_request:
     branches: [main, master]
 
 jobs:
-  test:
+  backend-tests:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -38,3 +38,33 @@ jobs:
           SECRET_KEY: 'ci-test-secret-key'
           DEBUG: 'True'
         run: python manage.py makemigrations --check --dry-run
+
+  flutter-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: my_app
+        run: flutter pub get
+
+      - name: Analyze code
+        working-directory: my_app
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        working-directory: my_app
+        run: flutter test

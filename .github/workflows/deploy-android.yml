@@ -8,11 +8,42 @@ on:
       - 'my_app/**'
 
 jobs:
-  build-and-deploy:
+  test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: my_app
+        run: flutter pub get
+
+      - name: Analyze code
+        working-directory: my_app
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        working-directory: my_app
+        run: flutter test
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -26,13 +57,14 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
       - name: Decode keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > my_app/android/app/upload-keystore.jks
 
       - name: Create key.properties
         run: |
-          cat > my_app/android/key.properties << EOF
+          cat > my_app/android/key.properties <<'EOF'
           storePassword=${{ secrets.STORE_PASSWORD }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
