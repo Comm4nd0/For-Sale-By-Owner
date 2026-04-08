@@ -24,7 +24,6 @@ import 'package:for_sale_by_owner/models/dashboard_stats.dart';
 import 'package:for_sale_by_owner/models/property.dart';
 import 'package:for_sale_by_owner/models/user_profile.dart';
 import 'package:for_sale_by_owner/models/mortgage_calculation.dart';
-import 'package:for_sale_by_owner/widgets/branded_app_bar.dart';
 
 // ─── Test helpers ──────────────────────────────────────────────────────
 
