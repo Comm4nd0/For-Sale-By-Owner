@@ -230,9 +230,6 @@ class _StampDutyScreenState extends State<StampDutyScreen> {
                             ),
                             ...(_result!['bands'] as List).map((band) {
                               final from = _formatCurrency(band['from']);
-                              final to = band['to'] == null
-                                  ? '+'
-                                  : ' - ${_formatCurrency(band['to'])}';
                               final bandLabel = band['to'] == null ? '$from+' : '$from - ${_formatCurrency(band['to'])}';
                               return TableRow(
                                 children: [

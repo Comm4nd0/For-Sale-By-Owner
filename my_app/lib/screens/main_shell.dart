@@ -11,7 +11,6 @@ import 'services_screen.dart';
 import 'account_screen.dart';
 import 'tools_screen.dart';
 import 'login_screen.dart';
-import 'register_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class MainShell extends StatefulWidget {

@@ -32,7 +32,6 @@ class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
   bool _isLoading = false;
   bool _hasMore = true;
   int _page = 1;
-  int _totalCount = 0;
   String? _error;
 
   @override
@@ -87,7 +86,6 @@ class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
       if (mounted) {
         setState(() {
           _providers = result.results;
-          _totalCount = result.count;
           _hasMore = result.next != null;
           _page = 2;
           _isLoading = false;

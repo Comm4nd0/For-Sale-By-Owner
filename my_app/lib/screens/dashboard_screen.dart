@@ -1049,12 +1049,4 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  String _formatDate(String dateStr) {
-    try {
-      final date = DateTime.parse(dateStr);
-      return '${date.day}/${date.month}/${date.year}';
-    } catch (_) {
-      return dateStr;
-    }
-  }
 }

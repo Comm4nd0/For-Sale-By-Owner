@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../models/buyer_profile.dart';
 import '../widgets/branded_app_bar.dart';
-import 'package:intl/intl.dart';
 
 class BuyerProfileScreen extends StatefulWidget {
   const BuyerProfileScreen({super.key});

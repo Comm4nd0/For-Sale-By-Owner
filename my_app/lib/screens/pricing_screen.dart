@@ -11,7 +11,6 @@ import '../widgets/branded_app_bar.dart';
 import '../widgets/scroll_to_top_button.dart';
 import '../utils/auto_retry.dart';
 import 'login_screen.dart';
-import 'service_provider_form_screen.dart';
 
 class PricingScreen extends StatefulWidget {
   const PricingScreen({super.key});

@@ -18,7 +18,6 @@ import 'edit_property_screen.dart';
 import '../widgets/service_providers_section.dart';
 import '../widgets/branded_app_bar.dart';
 import '../widgets/scroll_to_top_button.dart';
-import '../models/chat_room.dart';
 import '../models/viewing_slot.dart';
 import 'make_offer_screen.dart';
 import 'edit_offer_screen.dart';
