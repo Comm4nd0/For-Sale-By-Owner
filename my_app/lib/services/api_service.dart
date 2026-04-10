@@ -1446,7 +1446,10 @@ class ApiService {
     if (response.statusCode == 201) {
       return jsonDecode(response.body);
     }
-    throw Exception('Failed to create review');
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      throw Exception('Please log in to submit a review');
+    }
+    throw Exception(_extractError(response));
   }
 
   Future<Map<String, dynamic>> getNeighbourhoodSummary(
