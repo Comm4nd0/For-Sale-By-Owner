@@ -105,6 +105,7 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
       ),
     );
     if (confirmed != true) return;
+    if (!mounted) return;
 
     try {
       final api = context.read<ApiService>();
@@ -135,7 +136,7 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
     return Scaffold(
       appBar: AppBar(title: const Text('Viewing Slots')),
       floatingActionButton: widget.isOwner
-          ? FloatingActionButton(onPressed: _addSlot, child: PhosphorIcon(PhosphorIconsDuotone.plus))
+          ? FloatingActionButton(onPressed: _addSlot, child: const PhosphorIcon(PhosphorIconsDuotone.plus))
           : null,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -153,7 +154,7 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
                             color: AppTheme.forestMist,
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: PhosphorIcon(PhosphorIconsDuotone.calendar, size: 36, color: AppTheme.forestMid),
+                          child: const PhosphorIcon(PhosphorIconsDuotone.calendar, size: 36, color: AppTheme.forestMid),
                         ),
                         const SizedBox(height: 20),
                         const Text(
@@ -240,7 +241,7 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
               )
             : widget.isOwner
                 ? IconButton(
-                    icon: PhosphorIcon(PhosphorIconsDuotone.trash),
+                    icon: const PhosphorIcon(PhosphorIconsDuotone.trash),
                     onPressed: () async {
                       final confirmed = await showDialog<bool>(
                         context: context,
@@ -261,6 +262,7 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
                         ),
                       );
                       if (confirmed != true) return;
+                      if (!mounted) return;
                       final api = context.read<ApiService>();
                       await api.deleteViewingSlot(widget.propertyId, slot.id);
                       _loadSlots();
@@ -387,14 +389,14 @@ class _AddSlotSheetState extends State<_AddSlotSheet> with SingleTickerProviderS
                 labelColor: Colors.white,
                 unselectedLabelColor: AppTheme.slate,
                 labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                tabs: [
+                tabs: const [
                   Tab(
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         PhosphorIcon(PhosphorIconsDuotone.repeat, size: 16),
-                        const SizedBox(width: 6),
-                        const Text('Weekly'),
+                        SizedBox(width: 6),
+                        Text('Weekly'),
                       ],
                     ),
                   ),
@@ -403,8 +405,8 @@ class _AddSlotSheetState extends State<_AddSlotSheet> with SingleTickerProviderS
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         PhosphorIcon(PhosphorIconsDuotone.calendarCheck, size: 16),
-                        const SizedBox(width: 6),
-                        const Text('One-off'),
+                        SizedBox(width: 6),
+                        Text('One-off'),
                       ],
                     ),
                   ),
@@ -549,7 +551,7 @@ class _AddSlotSheetState extends State<_AddSlotSheet> with SingleTickerProviderS
             );
             if (date != null) setState(() => _selectedDate = date);
           },
-          icon: PhosphorIcon(PhosphorIconsDuotone.calendar, size: 18),
+          icon: const PhosphorIcon(PhosphorIconsDuotone.calendar, size: 18),
           label: Text(
             _selectedDate != null
                 ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
@@ -617,12 +619,12 @@ class _AddSlotSheetState extends State<_AddSlotSheet> with SingleTickerProviderS
       children: [
         IconButton(
           onPressed: value > 1 ? onDecrement : null,
-          icon: PhosphorIcon(PhosphorIconsDuotone.minusCircle),
+          icon: const PhosphorIcon(PhosphorIconsDuotone.minusCircle),
         ),
         Text('$value', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         IconButton(
           onPressed: value < 10 ? onIncrement : null,
-          icon: PhosphorIcon(PhosphorIconsDuotone.plusCircle),
+          icon: const PhosphorIcon(PhosphorIconsDuotone.plusCircle),
         ),
         const SizedBox(width: 8),
         Text(
