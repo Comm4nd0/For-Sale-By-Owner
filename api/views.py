@@ -1926,7 +1926,12 @@ def update_conveyancing_step(request, case_pk, step_pk):
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def generate_listing_description(request):
-    """Generate a property listing description based on provided details."""
+    """Generate a property listing description based on provided details.
+
+    Supports a ``brief=true`` flag (or ``tone='brief'``) which returns a short
+    1–2 sentence summary suitable for the ``brief_description`` field. The
+    long-form path is unchanged and uses the same field inputs as before.
+    """
     property_type = request.data.get('property_type', '')
     bedrooms = request.data.get('bedrooms', 0)
     bathrooms = request.data.get('bathrooms', 0)
@@ -1937,9 +1942,49 @@ def generate_listing_description(request):
     epc_rating = request.data.get('epc_rating', '')
     tone = request.data.get('tone', 'professional')
     additional_notes = request.data.get('additional_notes', '')
+    brief = request.data.get('brief', False) or tone == 'brief'
 
     # Build description from property details
-    type_display = dict(Property.PROPERTY_TYPES).get(property_type, property_type)
+    type_display = dict(Property.PROPERTY_TYPES).get(property_type, property_type) or 'property'
+
+    # ── Brief mode: single or double sentence, ≤ 300 chars ─────────
+    if brief:
+        try:
+            beds_int = int(bedrooms or 0)
+        except (TypeError, ValueError):
+            beds_int = 0
+        beds_part = f"{beds_int} bedroom " if beds_int else ''
+        where = f" in {location}" if location else ''
+        sentence_1 = f"A {beds_part}{type_display.lower()}{where}.".strip()
+
+        # Optional second sentence highlighting up to 3 features
+        second = ''
+        highlight = []
+        if isinstance(features, list):
+            highlight = [str(f) for f in features[:3] if f]
+        if not highlight:
+            if epc_rating:
+                highlight.append(f"EPC {epc_rating}")
+            if square_feet:
+                highlight.append(f"approx {square_feet} sq ft")
+        if highlight:
+            if len(highlight) == 1:
+                feature_phrase = highlight[0]
+            elif len(highlight) == 2:
+                feature_phrase = f"{highlight[0]} and {highlight[1]}"
+            else:
+                feature_phrase = f"{', '.join(highlight[:-1])} and {highlight[-1]}"
+            second = f" Featuring {feature_phrase}."
+        brief_text = (sentence_1 + second).strip()
+        # Enforce 300 char cap (brief_description field limit)
+        if len(brief_text) > 300:
+            brief_text = brief_text[:297].rstrip() + '...'
+        return Response({
+            'description': brief_text,
+            'brief': True,
+            'tone': 'brief',
+            'word_count': len(brief_text.split()),
+        })
 
     # Construct structured description
     parts = []
@@ -1998,6 +2043,51 @@ def generate_listing_description(request):
         'description': description,
         'tone': tone,
         'word_count': len(description.split()),
+    })
+
+
+# ── Postcode lookup (postcodes.io proxy, free, no API key) ───────
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def postcode_lookup(request, postcode):
+    """Look up a UK postcode via postcodes.io.
+
+    Returns lat/lon, admin_district, country for the given postcode. Does NOT
+    return a full address list — the free postcodes.io API only resolves the
+    postcode's centroid and admin region. Users still type their house number
+    and street manually.
+    """
+    normalized = (postcode or '').replace(' ', '').upper()
+    if not normalized:
+        return Response({'detail': 'Postcode required.'}, status=400)
+
+    try:
+        resp = requests.get(
+            f'https://api.postcodes.io/postcodes/{normalized}',
+            timeout=5,
+        )
+    except requests.RequestException:
+        return Response({'detail': 'Postcode lookup unavailable.'}, status=503)
+
+    if resp.status_code == 404:
+        return Response({'detail': 'Postcode not found.'}, status=404)
+    if resp.status_code != 200:
+        return Response({'detail': 'Postcode lookup failed.'}, status=502)
+
+    try:
+        payload = resp.json().get('result') or {}
+    except ValueError:
+        return Response({'detail': 'Invalid response from postcode service.'}, status=502)
+
+    return Response({
+        'postcode': payload.get('postcode', normalized),
+        'latitude': payload.get('latitude'),
+        'longitude': payload.get('longitude'),
+        'admin_district': payload.get('admin_district'),
+        'admin_county': payload.get('admin_county'),
+        'region': payload.get('region'),
+        'country': payload.get('country'),
     })
 
 

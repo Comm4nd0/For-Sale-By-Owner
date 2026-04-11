@@ -1,3 +1,5 @@
+import re
+
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from .models import (
@@ -107,14 +109,56 @@ class PropertySerializer(serializers.ModelSerializer):
         model = Property
         fields = [
             'id', 'owner', 'owner_name', 'owner_is_verified',
-            'title', 'slug', 'description',
+            'title', 'slug', 'description', 'brief_description',
             'property_type', 'property_type_display',
             'status', 'status_display', 'price',
             'address_line_1', 'address_line_2', 'city', 'county', 'postcode',
-            'latitude', 'longitude',
-            'bedrooms', 'bathrooms', 'reception_rooms', 'square_feet',
+            'latitude', 'longitude', 'what3words',
+            'bedrooms', 'bathrooms', 'reception_rooms',
+            'square_feet', 'floor_area_sqm',
             'epc_rating', 'epc_rating_display',
             'features', 'feature_list',
+            # Tenure & costs
+            'tenure', 'lease_years_remaining',
+            'ground_rent_amount', 'ground_rent_review_terms',
+            'service_charge_amount', 'service_charge_frequency',
+            'managing_agent_details', 'council_tax_band',
+            # Construction & build
+            'year_built', 'construction_type', 'non_standard_construction',
+            # Utilities & services
+            'electricity_supply', 'water_supply', 'sewerage',
+            'heating_type', 'broadband_speed', 'broadband_provider',
+            'broadband_monthly_cost', 'mobile_signal', 'parking_type',
+            # Rights, restrictions, risks
+            'restrictive_covenants', 'restrictive_covenants_details',
+            'rights_of_way', 'rights_of_way_details',
+            'listed_building', 'conservation_area',
+            'flood_risk', 'coastal_erosion_risk',
+            'mining_area', 'japanese_knotweed', 'accessibility_features',
+            # Building safety
+            'cladding_type', 'ews1_available', 'building_safety_notes',
+            # Works history
+            'extensions_year', 'loft_conversion_year', 'rewiring_year',
+            'reroof_year', 'new_boiler_year', 'new_windows_year',
+            'damp_proofing_year', 'works_notes',
+            # Warranties
+            'nhbc_years_remaining', 'solar_panels',
+            # Running costs
+            'annual_gas_bill', 'annual_electricity_bill', 'annual_water_bill',
+            # Environmental & location
+            'radon_risk', 'noise_sources',
+            'nearest_station_name', 'nearest_station_distance_km',
+            'nearby_schools',
+            # Outside space
+            'garden_size_sqm', 'garden_orientation', 'outbuildings',
+            # Chain & availability
+            'chain_status', 'earliest_completion_date', 'reason_for_sale',
+            # Fixtures & fittings
+            'fixtures_included', 'fixtures_excluded', 'fixtures_negotiable',
+            # Extras
+            'smart_home', 'ev_charging', 'solar_battery_storage',
+            'rainwater_harvesting', 'home_office', 'pet_friendly_features',
+            # Media + meta
             'images', 'floorplans', 'primary_image', 'image_count', 'is_saved',
             'is_owner',
             'price_history', 'view_count', 'message_count', 'offer_count',
@@ -123,6 +167,18 @@ class PropertySerializer(serializers.ModelSerializer):
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'owner', 'slug', 'created_at', 'updated_at']
+
+    W3W_RE = re.compile(r'^[a-z]+\.[a-z]+\.[a-z]+$')
+
+    def validate_what3words(self, value):
+        if not value:
+            return value
+        normalized = value.strip().lower().lstrip('/')
+        if not self.W3W_RE.match(normalized):
+            raise serializers.ValidationError(
+                'What3Words must be in the format "word.word.word" (lowercase letters only).'
+            )
+        return normalized
 
     def _is_owner(self, obj):
         request = self.context.get('request')
@@ -140,6 +196,8 @@ class PropertySerializer(serializers.ModelSerializer):
             data['address_line_1'] = ''
             data['address_line_2'] = ''
             data['postcode'] = ''
+            data['what3words'] = ''
+            # Keep rough lat/lon for map rendering but blank out to owner-only precision if needed
         return data
 
     def get_primary_image(self, obj):
@@ -184,16 +242,16 @@ class PropertyListSerializer(PropertySerializer):
     class Meta(PropertySerializer.Meta):
         fields = [
             'id', 'owner', 'owner_name', 'owner_is_verified',
-            'title', 'slug',
+            'title', 'slug', 'brief_description',
             'property_type', 'property_type_display',
             'status', 'status_display', 'price',
             'address_line_1', 'address_line_2', 'city', 'county', 'postcode',
             'latitude', 'longitude',
             'bedrooms', 'bathrooms', 'reception_rooms', 'square_feet',
-            'epc_rating', 'epc_rating_display',
+            'epc_rating', 'epc_rating_display', 'tenure', 'chain_status',
             'images', 'feature_list', 'primary_image', 'image_count', 'is_saved',
             'is_owner',
-            'view_count', 'video_url',
+            'view_count', 'video_url', 'listing_quality',
             'created_at', 'updated_at',
         ]
 

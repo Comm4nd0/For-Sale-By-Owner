@@ -82,11 +82,88 @@ class PropertyAdmin(admin.ModelAdmin):
     filter_horizontal = ['features']
     actions = ['approve_listings', 'reject_listings', 'mark_active', 'mark_withdrawn']
     fieldsets = (
-        (None, {'fields': ('owner', 'title', 'slug', 'status', 'price')}),
-        ('Property Details', {'fields': ('property_type', 'description', 'epc_rating', 'bedrooms', 'bathrooms', 'reception_rooms', 'square_feet', 'features')}),
+        (None, {'fields': ('owner', 'title', 'slug', 'status', 'price', 'brief_description')}),
+        ('Property Details', {'fields': ('property_type', 'description', 'epc_rating', 'bedrooms', 'bathrooms', 'reception_rooms', 'square_feet', 'floor_area_sqm', 'features')}),
         ('Address', {'fields': ('address_line_1', 'address_line_2', 'city', 'county', 'postcode')}),
-        ('Geolocation', {'fields': ('latitude', 'longitude')}),
+        ('Geolocation', {'fields': ('latitude', 'longitude', 'what3words')}),
         ('Media', {'fields': ('video_url', 'video_thumbnail')}),
+        ('Tenure & costs', {
+            'classes': ('collapse',),
+            'fields': (
+                'tenure', 'lease_years_remaining',
+                'ground_rent_amount', 'ground_rent_review_terms',
+                'service_charge_amount', 'service_charge_frequency',
+                'managing_agent_details', 'council_tax_band',
+            ),
+        }),
+        ('Construction & build', {
+            'classes': ('collapse',),
+            'fields': ('year_built', 'construction_type', 'non_standard_construction'),
+        }),
+        ('Utilities & services', {
+            'classes': ('collapse',),
+            'fields': (
+                'electricity_supply', 'water_supply', 'sewerage',
+                'heating_type', 'broadband_speed', 'broadband_provider',
+                'broadband_monthly_cost', 'mobile_signal', 'parking_type',
+            ),
+        }),
+        ('Rights, restrictions & risks', {
+            'classes': ('collapse',),
+            'fields': (
+                'restrictive_covenants', 'restrictive_covenants_details',
+                'rights_of_way', 'rights_of_way_details',
+                'listed_building', 'conservation_area',
+                'flood_risk', 'coastal_erosion_risk',
+                'mining_area', 'japanese_knotweed', 'accessibility_features',
+            ),
+        }),
+        ('Building safety', {
+            'classes': ('collapse',),
+            'fields': ('cladding_type', 'ews1_available', 'building_safety_notes'),
+        }),
+        ('Works history', {
+            'classes': ('collapse',),
+            'fields': (
+                'extensions_year', 'loft_conversion_year', 'rewiring_year',
+                'reroof_year', 'new_boiler_year', 'new_windows_year',
+                'damp_proofing_year', 'works_notes',
+            ),
+        }),
+        ('Warranties & running costs', {
+            'classes': ('collapse',),
+            'fields': (
+                'nhbc_years_remaining', 'solar_panels',
+                'annual_gas_bill', 'annual_electricity_bill', 'annual_water_bill',
+            ),
+        }),
+        ('Environmental & location', {
+            'classes': ('collapse',),
+            'fields': (
+                'radon_risk', 'noise_sources',
+                'nearest_station_name', 'nearest_station_distance_km',
+                'nearby_schools',
+            ),
+        }),
+        ('Outside space', {
+            'classes': ('collapse',),
+            'fields': ('garden_size_sqm', 'garden_orientation', 'outbuildings'),
+        }),
+        ('Chain & availability', {
+            'classes': ('collapse',),
+            'fields': ('chain_status', 'earliest_completion_date', 'reason_for_sale'),
+        }),
+        ('Fixtures & fittings', {
+            'classes': ('collapse',),
+            'fields': ('fixtures_included', 'fixtures_excluded', 'fixtures_negotiable'),
+        }),
+        ('Extras worth highlighting', {
+            'classes': ('collapse',),
+            'fields': (
+                'smart_home', 'ev_charging', 'solar_battery_storage',
+                'rainwater_harvesting', 'home_office', 'pet_friendly_features',
+            ),
+        }),
         ('Statistics', {'fields': ('view_count', 'message_count', 'save_count', 'flag_count')}),
         ('Dates', {'fields': ('created_at', 'updated_at')}),
     )

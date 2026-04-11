@@ -3,356 +3,83 @@
 {% block title %}List Your Property - For Sale By Owner{% endblock %}
 
 {% block extra_css %}
-<style>
-    .page-title { color: #115E66; margin-bottom: 1.5rem; }
-    .property-form { max-width: 700px; }
-
-    /* Progress indicator */
-    .progress-bar {
-        display: flex;
-        margin-bottom: 2rem;
-        position: relative;
-    }
-    .progress-bar::before {
-        content: '';
-        position: absolute;
-        top: 18px;
-        left: 60px;
-        right: 60px;
-        height: 2px;
-        background: #E2E2E2;
-        z-index: 0;
-    }
-    .progress-step {
-        flex: 1;
-        text-align: center;
-        position: relative;
-        z-index: 1;
-        cursor: default;
-    }
-    .progress-step.clickable { cursor: pointer; }
-    .step-number {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        background: #E2E2E2;
-        color: #4A5C62;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-        font-size: 0.95rem;
-        margin-bottom: 0.4rem;
-        transition: all 0.2s;
-    }
-    .progress-step.active .step-number { background: #19747E; color: white; }
-    .progress-step.completed .step-number { background: #115E66; color: white; }
-    .step-label { font-size: 0.8rem; color: #8FA3A8; display: block; }
-    .progress-step.active .step-label { color: #19747E; font-weight: 500; }
-    .progress-step.completed .step-label { color: #115E66; }
-
-    /* Form styles */
-    .form-group { margin-bottom: 1.25rem; }
-    .form-group label { display: block; margin-bottom: 0.3rem; font-weight: 500; color: #4A5C62; }
-    .form-group input, .form-group select, .form-group textarea {
-        width: 100%;
-        padding: 0.6rem;
-        border: 1px solid #E2E2E2;
-        border-radius: 6px;
-        font-size: 1rem;
-        font-family: inherit;
-    }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-        outline: none;
-        border-color: #19747E;
-        box-shadow: 0 0 0 2px rgba(45,106,79,0.15);
-    }
-    .form-group textarea { min-height: 150px; resize: vertical; }
-    .form-group .hint { font-size: 0.8rem; color: #8FA3A8; margin-top: 0.25rem; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
-    .form-row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; }
-    .section-title { font-size: 1.1rem; color: #115E66; margin: 0.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #E2E2E2; }
-
-    /* Steps visibility */
-    .step { display: none; }
-    .step.active { display: block; }
-
-    /* Step intro text */
-    .step-intro { color: #4A5C62; margin-bottom: 1.5rem; font-size: 0.95rem; }
-
-    /* Image upload */
-    .image-upload {
-        border: 2px dashed #E2E2E2;
-        border-radius: 8px;
-        padding: 2.5rem;
-        text-align: center;
-        cursor: pointer;
-        transition: border-color 0.2s, background 0.2s;
-    }
-    .image-upload:hover { border-color: #19747E; background: #F5F8F9; }
-    .image-upload input { display: none; }
-    .image-upload-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
-    .image-upload p { color: #4A5C62; margin-bottom: 0.25rem; }
-    .image-upload .hint { font-size: 0.8rem; color: #8FA3A8; }
-    .image-preview {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        gap: 0.75rem;
-        margin-top: 1rem;
-    }
-    .image-preview-item { position: relative; border-radius: 6px; overflow: hidden; }
-    .image-preview-item img { width: 100%; height: 100px; object-fit: cover; }
-    .image-preview-item .remove {
-        position: absolute;
-        top: 4px;
-        right: 4px;
-        background: rgba(26,60,46,0.7);
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 22px;
-        height: 22px;
-        cursor: pointer;
-        font-size: 14px;
-        line-height: 22px;
-        text-align: center;
-    }
-
-    /* Navigation buttons */
-    .step-actions {
-        margin-top: 2rem;
-        display: flex;
-        justify-content: space-between;
-        gap: 0.75rem;
-        padding-top: 1.5rem;
-        border-top: 1px solid #E2E2E2;
-    }
-    .step-actions .left { display: flex; gap: 0.75rem; }
-    .step-actions .right { display: flex; gap: 0.75rem; }
-    .btn-next {
-        background: #19747E;
-        color: white;
-        padding: 0.7rem 2rem;
-        border: none;
-        border-radius: 6px;
-        font-size: 1rem;
-        font-weight: 500;
-        cursor: pointer;
-        font-family: inherit;
-    }
-    .btn-next:hover { background: #2A9DA8; }
-    .btn-back {
-        background: #E2E2E2;
-        color: #115E66;
-        padding: 0.7rem 1.5rem;
-        border: none;
-        border-radius: 6px;
-        font-size: 1rem;
-        cursor: pointer;
-        font-family: inherit;
-    }
-    .btn-back:hover { background: #8FA3A8; }
-
-    .features-checkboxes label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.75rem; background: #F5F8F9; border: 1px solid #E2E2E2; border-radius: 20px; cursor: pointer; font-size: 0.85rem; transition: all 0.15s; }
-    .features-checkboxes label:has(input:checked) { background: #D1E8E2; border-color: #19747E; color: #115E66; }
-    .features-checkboxes input { display: none; }
-
-    @media (max-width: 768px) {
-        .form-row, .form-row-3 { grid-template-columns: 1fr; }
-        .form-row-4 { grid-template-columns: 1fr 1fr; }
-    }
-</style>
+<link rel="stylesheet" href="{% load static %}{% static 'css/listing-form.css' %}">
 {% endblock %}
 
 {% block content %}
 <h2 class="page-title">List Your Property &mdash; 100% Free</h2>
-<p style="color:#4A5C62; margin-top:-0.5rem; margin-bottom:1.5rem;">No fees, no commission, no hidden charges. Free forever.</p>
+<p class="page-subtitle">No fees, no commission, no hidden charges. Free forever.</p>
+<p class="page-subtitle" style="font-size:0.9rem; margin-bottom:1.5rem;">
+    Just the basics to publish — you can add more details after.
+</p>
 <div id="error" class="alert alert-error" style="display:none;"></div>
 
 <div class="property-form">
-    <!-- Progress bar -->
-    <div class="progress-bar">
-        <div class="progress-step active" data-step="1">
-            <span class="step-number">1</span>
-            <span class="step-label">The Basics</span>
-        </div>
-        <div class="progress-step" data-step="2">
-            <span class="step-number">2</span>
-            <span class="step-label">Details</span>
-        </div>
-        <div class="progress-step" data-step="3">
-            <span class="step-number">3</span>
-            <span class="step-label">Photos &amp; Publish</span>
-        </div>
-    </div>
-
     <form id="property-form">
-        <!-- STEP 1: The Basics -->
-        <div class="step active" data-step="1">
-            <p class="step-intro">Let's start with the key details about your property.</p>
 
+        <div class="form-group">
+            <label for="title">
+                Property Title
+                {% include 'partials/_field_help.html' with text="Eye-catching headline that shows up in search results. Keep it short — 'Beautiful 3-bed semi in Cheltenham' works better than a long list." %}
+            </label>
+            <input type="text" id="title" placeholder="e.g. Beautiful 3-bed semi in Cheltenham" required>
+        </div>
+
+        <div class="form-row">
             <div class="form-group">
-                <label for="title">Property Title</label>
-                <input type="text" id="title" placeholder="e.g. Beautiful 3-bed semi in Cheltenham" required>
-                <p class="hint">Give your property an eye-catching headline</p>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="property_type">Property Type</label>
-                    <select id="property_type" required>
-                        <option value="detached">Detached</option>
-                        <option value="semi_detached">Semi-Detached</option>
-                        <option value="terraced">Terraced</option>
-                        <option value="flat">Flat/Apartment</option>
-                        <option value="bungalow">Bungalow</option>
-                        <option value="cottage">Cottage</option>
-                        <option value="land">Land</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="price">Price (&pound;)</label>
-                    <input type="number" id="price" min="0" step="1" required>
-                </div>
-            </div>
-
-            <h3 class="section-title">Address</h3>
-            <div class="form-group">
-                <label for="address_line_1">Address Line 1</label>
-                <input type="text" id="address_line_1" required>
+                <label for="property_type">Property Type</label>
+                <select id="property_type" required>
+                    <option value="detached">Detached</option>
+                    <option value="semi_detached">Semi-Detached</option>
+                    <option value="terraced">Terraced</option>
+                    <option value="flat">Flat/Apartment</option>
+                    <option value="bungalow">Bungalow</option>
+                    <option value="cottage">Cottage</option>
+                    <option value="land">Land</option>
+                    <option value="other">Other</option>
+                </select>
             </div>
             <div class="form-group">
-                <label for="address_line_2">Address Line 2</label>
-                <input type="text" id="address_line_2">
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="city">City / Town</label>
-                    <input type="text" id="city" required>
-                </div>
-                <div class="form-group">
-                    <label for="county">County</label>
-                    <input type="text" id="county">
-                </div>
-            </div>
-            <div class="form-group" style="max-width: 200px;">
-                <label for="postcode">Postcode</label>
-                <input type="text" id="postcode" required>
-            </div>
-
-            <div class="step-actions">
-                <div class="left">
-                    <a href="/" class="btn btn-secondary">Cancel</a>
-                </div>
-                <div class="right">
-                    <button type="button" class="btn-next" onclick="goToStep(2)">Next: Details &rarr;</button>
-                </div>
+                <label for="price">
+                    Asking Price (&pound;)
+                    {% include 'partials/_field_help.html' with text="Type the price in pounds. Commas are added automatically as you type." %}
+                </label>
+                <input type="text" id="price" inputmode="numeric" placeholder="e.g. 350,000" data-price-format required>
             </div>
         </div>
 
-        <!-- STEP 2: Details -->
-        <div class="step" data-step="2">
-            <p class="step-intro">Tell buyers more about your property.</p>
-
-            <h3 class="section-title">Rooms</h3>
-            <div class="form-row-4">
-                <div class="form-group">
-                    <label for="bedrooms">Bedrooms</label>
-                    <input type="number" id="bedrooms" min="0" value="0">
-                </div>
-                <div class="form-group">
-                    <label for="bathrooms">Bathrooms</label>
-                    <input type="number" id="bathrooms" min="0" value="0">
-                </div>
-                <div class="form-group">
-                    <label for="reception_rooms">Reception</label>
-                    <input type="number" id="reception_rooms" min="0" value="0">
-                </div>
-                <div class="form-group">
-                    <label for="square_feet">Sq Ft</label>
-                    <input type="number" id="square_feet" min="0" placeholder="Optional">
-                </div>
+        <div class="form-group">
+            <label for="postcode">
+                Postcode
+                {% include 'partials/_field_help.html' with text="We look up the area from your postcode to get a rough location. You'll add the full street address after publishing." %}
+            </label>
+            <div class="postcode-lookup-row">
+                <input type="text" id="postcode" placeholder="e.g. BS1 1AA" autocomplete="postal-code" required>
+                <button type="button" id="postcode-lookup-btn" class="btn-ghost">Look up</button>
             </div>
-
-            <div class="form-group">
-                <label for="epc_rating">EPC Rating</label>
-                <select id="epc_rating">
-                    <option value="">Not specified</option>
-                    <option value="A">A</option>
-                    <option value="B">B</option>
-                    <option value="C">C</option>
-                    <option value="D">D</option>
-                    <option value="E">E</option>
-                    <option value="F">F</option>
-                    <option value="G">G</option>
-                </select>
-                <p class="hint">Required by law for most property sales in England and Wales</p>
-            </div>
-
-            <div class="form-group">
-                <label>Features</label>
-                <div id="features-list" class="features-checkboxes" style="display:flex; flex-wrap:wrap; gap:0.5rem;">
-                    <span style="color:#8FA3A8; font-size:0.9rem;">Loading features...</span>
-                </div>
-                <p class="hint">Select all features that apply to your property</p>
-            </div>
-
-            <div class="form-group">
-                <label for="description">Description</label>
-                <textarea id="description" placeholder="Describe what makes your property special. Mention key features, recent improvements, nearby amenities..."></textarea>
-                <p class="hint">A good description helps your property stand out</p>
-            </div>
-
-            <div class="step-actions">
-                <div class="left">
-                    <button type="button" class="btn-back" onclick="goToStep(1)">&larr; Back</button>
-                </div>
-                <div class="right">
-                    <button type="button" class="btn-next" onclick="goToStep(3)">Next: Photos &rarr;</button>
-                </div>
-            </div>
+            <p class="hint" id="postcode-hint"></p>
         </div>
 
-        <!-- STEP 3: Photos & Publish -->
-        <div class="step" data-step="3">
-            <p class="step-intro">Add photos and publish your listing.</p>
+        <div class="form-group" style="max-width:220px;">
+            <label for="bedrooms">Bedrooms</label>
+            <input type="number" id="bedrooms" min="0" value="3" required>
+        </div>
 
-            <h3 class="section-title">Photos</h3>
-            <div class="image-upload" onclick="document.getElementById('image-input').click()">
-                <input type="file" id="image-input" accept="image/*" multiple>
-                <div class="image-upload-icon">&#128247;</div>
-                <p>Click to select photos</p>
-                <p class="hint">Upload up to 10 photos. The first photo will be your main image.</p>
+        <h3 class="section-title" style="margin-top:1rem;">Photos</h3>
+        <div class="image-upload" onclick="document.getElementById('image-input').click()">
+            <input type="file" id="image-input" accept="image/*" multiple>
+            <div class="image-upload-icon">&#128247;</div>
+            <p>Click to select at least one photo</p>
+            <p class="hint">Add up to 10 photos now. You can add more later.</p>
+        </div>
+        <div class="image-preview" id="image-preview"></div>
+
+        <div class="step-actions">
+            <div class="left">
+                <a href="/" class="btn btn-secondary">Cancel</a>
             </div>
-            <div class="image-preview" id="image-preview"></div>
-
-            <h3 class="section-title" style="margin-top:1.5rem;">Floorplans</h3>
-            <div class="image-upload" onclick="document.getElementById('floorplan-input').click()">
-                <input type="file" id="floorplan-input" accept="image/*,.pdf" multiple>
-                <p>Click to add floorplans (optional)</p>
-                <p class="hint">Upload up to 5 floorplan images or PDFs</p>
-            </div>
-            <div class="image-preview" id="floorplan-preview"></div>
-
-            <div class="form-group" style="margin-top: 1.5rem;">
-                <label for="status">Listing Status</label>
-                <select id="status">
-                    <option value="draft">Draft (not visible to public)</option>
-                    <option value="active" selected>Active (visible to public)</option>
-                </select>
-                <p class="hint">Save as draft if you're not ready to go live yet</p>
-            </div>
-
-            <div class="step-actions">
-                <div class="left">
-                    <button type="button" class="btn-back" onclick="goToStep(2)">&larr; Back</button>
-                </div>
-                <div class="right">
-                    <button type="button" class="btn btn-secondary" id="save-edit-btn" style="padding: 0.7rem 1.5rem; font-size: 1rem;" onclick="submitForm('edit')">Save &amp; Continue Editing</button>
-                    <button type="submit" class="btn btn-primary" id="submit-btn" style="padding: 0.7rem 2rem; font-size: 1rem;">Save &amp; Go to Listings</button>
-                </div>
+            <div class="right">
+                <button type="submit" class="btn btn-primary" id="submit-btn" style="padding: 0.7rem 2rem; font-size: 1rem;">Publish &amp; continue &rarr;</button>
             </div>
         </div>
     </form>
@@ -360,28 +87,26 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% load static %}{% static 'js/price-format.js' %}"></script>
+<script src="{% load static %}{% static 'js/postcode-lookup.js' %}"></script>
 <script>
     if (!Auth.requireAuth()) throw new Error('Not authenticated');
 
-    let currentStep = 1;
     let selectedFiles = [];
-    let selectedFloorplans = [];
+    let lookupResult = null;
 
-    // Load available features
-    fetch('/api/features/', { headers: Auth.headers() })
-        .then(r => r.json())
-        .then(features => {
-            const list = Array.isArray(features) ? features : (features.results || []);
-            const container = document.getElementById('features-list');
-            if (!list.length) { container.innerHTML = '<span style="color:#8FA3A8; font-size:0.85rem;">No features available yet</span>'; return; }
-            container.innerHTML = list.map(f =>
-                `<label><input type="checkbox" name="features" value="${f.id}"> ${f.icon ? f.icon + ' ' : ''}${f.name}</label>`
-            ).join('');
-        }).catch(() => {
-            document.getElementById('features-list').innerHTML = '';
-        });
+    // Live comma formatting on the price input
+    FsboPriceFormat.attach(document.getElementById('price'));
 
-    // Client-side image compression
+    // Postcode lookup wiring
+    FsboPostcodeLookup.attach({
+        inputEl: document.getElementById('postcode'),
+        buttonEl: document.getElementById('postcode-lookup-btn'),
+        hintEl: document.getElementById('postcode-hint'),
+        onResult: (result) => { lookupResult = result; },
+    });
+
+    // Client-side image compression (copied from the original flow)
     function compressImage(file, maxWidth = 1920, quality = 0.85) {
         return new Promise((resolve) => {
             if (file.size < 500 * 1024) { resolve(file); return; }
@@ -401,88 +126,6 @@
         });
     }
 
-    // Floorplan handling
-    document.getElementById('floorplan-input').addEventListener('change', (e) => {
-        const files = Array.from(e.target.files);
-        selectedFloorplans = [...selectedFloorplans, ...files].slice(0, 5);
-        const container = document.getElementById('floorplan-preview');
-        container.innerHTML = selectedFloorplans.map((f, i) => `
-            <div class="image-preview-item">
-                ${f.type.startsWith('image/') ? `<img src="${URL.createObjectURL(f)}" alt="Floorplan">` : `<div style="width:100%;height:100px;background:#D1E8E2;display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:#4A5C62;">${f.name}</div>`}
-                <button type="button" class="remove" onclick="removeFloorplan(${i})">&times;</button>
-            </div>
-        `).join('');
-    });
-    function removeFloorplan(i) {
-        selectedFloorplans.splice(i, 1);
-        renderFloorplanPreviews();
-    }
-
-    function renderFloorplanPreviews() {
-        const container = document.getElementById('floorplan-preview');
-        container.innerHTML = selectedFloorplans.map((f, i) => `
-            <div class="image-preview-item">
-                ${f.type.startsWith('image/') ? `<img src="${URL.createObjectURL(f)}" alt="Floorplan">` : `<div style="width:100%;height:100px;background:#D1E8E2;display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:#4A5C62;">${escHtml(f.name)}</div>`}
-                <button type="button" class="remove" onclick="removeFloorplan(${i})">&times;</button>
-            </div>
-        `).join('');
-    }
-
-    // Step navigation
-    function goToStep(step) {
-        // Validate current step before advancing
-        if (step > currentStep) {
-            const currentStepEl = document.querySelector(`.step[data-step="${currentStep}"]`);
-            const requiredFields = currentStepEl.querySelectorAll('[required]');
-            let valid = true;
-            requiredFields.forEach(field => {
-                if (!field.value.trim()) {
-                    field.style.borderColor = '#B03A2E';
-                    valid = false;
-                } else {
-                    field.style.borderColor = '#E2E2E2';
-                }
-            });
-            if (!valid) {
-                const errorEl = document.getElementById('error');
-                errorEl.textContent = 'Please fill in all required fields before continuing.';
-                errorEl.style.display = 'block';
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                return;
-            }
-        }
-
-        document.getElementById('error').style.display = 'none';
-
-        // Update step visibility
-        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-        document.querySelector(`.step[data-step="${step}"]`).classList.add('active');
-
-        // Update progress bar
-        document.querySelectorAll('.progress-step').forEach(s => {
-            const sStep = parseInt(s.dataset.step);
-            s.classList.remove('active', 'completed', 'clickable');
-            if (sStep === step) {
-                s.classList.add('active');
-            } else if (sStep < step) {
-                s.classList.add('completed', 'clickable');
-            }
-        });
-
-        currentStep = step;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // Make completed steps clickable
-    document.querySelectorAll('.progress-step').forEach(s => {
-        s.addEventListener('click', () => {
-            if (s.classList.contains('completed') || s.classList.contains('active')) {
-                goToStep(parseInt(s.dataset.step));
-            }
-        });
-    });
-
-    // Image handling with compression
     document.getElementById('image-input').addEventListener('change', async (e) => {
         const newFiles = Array.from(e.target.files);
         const compressed = await Promise.all(newFiles.map(f => compressImage(f)));
@@ -504,52 +147,43 @@
         });
     }
 
-    function removeFile(index) {
+    window.removeFile = function(index) {
         selectedFiles.splice(index, 1);
         renderPreviews();
-    }
+    };
 
-    // Track which save action was clicked
-    let saveAction = 'listings';
-
-    function submitForm(action) {
-        saveAction = action;
-        document.getElementById('property-form').requestSubmit();
-    }
-
-    // Form submission
     document.getElementById('property-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('submit-btn');
-        const editBtn = document.getElementById('save-edit-btn');
         const errorEl = document.getElementById('error');
         errorEl.style.display = 'none';
+
+        if (selectedFiles.length === 0) {
+            errorEl.textContent = 'Please add at least one photo.';
+            errorEl.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+
         btn.disabled = true;
-        editBtn.disabled = true;
-        btn.textContent = 'Creating...';
+        btn.textContent = 'Publishing...';
 
         const body = {
-            title: document.getElementById('title').value,
+            title: document.getElementById('title').value.trim(),
             property_type: document.getElementById('property_type').value,
-            price: document.getElementById('price').value,
-            description: document.getElementById('description').value,
-            address_line_1: document.getElementById('address_line_1').value,
-            address_line_2: document.getElementById('address_line_2').value,
-            city: document.getElementById('city').value,
-            county: document.getElementById('county').value,
-            postcode: document.getElementById('postcode').value,
+            price: FsboPriceFormat.strip(document.getElementById('price').value),
+            postcode: document.getElementById('postcode').value.trim(),
             bedrooms: parseInt(document.getElementById('bedrooms').value) || 0,
-            bathrooms: parseInt(document.getElementById('bathrooms').value) || 0,
-            reception_rooms: parseInt(document.getElementById('reception_rooms').value) || 0,
-            status: document.getElementById('status').value,
+            status: 'active',
         };
-        const sqft = document.getElementById('square_feet').value;
-        if (sqft) body.square_feet = parseInt(sqft);
-        const epc = document.getElementById('epc_rating').value;
-        if (epc) body.epc_rating = epc;
-        // Collect selected features
-        const featureIds = Array.from(document.querySelectorAll('input[name="features"]:checked')).map(cb => parseInt(cb.value));
-        if (featureIds.length) body.features = featureIds;
+
+        // Pre-fill lat/lon/city/county from postcode lookup if we did one
+        if (lookupResult) {
+            if (lookupResult.latitude != null) body.latitude = lookupResult.latitude;
+            if (lookupResult.longitude != null) body.longitude = lookupResult.longitude;
+            if (lookupResult.admin_district) body.city = lookupResult.admin_district;
+            if (lookupResult.admin_county) body.county = lookupResult.admin_county;
+        }
 
         try {
             const res = await fetch('/api/properties/', {
@@ -566,59 +200,39 @@
             const property = await res.json();
 
             // Upload images
-            if (selectedFiles.length > 0) {
-                btn.textContent = 'Uploading photos...';
-                let uploadErrors = [];
-                for (let i = 0; i < selectedFiles.length; i++) {
-                    btn.textContent = `Uploading photo ${i + 1} of ${selectedFiles.length}...`;
-                    const formData = new FormData();
-                    formData.append('image', selectedFiles[i]);
-                    const imgRes = await fetch(`/api/properties/${property.id}/images/`, {
-                        method: 'POST',
-                        headers: Auth.headers(false),
-                        body: formData,
-                    });
-                    if (!imgRes.ok) {
-                        let errMsg = `${imgRes.status}`;
-                        try {
-                            const errData = await imgRes.json();
-                            errMsg = errData.detail || errData.image || JSON.stringify(errData);
-                        } catch {
-                            const text = await imgRes.text().catch(() => '');
-                            errMsg = `HTTP ${imgRes.status}: ${text.substring(0, 200) || imgRes.statusText}`;
-                        }
-                        uploadErrors.push(`Photo ${i + 1}: ${errMsg}`);
+            btn.textContent = 'Uploading photos...';
+            const uploadErrors = [];
+            for (let i = 0; i < selectedFiles.length; i++) {
+                btn.textContent = `Uploading photo ${i + 1} of ${selectedFiles.length}...`;
+                const formData = new FormData();
+                formData.append('image', selectedFiles[i]);
+                const imgRes = await fetch(`/api/properties/${property.id}/images/`, {
+                    method: 'POST',
+                    headers: Auth.headers(false),
+                    body: formData,
+                });
+                if (!imgRes.ok) {
+                    let errMsg = `${imgRes.status}`;
+                    try {
+                        const errData = await imgRes.json();
+                        errMsg = errData.detail || errData.image || JSON.stringify(errData);
+                    } catch {
+                        errMsg = `HTTP ${imgRes.status}`;
                     }
+                    uploadErrors.push(`Photo ${i + 1}: ${errMsg}`);
                 }
-                if (uploadErrors.length > 0) {
-                    alert('Some photos failed to upload:\\n' + uploadErrors.join('\\n') + '\\n\\nYou can add them later from the edit page.');
-                }
+            }
+            if (uploadErrors.length > 0) {
+                alert('Some photos failed to upload:\n' + uploadErrors.join('\n') + '\n\nYou can add them later from the complete-listing page.');
             }
 
-            // Upload floorplans
-            if (selectedFloorplans.length > 0) {
-                btn.textContent = 'Uploading floorplans...';
-                for (let i = 0; i < selectedFloorplans.length; i++) {
-                    const fd = new FormData();
-                    fd.append('file', selectedFloorplans[i]);
-                    fd.append('title', selectedFloorplans[i].name.replace(/\.[^.]+$/, '') || 'Floorplan');
-                    await fetch(`/api/properties/${property.id}/floorplans/`, {
-                        method: 'POST', headers: Auth.headers(false), body: fd,
-                    });
-                }
-            }
-
-            if (saveAction === 'edit') {
-                window.location.href = `/properties/${property.id}/edit/`;
-            } else {
-                window.location.href = '/my-listings/';
-            }
+            // Redirect to Phase 2 "Complete your listing" screen
+            window.location.href = `/properties/${property.id}/complete/`;
         } catch (err) {
             errorEl.textContent = err.message || 'Failed to create property.';
             errorEl.style.display = 'block';
             btn.disabled = false;
-            editBtn.disabled = false;
-            btn.textContent = 'Save & Go to Listings';
+            btn.textContent = 'Publish & continue →';
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     });

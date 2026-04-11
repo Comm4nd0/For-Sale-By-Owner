@@ -182,6 +182,10 @@ class ApiConstants {
   // #32 AI Description Generator
   static String get generateDescription => '$apiUrl/generate-description/';
 
+  // Postcode lookup (postcodes.io proxy, free)
+  static String postcodeLookup(String postcode) =>
+      '$apiUrl/postcode-lookup/${Uri.encodeComponent(postcode.replaceAll(' ', '').toUpperCase())}/';
+
   // #33 Similar Properties (already exists above)
 
   // #35 Stamp Duty Calculator

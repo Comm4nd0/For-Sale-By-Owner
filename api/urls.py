@@ -193,6 +193,9 @@ urlpatterns = [
     # #32 AI listing description generator
     path('generate-description/', views.generate_listing_description, name='generate-description'),
 
+    # Postcode lookup (postcodes.io proxy)
+    path('postcode-lookup/<str:postcode>/', views.postcode_lookup, name='postcode-lookup'),
+
     # #33 Similar properties
     path('properties/<int:property_pk>/similar/', views.similar_properties, name='similar-properties'),
 

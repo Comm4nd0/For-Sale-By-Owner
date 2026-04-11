@@ -12,6 +12,7 @@ import '../services/api_service.dart';
 import 'property_detail_screen.dart';
 import 'create_property_screen.dart';
 import 'edit_property_screen.dart';
+import 'complete_property_screen.dart';
 import '../utils/auto_retry.dart';
 
 class MyListingsScreen extends StatefulWidget {
@@ -411,6 +412,49 @@ class _MyListingsScreenState extends State<MyListingsScreen> with AutoRetryMixin
                               ],
                             ],
                           ),
+                          if (property.listingQualityScore != null &&
+                              property.listingQualityScore! < 80) ...[
+                            const SizedBox(height: 8),
+                            InkWell(
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => CompletePropertyScreen(
+                                        propertyId: property.id),
+                                  ),
+                                );
+                                _loadListings();
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.forestMist,
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                      color: AppTheme.forestMid, width: 1),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(PhosphorIconsDuotone.sparkle,
+                                        size: 14,
+                                        color: AppTheme.forestDeep),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Complete listing (${property.listingQualityScore}%)',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.forestDeep,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
