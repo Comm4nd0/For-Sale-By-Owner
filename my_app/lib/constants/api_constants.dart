@@ -140,6 +140,8 @@ class ApiConstants {
       '$apiUrl/properties/$propertyId/viewing-slots/';
   static String viewingSlot(int propertyId, int slotId) =>
       '$apiUrl/properties/$propertyId/viewing-slots/$slotId/';
+  static String viewingSlotsBulkCreate(int propertyId) =>
+      '$apiUrl/properties/$propertyId/viewing-slots/bulk-create/';
   static String bookViewingSlot(int propertyId, int slotId) =>
       '$apiUrl/properties/$propertyId/viewing-slots/$slotId/book/';
 
