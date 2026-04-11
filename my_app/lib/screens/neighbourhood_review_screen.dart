@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
 import '../models/neighbourhood_review.dart';
 import '../widgets/branded_app_bar.dart';
 
@@ -81,6 +82,14 @@ class _NeighbourhoodReviewScreenState extends State<NeighbourhoodReviewScreen> {
   }
 
   void _openAddReview() {
+    if (!context.read<AuthService>().isAuthenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please log in to add a neighbourhood review'),
+        ),
+      );
+      return;
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

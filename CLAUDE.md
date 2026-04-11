@@ -9,6 +9,10 @@
 - **Web:** Django templates for server-rendered pages
 - **Domain:** for-sale-by-owner.co.uk
 
+## Feature Parity (CRITICAL)
+
+**All features must exist on both the web app and the mobile app.** Any new feature or bug fix must be implemented in both the Django web app (templates/views) and the Flutter mobile app (`my_app/`). Do not ship a change to one platform without the equivalent change on the other — the two clients must stay in lockstep in terms of functionality.
+
 ## Repository Structure
 
 ```
