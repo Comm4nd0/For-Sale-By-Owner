@@ -42,6 +42,7 @@ urlpatterns = [
     path('properties/new/', CSRFTemplateView.as_view(template_name='property_create.html'), name='property-create'),
     path('properties/<int:id>/', CSRFTemplateView.as_view(template_name='property_detail.html'), name='property-detail'),
     path('properties/<int:id>/edit/', CSRFTemplateView.as_view(template_name='property_edit.html'), name='property-edit'),
+    path('properties/<int:id>/complete/', CSRFTemplateView.as_view(template_name='property_complete.html'), name='property-complete'),
     path('my-listings/', CSRFTemplateView.as_view(template_name='my_listings.html'), name='my-listings'),
     path('dashboard/', CSRFTemplateView.as_view(template_name='dashboard.html'), name='dashboard'),
     path('saved/', CSRFTemplateView.as_view(template_name='saved_properties.html'), name='saved-properties'),

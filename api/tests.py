@@ -225,6 +225,20 @@ class PropertyAPITest(TestCase):
         prop = Property.objects.get(pk=res.data['id'])
         self.assertEqual(prop.price_history.count(), 1)
 
+    def test_create_property_phase1_minimum(self):
+        """Phase 1 should publish with only title, type, price, postcode, bedrooms."""
+        data = {
+            'title': 'Phase 1 House', 'property_type': 'detached', 'price': '350000',
+            'postcode': 'BS1 1AA', 'bedrooms': 3,
+        }
+        res = self.owner_client.post('/api/properties/', data, format='json')
+        self.assertEqual(res.status_code, 201, res.data)
+        prop = Property.objects.get(pk=res.data['id'])
+        # No address_line_1 / city required yet
+        self.assertEqual(prop.address_line_1, '')
+        self.assertEqual(prop.city, '')
+        self.assertEqual(prop.bedrooms, 3)
+
     def test_retrieve_property(self):
         res = self.anon_client.get(f'/api/properties/{self.prop.id}/')
         self.assertEqual(res.status_code, 200)
@@ -323,6 +337,175 @@ class PropertyAPITest(TestCase):
         self.assertEqual(res.status_code, 201)
         prop = Property.objects.get(pk=res.data['id'])
         self.assertEqual(prop.features.count(), 2)
+
+    # ── Phase 2 field patching ──────────────────────────────────────────
+
+    def test_patch_property_phase2_fields(self):
+        """PATCH should accept Phase 2 fields like tenure, flood_risk, garden_size_sqm."""
+        res = self.owner_client.patch(
+            f'/api/properties/{self.prop.id}/',
+            {
+                'tenure': 'freehold',
+                'flood_risk': 'none',
+                'garden_size_sqm': '120.5',
+                'garden_orientation': 's',
+                'council_tax_band': 'D',
+                'chain_status': 'no_chain',
+                'heating_type': 'gas_central',
+            },
+            format='json',
+        )
+        self.assertEqual(res.status_code, 200, res.data)
+        self.prop.refresh_from_db()
+        self.assertEqual(self.prop.tenure, 'freehold')
+        self.assertEqual(self.prop.flood_risk, 'none')
+        self.assertEqual(str(self.prop.garden_size_sqm), '120.50')
+        self.assertEqual(self.prop.council_tax_band, 'D')
+        self.assertEqual(self.prop.chain_status, 'no_chain')
+
+    def test_patch_property_extras_booleans(self):
+        res = self.owner_client.patch(
+            f'/api/properties/{self.prop.id}/',
+            {'ev_charging': True, 'smart_home': True, 'home_office': True},
+            format='json',
+        )
+        self.assertEqual(res.status_code, 200)
+        self.prop.refresh_from_db()
+        self.assertTrue(self.prop.ev_charging)
+        self.assertTrue(self.prop.smart_home)
+        self.assertTrue(self.prop.home_office)
+
+    # ── What3Words validation ───────────────────────────────────────────
+
+    def test_validate_what3words_accepts_valid(self):
+        res = self.owner_client.patch(
+            f'/api/properties/{self.prop.id}/',
+            {'what3words': 'index.home.raft'},
+            format='json',
+        )
+        self.assertEqual(res.status_code, 200, res.data)
+        self.prop.refresh_from_db()
+        self.assertEqual(self.prop.what3words, 'index.home.raft')
+
+    def test_validate_what3words_normalises_case(self):
+        res = self.owner_client.patch(
+            f'/api/properties/{self.prop.id}/',
+            {'what3words': 'Index.Home.Raft'},
+            format='json',
+        )
+        self.assertEqual(res.status_code, 200, res.data)
+        self.prop.refresh_from_db()
+        self.assertEqual(self.prop.what3words, 'index.home.raft')
+
+    def test_validate_what3words_rejects_invalid(self):
+        res = self.owner_client.patch(
+            f'/api/properties/{self.prop.id}/',
+            {'what3words': 'not a valid w3w value 123'},
+            format='json',
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertIn('what3words', res.data)
+
+    # ── Listing quality score uses new fields ──────────────────────────
+
+    def test_listing_quality_score_rewards_new_fields(self):
+        score_before = self.prop.listing_quality_score()['score']
+        self.prop.tenure = 'freehold'
+        self.prop.flood_risk = 'none'
+        self.prop.council_tax_band = 'D'
+        self.prop.heating_type = 'gas_central'
+        self.prop.chain_status = 'no_chain'
+        self.prop.save()
+        score_after = self.prop.listing_quality_score()['score']
+        self.assertGreater(score_after, score_before)
+
+    # ── Postcode lookup ─────────────────────────────────────────────────
+
+    def test_postcode_lookup_ok(self):
+        from unittest.mock import patch
+        fake_payload = {
+            'status': 200,
+            'result': {
+                'postcode': 'SW1A 1AA',
+                'latitude': 51.501009,
+                'longitude': -0.141588,
+                'admin_district': 'Westminster',
+                'admin_county': None,
+                'region': 'London',
+                'country': 'England',
+            },
+        }
+
+        class FakeResponse:
+            status_code = 200
+
+            def json(self_inner):
+                return fake_payload
+
+        with patch('api.views.requests.get', return_value=FakeResponse()):
+            res = self.anon_client.get('/api/postcode-lookup/SW1A1AA/')
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertEqual(res.data['postcode'], 'SW1A 1AA')
+        self.assertAlmostEqual(res.data['latitude'], 51.501009, places=4)
+        self.assertEqual(res.data['admin_district'], 'Westminster')
+
+    def test_postcode_lookup_not_found(self):
+        from unittest.mock import patch
+
+        class FakeResponse:
+            status_code = 404
+
+            def json(self_inner):
+                return {'status': 404, 'error': 'Postcode not found'}
+
+        with patch('api.views.requests.get', return_value=FakeResponse()):
+            res = self.anon_client.get('/api/postcode-lookup/ZZ1ZZ1/')
+        self.assertEqual(res.status_code, 404)
+
+    def test_postcode_lookup_service_down(self):
+        from unittest.mock import patch
+        import requests as real_requests
+
+        with patch('api.views.requests.get', side_effect=real_requests.ConnectionError('boom')):
+            res = self.anon_client.get('/api/postcode-lookup/SW1A1AA/')
+        self.assertEqual(res.status_code, 503)
+
+    # ── Brief description mode ──────────────────────────────────────────
+
+    def test_generate_description_brief_mode(self):
+        res = self.owner_client.post(
+            '/api/generate-description/',
+            {
+                'brief': True,
+                'property_type': 'detached',
+                'bedrooms': 4,
+                'location': 'Bristol',
+                'features': ['Garden', 'Garage', 'Solar panels'],
+            },
+            format='json',
+        )
+        self.assertEqual(res.status_code, 200, res.data)
+        text = res.data['description']
+        self.assertTrue(res.data.get('brief'))
+        self.assertLessEqual(len(text), 300)
+        self.assertIn('4 bedroom', text.lower())
+        self.assertIn('bristol', text.lower())
+
+    def test_generate_description_professional_still_works(self):
+        """Long-form path should be unchanged."""
+        res = self.owner_client.post(
+            '/api/generate-description/',
+            {
+                'property_type': 'detached', 'bedrooms': 3, 'bathrooms': 2,
+                'reception_rooms': 2, 'square_feet': 1500,
+                'features': ['Garden'], 'location': 'Bath',
+                'epc_rating': 'C', 'tone': 'professional',
+            },
+            format='json',
+        )
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertFalse(res.data.get('brief'))
+        self.assertGreater(len(res.data['description']), 150)
 
 
 @override_settings(REST_FRAMEWORK=TEST_REST_FRAMEWORK, STORAGES=TEST_STORAGES)

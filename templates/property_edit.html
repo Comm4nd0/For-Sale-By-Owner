@@ -47,12 +47,22 @@
 
 {% block content %}
 <h2 class="page-title">Edit Property</h2>
+<div id="complete-banner" style="background:linear-gradient(135deg,#115E66,#19747E);color:white;padding:1rem 1.25rem;border-radius:10px;margin-bottom:1.25rem;display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+        <div>
+            <strong>Add more details to stand out</strong><br>
+            <span style="opacity:0.9;font-size:0.9rem;">Tenure, flood risk, utilities, running costs, fixtures and more.</span>
+        </div>
+        <a href="#" id="complete-link" class="btn btn-primary" style="background:#F5C542;color:#115E66;padding:0.55rem 1.25rem;border-radius:6px;font-weight:600;">Complete listing →</a>
+    </div>
+</div>
 <div id="error" class="alert alert-error" style="display:none;"></div>
 <div id="success" class="alert alert-success" style="display:none;"></div>
 <div id="form-container"><p>Loading...</p></div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% load static %}{% static 'js/price-format.js' %}"></script>
 <script>
     if (!Auth.requireAuth()) throw new Error('Not authenticated');
 
@@ -87,6 +97,14 @@
         const p = await res.json();
         existingImages = p.images || [];
 
+        // Wire the "Complete listing" banner
+        const completeLink = document.getElementById('complete-link');
+        if (completeLink) completeLink.href = `/properties/${propertyId}/complete/`;
+        const banner = document.getElementById('complete-banner');
+        if (banner && p.listing_quality && typeof p.listing_quality.score === 'number' && p.listing_quality.score < 80) {
+            banner.style.display = 'block';
+        }
+
         document.getElementById('form-container').innerHTML = `
         <form id="property-form" class="property-form">
             <div class="form-group">
@@ -105,7 +123,7 @@
                 </div>
                 <div class="form-group">
                     <label for="price">Price (&pound;)</label>
-                    <input type="number" id="price" value="${p.price}" min="0" step="1" required>
+                    <input type="text" inputmode="numeric" id="price" value="${FsboPriceFormat.format(p.price)}" data-price-format required>
                 </div>
             </div>
             <div class="form-group">
@@ -295,7 +313,7 @@
         const body = {
             title: document.getElementById('title').value,
             property_type: document.getElementById('property_type').value,
-            price: document.getElementById('price').value,
+            price: FsboPriceFormat.strip(document.getElementById('price').value),
             description: document.getElementById('description').value,
             address_line_1: document.getElementById('address_line_1').value,
             address_line_2: document.getElementById('address_line_2').value,

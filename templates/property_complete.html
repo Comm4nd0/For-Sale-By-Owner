@@ -1,0 +1,801 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Complete Your Listing - For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/listing-form.css' %}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""/>
+{% endblock %}
+
+{% block content %}
+<div class="property-form" id="complete-wrapper" style="display:none;">
+    <!-- Header with completion bar -->
+    <div class="completion-header">
+        <h2 id="listing-title" style="color:white;">Your listing is live!</h2>
+        <p>Add more details to stand out in search results. Nothing here is required — you can come back later.</p>
+        <div class="completion-bar"><div class="completion-bar__fill" id="completion-fill" style="width:0"></div></div>
+        <div class="completion-score">
+            <span id="completion-percent">0</span><small>% complete</small>
+        </div>
+    </div>
+
+    <div id="error" class="alert alert-error" style="display:none;"></div>
+
+    <!-- Section: Address & location ─────────────────────────────── -->
+    <details class="listing-section" open data-section="address">
+        <summary class="listing-section__header">
+            <span class="listing-section__title">
+                📍 Address & location
+                <span class="listing-section__badge" data-badge="address">0 / 6</span>
+            </span>
+            <span class="listing-section__save-indicator" data-save="address">Saved ✓</span>
+        </summary>
+        <div class="listing-section__body">
+            <div class="form-group">
+                <label for="address_line_1">Address Line 1</label>
+                <input type="text" id="address_line_1" data-field="address_line_1">
+            </div>
+            <div class="form-group">
+                <label for="address_line_2">Address Line 2</label>
+                <input type="text" id="address_line_2" data-field="address_line_2">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="city">City / Town</label>
+                    <input type="text" id="city" data-field="city">
+                </div>
+                <div class="form-group">
+                    <label for="county">County</label>
+                    <input type="text" id="county" data-field="county">
+                </div>
+            </div>
+            <div class="form-group" style="max-width:260px;">
+                <label for="postcode">
+                    Postcode
+                    {% include 'partials/_field_help.html' with text="Changing the postcode re-runs the lookup and pans the map." %}
+                </label>
+                <div class="postcode-lookup-row">
+                    <input type="text" id="postcode" data-field="postcode" autocomplete="postal-code">
+                    <button type="button" id="postcode-lookup-btn" class="btn-ghost">Look up</button>
+                </div>
+                <p class="hint" id="postcode-hint"></p>
+            </div>
+
+            <label>Map pin (drag to adjust)</label>
+            <div id="map" class="map-container"></div>
+            <p class="map-attribution">Drop or drag the pin to set your exact location. Data from OpenStreetMap contributors.</p>
+            <input type="hidden" id="latitude" data-field="latitude">
+            <input type="hidden" id="longitude" data-field="longitude">
+
+            <div class="form-group" style="max-width:320px;">
+                <label for="what3words">
+                    what3words address (optional)
+                    {% include 'partials/_field_help.html' with text="A 3-word address for the exact spot — e.g. index.home.raft. Leave blank if you don't know it." %}
+                </label>
+                <input type="text" id="what3words" placeholder="word.word.word" data-field="what3words">
+                <p class="hint">Only lowercase letters and dots (e.g. filled.count.soap)</p>
+            </div>
+        </div>
+    </details>
+
+    <!-- Section: Property basics ───────────────────────────────── -->
+    <details class="listing-section" data-section="basics">
+        <summary class="listing-section__header">
+            <span class="listing-section__title">
+                🏠 Property basics
+                <span class="listing-section__badge" data-badge="basics">0 / 7</span>
+            </span>
+            <span class="listing-section__save-indicator" data-save="basics">Saved ✓</span>
+        </summary>
+        <div class="listing-section__body">
+            <div class="form-row-4">
+                <div class="form-group"><label for="bathrooms">Bathrooms</label><input type="number" id="bathrooms" min="0" data-field="bathrooms"></div>
+                <div class="form-group"><label for="reception_rooms">Reception</label><input type="number" id="reception_rooms" min="0" data-field="reception_rooms"></div>
+                <div class="form-group"><label for="square_feet">Sq ft</label><input type="number" id="square_feet" min="0" data-field="square_feet"></div>
+                <div class="form-group"><label for="floor_area_sqm">Sq m</label><input type="number" id="floor_area_sqm" min="0" step="0.01" data-field="floor_area_sqm"></div>
+            </div>
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label for="year_built">
+                        Year built
+                        {% include 'partials/_field_help.html' with text="Approximate is fine — helps buyers judge the era of the property." %}
+                    </label>
+                    <input type="number" id="year_built" min="1500" max="2100" data-field="year_built">
+                </div>
+                <div class="form-group">
+                    <label for="construction_type">
+                        Construction
+                        {% include 'partials/_field_help.html' with text="Non-standard construction (timber, concrete, steel frame, cob) can affect mortgage availability." %}
+                    </label>
+                    <select id="construction_type" data-field="construction_type">
+                        <option value="">Not specified</option>
+                        <option value="standard">Standard brick</option>
+                        <option value="timber">Timber frame</option>
+                        <option value="concrete">Concrete</option>
+                        <option value="steel">Steel frame</option>
+                        <option value="cob">Cob</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="epc_rating">
+                        EPC rating
+                        {% include 'partials/_field_help.html' with text="Energy Performance Certificate rating from A (best) to G (worst). Required by law for most sales." %}
+                    </label>
+                    <select id="epc_rating" data-field="epc_rating">
+                        <option value="">Not specified</option>
+                        <option value="A">A</option><option value="B">B</option><option value="C">C</option>
+                        <option value="D">D</option><option value="E">E</option><option value="F">F</option><option value="G">G</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </details>
+
+    <!-- Section: Tenure & running costs ─────────────────────────── -->
+    <details class="listing-section" data-section="tenure">
+        <summary class="listing-section__header">
+            <span class="listing-section__title">
+                📜 Tenure & running costs
+                <span class="listing-section__badge" data-badge="tenure">0 / 8</span>
+            </span>
+            <span class="listing-section__save-indicator" data-save="tenure">Saved ✓</span>
+        </summary>
+        <div class="listing-section__body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="tenure">
+                        Tenure
+                        {% include 'partials/_field_help.html' with text="Freehold = you own the building and land. Leasehold = you own the property for a fixed term. Share of freehold is common in flats where residents collectively own the freehold." %}
+                    </label>
+                    <select id="tenure" data-field="tenure">
+                        <option value="">Not specified</option>
+                        <option value="freehold">Freehold</option>
+                        <option value="leasehold">Leasehold</option>
+                        <option value="share_of_freehold">Share of Freehold</option>
+                        <option value="commonhold">Commonhold</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="council_tax_band">Council tax band</label>
+                    <select id="council_tax_band" data-field="council_tax_band">
+                        <option value="">Not specified</option>
+                        <option>A</option><option>B</option><option>C</option><option>D</option>
+                        <option>E</option><option>F</option><option>G</option><option>H</option>
+                    </select>
+                </div>
+            </div>
+            <div id="leasehold-extras" style="display:none;">
+                <div class="form-row">
+                    <div class="form-group"><label for="lease_years_remaining">Years remaining on lease</label><input type="number" id="lease_years_remaining" min="0" data-field="lease_years_remaining"></div>
+                    <div class="form-group"><label for="ground_rent_amount">Ground rent (£/year)</label><input type="number" id="ground_rent_amount" min="0" step="0.01" data-field="ground_rent_amount"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label for="service_charge_amount">Service charge amount (£)</label><input type="number" id="service_charge_amount" min="0" step="0.01" data-field="service_charge_amount"></div>
+                    <div class="form-group">
+                        <label for="service_charge_frequency">Frequency</label>
+                        <select id="service_charge_frequency" data-field="service_charge_frequency">
+                            <option value="">Not specified</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="annual">Annual</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group"><label for="managing_agent_details">Managing agent details</label><textarea id="managing_agent_details" data-field="managing_agent_details"></textarea></div>
+                <div class="form-group"><label for="ground_rent_review_terms">Ground rent review terms</label><textarea id="ground_rent_review_terms" data-field="ground_rent_review_terms"></textarea></div>
+            </div>
+            <h4 style="margin-top:1rem; color:#115E66; font-size:0.95rem;">Annual running costs (optional)</h4>
+            <div class="form-row-3">
+                <div class="form-group"><label for="annual_gas_bill">Gas (£/year)</label><input type="number" id="annual_gas_bill" min="0" step="0.01" data-field="annual_gas_bill"></div>
+                <div class="form-group"><label for="annual_electricity_bill">Electricity (£/year)</label><input type="number" id="annual_electricity_bill" min="0" step="0.01" data-field="annual_electricity_bill"></div>
+                <div class="form-group"><label for="annual_water_bill">Water (£/year)</label><input type="number" id="annual_water_bill" min="0" step="0.01" data-field="annual_water_bill"></div>
+            </div>
+        </div>
+    </details>
+
+    <!-- Section: Utilities ─────────────────────────────────────── -->
+    <details class="listing-section" data-section="utilities">
+        <summary class="listing-section__header">
+            <span class="listing-section__title">
+                🔌 Utilities & services
+                <span class="listing-section__badge" data-badge="utilities">0 / 7</span>
+            </span>
+            <span class="listing-section__save-indicator" data-save="utilities">Saved ✓</span>
+        </summary>
+        <div class="listing-section__body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="electricity_supply">Electricity</label>
+                    <select id="electricity_supply" data-field="electricity_supply">
+                        <option value="">Not specified</option>
+                        <option value="mains">Mains</option><option value="off_grid">Off-grid</option><option value="solar">Solar</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="water_supply">Water</label>
+                    <select id="water_supply" data-field="water_supply">
+                        <option value="">Not specified</option>
+                        <option value="mains">Mains</option><option value="private">Private</option><option value="shared">Shared</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="sewerage">
+                        Sewerage
+                        {% include 'partials/_field_help.html' with text="Not everyone has mains drainage — rural homes often have septic tanks or treatment plants." %}
+                    </label>
+                    <select id="sewerage" data-field="sewerage">
+                        <option value="">Not specified</option>
+                        <option value="mains">Mains</option><option value="septic">Septic tank</option><option value="cesspit">Cesspit</option><option value="treatment_plant">Treatment plant</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="heating_type">Heating</label>
+                    <select id="heating_type" data-field="heating_type">
+                        <option value="">Not specified</option>
+                        <option value="gas_central">Gas central</option>
+                        <option value="electric">Electric</option>
+                        <option value="oil">Oil</option>
+                        <option value="lpg">LPG</option>
+                        <option value="heat_pump">Heat pump</option>
+                        <option value="none">None</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="broadband_speed">Broadband</label>
+                    <select id="broadband_speed" data-field="broadband_speed">
+                        <option value="">Not specified</option>
+                        <option value="standard">Standard</option>
+                        <option value="superfast">Superfast</option>
+                        <option value="ultrafast">Ultrafast</option>
+                        <option value="full_fibre">Full fibre</option>
+                        <option value="unknown">Unknown</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="parking_type">Parking</label>
+                    <select id="parking_type" data-field="parking_type">
+                        <option value="">Not specified</option>
+                        <option value="garage">Garage</option>
+                        <option value="driveway">Driveway</option>
+                        <option value="allocated">Allocated</option>
+                        <option value="permit">Permit</option>
+                        <option value="on_street">On-street</option>
+                        <option value="none">None</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label for="broadband_provider">Broadband provider</label><input type="text" id="broadband_provider" data-field="broadband_provider"></div>
+                <div class="form-group"><label for="broadband_monthly_cost">Monthly cost (£)</label><input type="number" id="broadband_monthly_cost" min="0" step="0.01" data-field="broadband_monthly_cost"></div>
+            </div>
+        </div>
+    </details>
+
+    <!-- Section: Rights, restrictions & risks ──────────────────── -->
+    <details class="listing-section" data-section="risks">
+        <summary class="listing-section__header">
+            <span class="listing-section__title">
+                ⚠️ Rights, restrictions & risks
+                <span class="listing-section__badge" data-badge="risks">0 / 10</span>
+            </span>
+            <span class="listing-section__save-indicator" data-save="risks">Saved ✓</span>
+        </summary>
+        <div class="listing-section__body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="flood_risk">
+                        Flood risk
+                        {% include 'partials/_field_help.html' with text="Material information — buyers and lenders expect to see known flood risks disclosed." %}
+                    </label>
+                    <select id="flood_risk" data-field="flood_risk">
+                        <option value="">Not specified</option>
+                        <option value="none">None</option>
+                        <option value="river">River</option>
+                        <option value="surface_water">Surface water</option>
+                        <option value="groundwater">Groundwater</option>
+                        <option value="multiple">Multiple</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="listed_building">
+                        Listed building
+                        {% include 'partials/_field_help.html' with text="Listed buildings are protected by law. Grade I is the highest protection." %}
+                    </label>
+                    <select id="listed_building" data-field="listed_building">
+                        <option value="">Not specified</option>
+                        <option value="none">None</option>
+                        <option value="grade_1">Grade I</option>
+                        <option value="grade_2_star">Grade II*</option>
+                        <option value="grade_2">Grade II</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="mining_area">
+                        Mining area
+                        {% include 'partials/_field_help.html' with text="Historic mining (coal, tin) can affect subsidence risk and is disclosed in searches." %}
+                    </label>
+                    <select id="mining_area" data-field="mining_area">
+                        <option value="">Not specified</option>
+                        <option value="none">None</option>
+                        <option value="coal">Coal</option>
+                        <option value="tin">Tin</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="japanese_knotweed">
+                        Japanese knotweed
+                        {% include 'partials/_field_help.html' with text="Invasive plant that can damage foundations and is a material fact buyers ask about." %}
+                    </label>
+                    <select id="japanese_knotweed" data-field="japanese_knotweed">
+                        <option value="">Not specified</option>
+                        <option value="none">Never</option>
+                        <option value="present">Present</option>
+                        <option value="treated">Treated</option>
+                        <option value="unsure">Unsure</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <label style="display:flex;align-items:center;gap:0.5rem;">
+                    <input type="checkbox" id="conservation_area" data-field="conservation_area" data-bool>
+                    Conservation area
+                </label>
+                <label style="display:flex;align-items:center;gap:0.5rem;">
+                    <input type="checkbox" id="coastal_erosion_risk" data-field="coastal_erosion_risk" data-bool>
+                    Coastal erosion risk
+                </label>
+            </div>
+            <div class="form-row">
+                <label style="display:flex;align-items:center;gap:0.5rem;">
+                    <input type="checkbox" id="restrictive_covenants" data-field="restrictive_covenants" data-bool>
+                    Restrictive covenants
+                </label>
+                <label style="display:flex;align-items:center;gap:0.5rem;">
+                    <input type="checkbox" id="rights_of_way" data-field="rights_of_way" data-bool>
+                    Rights of way affect the property
+                </label>
+            </div>
+            <div class="form-group"><label for="restrictive_covenants_details">Covenant details (optional)</label><textarea id="restrictive_covenants_details" data-field="restrictive_covenants_details"></textarea></div>
+            <div class="form-group"><label for="rights_of_way_details">Rights of way details (optional)</label><textarea id="rights_of_way_details" data-field="rights_of_way_details"></textarea></div>
+            <div class="form-group">
+                <label for="cladding_type">
+                    Cladding type (flats only)
+                    {% include 'partials/_field_help.html' with text="If your flat has cladding, buyers' lenders may ask for an EWS1 form. Leave blank if not applicable." %}
+                </label>
+                <input type="text" id="cladding_type" data-field="cladding_type">
+            </div>
+            <div class="form-row">
+                <label style="display:flex;align-items:center;gap:0.5rem;">
+                    <input type="checkbox" id="ews1_available" data-field="ews1_available" data-bool>
+                    <span>
+                        EWS1 form available
+                        {% include 'partials/_field_help.html' with text="The External Wall System 1 form confirms a building's external walls meet fire-safety standards. Lenders often require it for flats in buildings with cladding." %}
+                    </span>
+                </label>
+                <label style="display:flex;align-items:center;gap:0.5rem;">
+                    <input type="checkbox" id="non_standard_construction" data-field="non_standard_construction" data-bool>
+                    Non-standard construction
+                </label>
+            </div>
+            <div class="form-group"><label for="accessibility_features">Accessibility features</label><textarea id="accessibility_features" data-field="accessibility_features"></textarea></div>
+        </div>
+    </details>
+
+    <!-- Section: Works history ─────────────────────────────────── -->
+    <details class="listing-section" data-section="works">
+        <summary class="listing-section__header">
+            <span class="listing-section__title">
+                🛠️ Works history
+                <span class="listing-section__badge" data-badge="works">0 / 7</span>
+            </span>
+            <span class="listing-section__save-indicator" data-save="works">Saved ✓</span>
+        </summary>
+        <div class="listing-section__body">
+            <p class="hint" style="margin-bottom:1rem;">Rough years are fine — this helps buyers understand what's been done.</p>
+            <div class="form-row-3">
+                <div class="form-group"><label for="extensions_year">Extensions (year)</label><input type="number" id="extensions_year" min="1900" max="2100" data-field="extensions_year"></div>
+                <div class="form-group"><label for="loft_conversion_year">Loft conversion</label><input type="number" id="loft_conversion_year" min="1900" max="2100" data-field="loft_conversion_year"></div>
+                <div class="form-group"><label for="rewiring_year">Rewiring</label><input type="number" id="rewiring_year" min="1900" max="2100" data-field="rewiring_year"></div>
+            </div>
+            <div class="form-row-4">
+                <div class="form-group"><label for="reroof_year">Re-roof</label><input type="number" id="reroof_year" min="1900" max="2100" data-field="reroof_year"></div>
+                <div class="form-group"><label for="new_boiler_year">New boiler</label><input type="number" id="new_boiler_year" min="1900" max="2100" data-field="new_boiler_year"></div>
+                <div class="form-group"><label for="new_windows_year">New windows</label><input type="number" id="new_windows_year" min="1900" max="2100" data-field="new_windows_year"></div>
+                <div class="form-group"><label for="damp_proofing_year">Damp-proofing</label><input type="number" id="damp_proofing_year" min="1900" max="2100" data-field="damp_proofing_year"></div>
+            </div>
+            <div class="form-group"><label for="works_notes">Notes, permissions, guarantees</label><textarea id="works_notes" data-field="works_notes"></textarea></div>
+            <div class="form-row">
+                <div class="form-group"><label for="nhbc_years_remaining">NHBC warranty (years remaining)</label><input type="number" id="nhbc_years_remaining" min="0" data-field="nhbc_years_remaining"></div>
+                <div class="form-group">
+                    <label for="solar_panels">Solar panels</label>
+                    <select id="solar_panels" data-field="solar_panels">
+                        <option value="">None</option>
+                        <option value="owned">Owned</option>
+                        <option value="leased">Leased</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </details>
+
+    <!-- Section: Outside space, chain, fixtures ───────────────── -->
+    <details class="listing-section" data-section="outside">
+        <summary class="listing-section__header">
+            <span class="listing-section__title">
+                🌳 Outside space & chain
+                <span class="listing-section__badge" data-badge="outside">0 / 8</span>
+            </span>
+            <span class="listing-section__save-indicator" data-save="outside">Saved ✓</span>
+        </summary>
+        <div class="listing-section__body">
+            <div class="form-row">
+                <div class="form-group"><label for="garden_size_sqm">Garden size (sq m)</label><input type="number" id="garden_size_sqm" min="0" step="0.01" data-field="garden_size_sqm"></div>
+                <div class="form-group">
+                    <label for="garden_orientation">Garden orientation</label>
+                    <select id="garden_orientation" data-field="garden_orientation">
+                        <option value="">Not specified</option>
+                        <option value="none">No garden</option>
+                        <option value="n">North</option><option value="ne">North-East</option>
+                        <option value="e">East</option><option value="se">South-East</option>
+                        <option value="s">South</option><option value="sw">South-West</option>
+                        <option value="w">West</option><option value="nw">North-West</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group"><label for="outbuildings">Outbuildings (shed, studio, garage)</label><textarea id="outbuildings" data-field="outbuildings"></textarea></div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="chain_status">
+                        Chain status
+                        {% include 'partials/_field_help.html' with text="'No chain' means you can sell without waiting for another transaction. Buyers prefer no-chain properties." %}
+                    </label>
+                    <select id="chain_status" data-field="chain_status">
+                        <option value="">Not specified</option>
+                        <option value="no_chain">No chain</option>
+                        <option value="in_chain">In chain</option>
+                        <option value="part_exchange">Part exchange</option>
+                    </select>
+                </div>
+                <div class="form-group"><label for="earliest_completion_date">Earliest completion date</label><input type="date" id="earliest_completion_date" data-field="earliest_completion_date"></div>
+            </div>
+            <div class="form-group"><label for="reason_for_sale">Reason for sale (optional)</label><textarea id="reason_for_sale" data-field="reason_for_sale"></textarea></div>
+            <div class="form-group">
+                <label for="fixtures_included">
+                    Fixtures included
+                    {% include 'partials/_field_help.html' with text="Items that will stay when you leave (curtains, carpets, white goods). This is a summary — the formal TA10 form comes later in conveyancing." %}
+                </label>
+                <textarea id="fixtures_included" data-field="fixtures_included"></textarea>
+            </div>
+            <div class="form-group"><label for="fixtures_excluded">Fixtures NOT included</label><textarea id="fixtures_excluded" data-field="fixtures_excluded"></textarea></div>
+        </div>
+    </details>
+
+    <!-- Section: Environment, schools, extras ─────────────────── -->
+    <details class="listing-section" data-section="extras">
+        <summary class="listing-section__header">
+            <span class="listing-section__title">
+                ✨ Neighbourhood & extras
+                <span class="listing-section__badge" data-badge="extras">0 / 11</span>
+            </span>
+            <span class="listing-section__save-indicator" data-save="extras">Saved ✓</span>
+        </summary>
+        <div class="listing-section__body">
+            <div class="form-row">
+                <div class="form-group"><label for="nearest_station_name">Nearest station</label><input type="text" id="nearest_station_name" data-field="nearest_station_name"></div>
+                <div class="form-group"><label for="nearest_station_distance_km">Distance (km)</label><input type="number" id="nearest_station_distance_km" min="0" step="0.01" data-field="nearest_station_distance_km"></div>
+            </div>
+            <div class="form-group"><label for="nearby_schools">Nearby schools</label><textarea id="nearby_schools" data-field="nearby_schools"></textarea></div>
+            <div class="form-group"><label for="noise_sources">Noise sources</label><input type="text" id="noise_sources" data-field="noise_sources" placeholder="e.g. road, rail, flight path"></div>
+            <div class="form-group">
+                <label for="radon_risk">
+                    Radon risk
+                    {% include 'partials/_field_help.html' with text="Naturally occurring radioactive gas — more common in some UK regions. Buyers may ask." %}
+                </label>
+                <select id="radon_risk" data-field="radon_risk">
+                    <option value="">Not specified</option>
+                    <option value="unknown">Unknown</option>
+                    <option value="none">None</option>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                </select>
+            </div>
+            <h4 style="margin-top:1rem; color:#115E66; font-size:0.95rem;">Extras worth highlighting</h4>
+            <div class="form-row">
+                <label style="display:flex;align-items:center;gap:0.5rem;"><input type="checkbox" id="smart_home" data-field="smart_home" data-bool> Smart home</label>
+                <label style="display:flex;align-items:center;gap:0.5rem;"><input type="checkbox" id="ev_charging" data-field="ev_charging" data-bool> EV charging</label>
+            </div>
+            <div class="form-row">
+                <label style="display:flex;align-items:center;gap:0.5rem;"><input type="checkbox" id="solar_battery_storage" data-field="solar_battery_storage" data-bool> Solar battery storage</label>
+                <label style="display:flex;align-items:center;gap:0.5rem;"><input type="checkbox" id="rainwater_harvesting" data-field="rainwater_harvesting" data-bool> Rainwater harvesting</label>
+            </div>
+            <div class="form-row">
+                <label style="display:flex;align-items:center;gap:0.5rem;"><input type="checkbox" id="home_office" data-field="home_office" data-bool> Home office</label>
+                <label style="display:flex;align-items:center;gap:0.5rem;"><input type="checkbox" id="pet_friendly_features" data-field="pet_friendly_features" data-bool> Pet-friendly features</label>
+            </div>
+        </div>
+    </details>
+
+    <!-- Section: Description ──────────────────────────────────── -->
+    <details class="listing-section" data-section="description">
+        <summary class="listing-section__header">
+            <span class="listing-section__title">
+                📝 Description
+                <span class="listing-section__badge" data-badge="description">0 / 2</span>
+            </span>
+            <span class="listing-section__save-indicator" data-save="description">Saved ✓</span>
+        </summary>
+        <div class="listing-section__body">
+            <div class="form-group">
+                <label for="brief_description">
+                    Brief description (shown in search results)
+                    {% include 'partials/_field_help.html' with text="A 1–2 sentence summary. Tap 'Auto-fill' to generate one from your details, then tweak it." %}
+                </label>
+                <textarea id="brief_description" data-field="brief_description" maxlength="300" style="min-height:70px;"></textarea>
+                <button type="button" class="auto-fill-btn" id="auto-brief-btn">✨ Auto-fill from my details</button>
+            </div>
+            <div class="form-group">
+                <label for="description">Full description</label>
+                <textarea id="description" data-field="description" style="min-height:180px;"></textarea>
+            </div>
+        </div>
+    </details>
+
+    <div class="step-actions">
+        <div class="left">
+            <a href="/my-listings/" class="btn btn-secondary">I'll finish later</a>
+        </div>
+        <div class="right">
+            <a href="/my-listings/" class="btn btn-primary" style="padding:0.7rem 2rem;">Done</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+<script src="{% static 'js/postcode-lookup.js' %}"></script>
+<script src="{% static 'js/map-pin.js' %}"></script>
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+
+    const propertyId = parseInt(window.location.pathname.match(/\/properties\/(\d+)\/complete/)[1]);
+    let saveTimer = null;
+    let map = null;
+
+    // Section → field id map (used for badge counts). ORDER matters only for the badges.
+    const SECTION_FIELDS = {
+        address:    ['address_line_1', 'address_line_2', 'city', 'county', 'what3words', 'latitude'],
+        basics:     ['bathrooms', 'reception_rooms', 'square_feet', 'floor_area_sqm', 'year_built', 'construction_type', 'epc_rating'],
+        tenure:     ['tenure', 'council_tax_band', 'lease_years_remaining', 'service_charge_amount', 'annual_gas_bill', 'annual_electricity_bill', 'annual_water_bill', 'managing_agent_details'],
+        utilities:  ['electricity_supply', 'water_supply', 'sewerage', 'heating_type', 'broadband_speed', 'parking_type', 'broadband_provider'],
+        risks:      ['flood_risk', 'listed_building', 'mining_area', 'japanese_knotweed', 'conservation_area', 'coastal_erosion_risk', 'restrictive_covenants', 'rights_of_way', 'ews1_available', 'accessibility_features'],
+        works:      ['extensions_year', 'loft_conversion_year', 'rewiring_year', 'reroof_year', 'new_boiler_year', 'new_windows_year', 'damp_proofing_year'],
+        outside:    ['garden_size_sqm', 'garden_orientation', 'outbuildings', 'chain_status', 'earliest_completion_date', 'reason_for_sale', 'fixtures_included', 'fixtures_excluded'],
+        extras:     ['nearest_station_name', 'nearest_station_distance_km', 'nearby_schools', 'noise_sources', 'radon_risk', 'smart_home', 'ev_charging', 'solar_battery_storage', 'rainwater_harvesting', 'home_office', 'pet_friendly_features'],
+        description:['brief_description', 'description'],
+    };
+
+    // Load the property and populate every data-field input
+    async function loadProperty() {
+        const res = await fetch(`/api/properties/${propertyId}/`, { headers: Auth.headers() });
+        if (!res.ok) {
+            showError('Could not load your listing. Please try again.');
+            return null;
+        }
+        const prop = await res.json();
+        document.getElementById('listing-title').textContent = `${prop.title} is live!`;
+
+        document.querySelectorAll('[data-field]').forEach(el => {
+            const name = el.dataset.field;
+            const value = prop[name];
+            if (value == null) return;
+            if (el.type === 'checkbox') {
+                el.checked = !!value;
+            } else {
+                el.value = value;
+            }
+        });
+
+        // Toggle leasehold-extras block
+        toggleLeaseholdExtras();
+        document.getElementById('tenure').addEventListener('change', toggleLeaseholdExtras);
+
+        // Completion header + badges
+        updateBadges();
+        if (prop.listing_quality && typeof prop.listing_quality.score === 'number') {
+            setCompletion(prop.listing_quality.score);
+        }
+
+        // Init map
+        map = FsboMapPin.init({
+            containerEl: document.getElementById('map'),
+            lat: prop.latitude, lon: prop.longitude,
+            onChange: (lat, lon) => {
+                document.getElementById('latitude').value = lat;
+                document.getElementById('longitude').value = lon;
+                queueSave('address', { latitude: lat, longitude: lon });
+            },
+        });
+
+        // Postcode lookup in Phase 2
+        FsboPostcodeLookup.attach({
+            inputEl: document.getElementById('postcode'),
+            buttonEl: document.getElementById('postcode-lookup-btn'),
+            hintEl: document.getElementById('postcode-hint'),
+            cityEl: document.getElementById('city'),
+            countyEl: document.getElementById('county'),
+            latEl: document.getElementById('latitude'),
+            lonEl: document.getElementById('longitude'),
+            onResult: (result) => {
+                if (result && map) {
+                    map.setLocation(result.latitude, result.longitude);
+                    queueSave('address', {
+                        city: result.admin_district || undefined,
+                        county: result.admin_county || result.region || undefined,
+                        latitude: result.latitude,
+                        longitude: result.longitude,
+                    });
+                }
+            },
+        });
+
+        return prop;
+    }
+
+    function toggleLeaseholdExtras() {
+        const t = document.getElementById('tenure').value;
+        const extras = document.getElementById('leasehold-extras');
+        extras.style.display = (t === 'leasehold' || t === 'share_of_freehold') ? 'block' : 'none';
+    }
+
+    function showError(msg) {
+        const el = document.getElementById('error');
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+
+    function setCompletion(score) {
+        document.getElementById('completion-percent').textContent = score;
+        document.getElementById('completion-fill').style.width = `${score}%`;
+    }
+
+    function fieldIsFilled(el) {
+        if (!el) return false;
+        if (el.type === 'checkbox') return el.checked;
+        return el.value != null && String(el.value).trim() !== '';
+    }
+
+    function updateBadges() {
+        Object.entries(SECTION_FIELDS).forEach(([section, fields]) => {
+            const filled = fields.filter(name => fieldIsFilled(document.getElementById(name))).length;
+            const badge = document.querySelector(`[data-badge="${section}"]`);
+            if (badge) badge.textContent = `${filled} / ${fields.length}`;
+        });
+    }
+
+    // Debounced autosave per section
+    function queueSave(sectionKey, extraPayload) {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => performSave(sectionKey, extraPayload), 800);
+    }
+
+    async function performSave(sectionKey, extraPayload) {
+        const payload = {};
+        const fieldNames = SECTION_FIELDS[sectionKey] || [];
+        fieldNames.forEach(name => {
+            const el = document.getElementById(name);
+            if (!el) return;
+            if (el.type === 'checkbox') {
+                payload[name] = el.checked;
+            } else {
+                const v = el.value;
+                payload[name] = v === '' ? null : v;
+            }
+        });
+        // latitude / longitude aren't listed under SECTION_FIELDS for other sections, merge explicit extras
+        if (extraPayload) Object.assign(payload, extraPayload);
+
+        try {
+            const res = await fetch(`/api/properties/${propertyId}/`, {
+                method: 'PATCH',
+                headers: Auth.headers(),
+                body: JSON.stringify(payload),
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                showError(`Save failed: ${Object.entries(data).map(([k,v])=>`${k}: ${v}`).join(' | ')}`);
+                return;
+            }
+            const updated = await res.json();
+            const indicator = document.querySelector(`[data-save="${sectionKey}"]`);
+            if (indicator) {
+                indicator.classList.add('visible');
+                setTimeout(() => indicator.classList.remove('visible'), 1500);
+            }
+            if (updated.listing_quality && typeof updated.listing_quality.score === 'number') {
+                setCompletion(updated.listing_quality.score);
+            }
+            updateBadges();
+        } catch (e) {
+            showError('Save failed — check your connection.');
+        }
+    }
+
+    // Wire every field: autosave its section on change/blur
+    function wireFields() {
+        document.querySelectorAll('[data-field]').forEach(el => {
+            const section = el.closest('[data-section]')?.dataset.section;
+            if (!section) return;
+            const evt = (el.tagName === 'SELECT' || el.type === 'checkbox' || el.type === 'date') ? 'change' : 'input';
+            el.addEventListener(evt, () => queueSave(section));
+            if (el.tagName === 'TEXTAREA' || el.type === 'text' || el.type === 'number') {
+                el.addEventListener('blur', () => queueSave(section));
+            }
+        });
+    }
+
+    // Auto-fill brief description
+    document.getElementById('auto-brief-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('auto-brief-btn');
+        btn.disabled = true;
+        btn.textContent = 'Generating…';
+        try {
+            const res = await fetch(`/api/properties/${propertyId}/`, { headers: Auth.headers() });
+            const p = await res.json();
+            const gen = await fetch('/api/generate-description/', {
+                method: 'POST',
+                headers: Auth.headers(),
+                body: JSON.stringify({
+                    brief: true,
+                    property_type: p.property_type,
+                    bedrooms: p.bedrooms,
+                    bathrooms: p.bathrooms,
+                    reception_rooms: p.reception_rooms,
+                    square_feet: p.square_feet,
+                    features: (p.feature_list || []).map(f => f.name),
+                    location: p.city || '',
+                    epc_rating: p.epc_rating || '',
+                }),
+            });
+            const data = await gen.json();
+            if (data && data.description) {
+                document.getElementById('brief_description').value = data.description;
+                queueSave('description');
+            }
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '✨ Auto-fill from my details';
+        }
+    });
+
+    // Tooltip click-to-toggle fallback for touch devices
+    document.addEventListener('click', (e) => {
+        const help = e.target.closest('[data-help-popover]');
+        document.querySelectorAll('.field-help.open').forEach(el => {
+            if (el !== help) el.classList.remove('open');
+        });
+        if (help) help.classList.toggle('open');
+    });
+
+    (async function bootstrap() {
+        await loadProperty();
+        wireFields();
+        document.getElementById('complete-wrapper').style.display = 'block';
+    })();
+</script>
+{% endblock %}

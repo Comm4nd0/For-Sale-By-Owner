@@ -1,12 +1,22 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import '../constants/app_theme.dart';
-import '../widgets/branded_app_bar.dart';
-import '../models/property_feature.dart';
-import '../services/api_service.dart';
-import 'image_management_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+import '../constants/app_theme.dart';
+import '../services/api_service.dart';
+import '../utils/price_input_formatter.dart';
+import '../widgets/branded_app_bar.dart';
+import '../widgets/labelled_field.dart';
+import 'complete_property_screen.dart';
+
+/// Phase 1 listing creation — minimal fields needed to publish:
+/// title, property type, price, postcode, bedrooms + at least one photo.
+/// Everything else is captured on the [CompletePropertyScreen] after the
+/// listing is live.
 class CreatePropertyScreen extends StatefulWidget {
   const CreatePropertyScreen({super.key});
 
@@ -15,467 +25,440 @@ class CreatePropertyScreen extends StatefulWidget {
 }
 
 class _CreatePropertyScreenState extends State<CreatePropertyScreen> {
-  int _currentStep = 0;
-  bool _isSubmitting = false;
-
-  // Form keys for each step
-  final _basicFormKey = GlobalKey<FormState>();
-  final _locationFormKey = GlobalKey<FormState>();
-  final _detailsFormKey = GlobalKey<FormState>();
-
-  // Step 0 - Basic Details
+  final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
-  String _propertyType = 'detached';
-
-  // Step 1 - Location
-  final _addressLine1Controller = TextEditingController();
-  final _addressLine2Controller = TextEditingController();
-  final _cityController = TextEditingController();
-  final _countyController = TextEditingController();
   final _postcodeController = TextEditingController();
+  final _bedroomsController = TextEditingController(text: '3');
 
-  // Step 2 - Details
-  int _bedrooms = 1;
-  int _bathrooms = 1;
-  int _receptionRooms = 1;
-  final _sqftController = TextEditingController();
-  String _epcRating = '';
+  String _propertyType = 'detached';
+  final List<XFile> _photos = [];
+  Map<String, dynamic>? _postcodeResult;
+  bool _lookingUp = false;
+  String? _postcodeMessage;
+  bool _submitting = false;
+  String? _submitError;
 
-  // Step 3 - Features
-  List<PropertyFeature> _allFeatures = [];
-  List<int> _selectedFeatureIds = [];
-  bool _featuresLoading = true;
-
-  // Step 4 - Review
-  String _status = 'draft';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadFeatures();
-  }
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void dispose() {
     _titleController.dispose();
-    _descriptionController.dispose();
     _priceController.dispose();
-    _addressLine1Controller.dispose();
-    _addressLine2Controller.dispose();
-    _cityController.dispose();
-    _countyController.dispose();
     _postcodeController.dispose();
-    _sqftController.dispose();
+    _bedroomsController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadFeatures() async {
+  Future<void> _runPostcodeLookup() async {
+    final raw = _postcodeController.text.trim();
+    if (raw.isEmpty) return;
+    setState(() {
+      _lookingUp = true;
+      _postcodeMessage = null;
+    });
     try {
-      final apiService = context.read<ApiService>();
-      final features = await apiService.getFeatures();
-      if (mounted) {
-        setState(() {
-          _allFeatures = features;
-          _featuresLoading = false;
-        });
-      }
+      final result = await context.read<ApiService>().lookupPostcode(raw);
+      if (!mounted) return;
+      setState(() {
+        _postcodeResult = result;
+        final district = result['admin_district']?.toString() ?? '';
+        final region = result['region']?.toString() ?? '';
+        final parts = <String>[
+          if (district.isNotEmpty) district,
+          if (region.isNotEmpty) region,
+        ];
+        _postcodeMessage = parts.isEmpty
+            ? 'Found.'
+            : 'Found: ${parts.join(", ")}. You can add the street name later.';
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() => _featuresLoading = false);
-      }
+      if (!mounted) return;
+      setState(() {
+        _postcodeResult = null;
+        _postcodeMessage = e.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) setState(() => _lookingUp = false);
     }
   }
 
-  bool _validateCurrentStep() {
-    switch (_currentStep) {
-      case 0:
-        return _basicFormKey.currentState?.validate() ?? false;
-      case 1:
-        return _locationFormKey.currentState?.validate() ?? false;
-      case 2:
-        return _detailsFormKey.currentState?.validate() ?? false;
-      case 3:
-        return true;
-      case 4:
-        return true;
-      default:
-        return false;
-    }
+  Future<void> _pickPhotos() async {
+    final picked = await _picker.pickMultiImage(
+      imageQuality: 85,
+      maxWidth: 1920,
+      maxHeight: 1920,
+    );
+    if (picked.isEmpty) return;
+    setState(() {
+      _photos.addAll(picked);
+      if (_photos.length > 10) _photos.removeRange(10, _photos.length);
+    });
   }
 
-  Future<void> _submitProperty() async {
-    setState(() => _isSubmitting = true);
+  void _removePhoto(int index) {
+    setState(() => _photos.removeAt(index));
+  }
 
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_photos.isEmpty) {
+      setState(() => _submitError = 'Please add at least one photo.');
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _submitError = null;
+    });
+
+    final api = context.read<ApiService>();
     try {
-      final apiService = context.read<ApiService>();
-
       final body = <String, dynamic>{
         'title': _titleController.text.trim(),
-        'description': _descriptionController.text.trim(),
         'property_type': _propertyType,
-        'price': _priceController.text.trim(),
-        'address_line_1': _addressLine1Controller.text.trim(),
-        'address_line_2': _addressLine2Controller.text.trim(),
-        'city': _cityController.text.trim(),
-        'county': _countyController.text.trim(),
+        'price': PriceInputFormatter.stripCommas(_priceController.text),
         'postcode': _postcodeController.text.trim(),
-        'bedrooms': _bedrooms,
-        'bathrooms': _bathrooms,
-        'reception_rooms': _receptionRooms,
-        'epc_rating': _epcRating,
-        'status': _status,
-        'features': _selectedFeatureIds,
+        'bedrooms': int.tryParse(_bedroomsController.text.trim()) ?? 0,
+        'status': 'active',
       };
 
-      if (_sqftController.text.isNotEmpty) {
-        body['square_feet'] = int.tryParse(_sqftController.text.trim());
+      // Pre-fill lat/lon/city/county if the lookup was run successfully
+      if (_postcodeResult != null) {
+        final lat = _postcodeResult!['latitude'];
+        final lon = _postcodeResult!['longitude'];
+        final district = _postcodeResult!['admin_district'];
+        final county = _postcodeResult!['admin_county'] ?? _postcodeResult!['region'];
+        if (lat != null) body['latitude'] = lat;
+        if (lon != null) body['longitude'] = lon;
+        if (district != null) body['city'] = district;
+        if (county != null) body['county'] = county;
       }
 
-      final property = await apiService.createProperty(body);
+      final property = await api.createProperty(body);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Property created! Add some photos.')),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ImageManagementScreen(property: property),
-          ),
-        );
+      // Upload photos in sequence (keeps ordering stable)
+      for (final photo in _photos) {
+        try {
+          await api.uploadPropertyImage(property.id, photo);
+        } catch (_) {
+          // Non-fatal: user can re-add failed photos from the complete screen
+        }
       }
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CompletePropertyScreen(propertyId: property.id),
+        ),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create property: $e')),
-        );
-        setState(() => _isSubmitting = false);
-      }
+      if (!mounted) return;
+      setState(() {
+        _submitError = e.toString().replaceFirst('Exception: ', '');
+        _submitting = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: BrandedAppBar.build(context: context, showHomeButton: true),
-      body: Stepper(
-        type: StepperType.vertical,
-        currentStep: _currentStep,
-        onStepContinue: () {
-          if (_validateCurrentStep()) {
-            if (_currentStep < 4) {
-              setState(() => _currentStep += 1);
-            } else {
-              _submitProperty();
-            }
-          }
-        },
-        onStepCancel: () {
-          if (_currentStep > 0) {
-            setState(() => _currentStep -= 1);
-          }
-        },
-        onStepTapped: (step) {
-          if (step < _currentStep) {
-            setState(() => _currentStep = step);
-          }
-        },
-        controlsBuilder: (context, details) {
-          return Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: Row(
-              children: [
-                if (_currentStep == 4)
-                  ElevatedButton(
-                    onPressed: _isSubmitting ? null : details.onStepContinue,
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child:
-                                CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Create Listing'),
-                  )
-                else
-                  ElevatedButton(
-                    onPressed: details.onStepContinue,
-                    child: const Text('Continue'),
+      appBar: BrandedAppBar.build(
+        context: context,
+        showHomeButton: true,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'List your property',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: AppTheme.forestDeep,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Just the basics to publish — you can add more details after.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.charcoal.withValues(alpha: 0.7),
+                    ),
+              ),
+              const SizedBox(height: 20),
+              if (_submitError != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    border: Border.all(color: Colors.red.shade300),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                const SizedBox(width: 8),
-                if (_currentStep > 0)
-                  TextButton(
-                    onPressed: details.onStepCancel,
-                    child: const Text('Back'),
+                  child: Text(
+                    _submitError!,
+                    style: TextStyle(color: Colors.red.shade900),
                   ),
+                ),
+              LabelledField(
+                label: 'Property title',
+                helpText:
+                    "Eye-catching headline. Keep it short — 'Beautiful 3-bed semi in Cheltenham' works better than a long list.",
+                child: TextFormField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(
+                    hintText: 'e.g. Beautiful 3-bed semi in Cheltenham',
+                  ),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                ),
+              ),
+              LabelledField(
+                label: 'Property type',
+                child: DropdownButtonFormField<String>(
+                  value: _propertyType,
+                  items: const [
+                    DropdownMenuItem(value: 'detached', child: Text('Detached')),
+                    DropdownMenuItem(
+                        value: 'semi_detached', child: Text('Semi-Detached')),
+                    DropdownMenuItem(value: 'terraced', child: Text('Terraced')),
+                    DropdownMenuItem(
+                        value: 'flat', child: Text('Flat / Apartment')),
+                    DropdownMenuItem(value: 'bungalow', child: Text('Bungalow')),
+                    DropdownMenuItem(value: 'cottage', child: Text('Cottage')),
+                    DropdownMenuItem(value: 'land', child: Text('Land')),
+                    DropdownMenuItem(value: 'other', child: Text('Other')),
+                  ],
+                  onChanged: (v) =>
+                      setState(() => _propertyType = v ?? 'detached'),
+                ),
+              ),
+              LabelledField(
+                label: 'Asking price (£)',
+                helpText:
+                    'Type the price in pounds. Commas are added automatically as you type.',
+                child: TextFormField(
+                  controller: _priceController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    PriceInputFormatter(),
+                  ],
+                  decoration: const InputDecoration(
+                    prefixText: '£ ',
+                    hintText: 'e.g. 350,000',
+                  ),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                ),
+              ),
+              LabelledField(
+                label: 'Postcode',
+                helpText:
+                    "We look up the area from your postcode to get a rough location. You'll add the full street address after publishing.",
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _postcodeController,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: const InputDecoration(
+                          hintText: 'e.g. BS1 1AA',
+                        ),
+                        validator: (v) =>
+                            (v == null || v.trim().isEmpty) ? 'Required' : null,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton(
+                      onPressed: _lookingUp ? null : _runPostcodeLookup,
+                      child: _lookingUp
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Look up'),
+                    ),
+                  ],
+                ),
+              ),
+              if (_postcodeMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12, left: 2),
+                  child: Text(
+                    _postcodeMessage!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _postcodeResult != null
+                          ? AppTheme.forestMid
+                          : Colors.red.shade700,
+                    ),
+                  ),
+                ),
+              LabelledField(
+                label: 'Bedrooms',
+                child: SizedBox(
+                  width: 160,
+                  child: TextFormField(
+                    controller: _bedroomsController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (v) {
+                      final n = int.tryParse(v ?? '');
+                      if (n == null || n < 0) return 'Required';
+                      return null;
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Photos',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppTheme.forestDeep,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: _pickPhotos,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: AppTheme.forestMid.withValues(alpha: 0.4),
+                      width: 2,
+                      style: BorderStyle.solid,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    color: AppTheme.forestMist.withValues(alpha: 0.3),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        PhosphorIconsDuotone.camera,
+                        size: 36,
+                        color: AppTheme.forestMid,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _photos.isEmpty
+                            ? 'Tap to add photos'
+                            : 'Add more (${_photos.length}/10)',
+                        style: TextStyle(
+                          color: AppTheme.forestDeep,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'At least one photo is required.',
+                        style: TextStyle(
+                          color: AppTheme.charcoal.withValues(alpha: 0.6),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (_photos.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (int i = 0; i < _photos.length; i++)
+                      Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: FutureBuilder<Uint8List>(
+                              future: _photos[i].readAsBytes(),
+                              builder: (context, snap) {
+                                if (snap.connectionState !=
+                                        ConnectionState.done ||
+                                    snap.data == null) {
+                                  return Container(
+                                    width: 96,
+                                    height: 96,
+                                    color: AppTheme.forestMist,
+                                  );
+                                }
+                                return Image.memory(
+                                  snap.data!,
+                                  width: 96,
+                                  height: 96,
+                                  fit: BoxFit.cover,
+                                );
+                              },
+                            ),
+                          ),
+                          Positioned(
+                            top: 2,
+                            right: 2,
+                            child: InkWell(
+                              onTap: () => _removePhoto(i),
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.6),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
               ],
-            ),
-          );
-        },
-        steps: [
-          Step(
-            title: const Text('Basic Details'),
-            isActive: _currentStep >= 0,
-            state: _currentStep > 0 ? StepState.complete : StepState.indexed,
-            content: _buildBasicDetailsStep(),
-          ),
-          Step(
-            title: const Text('Location'),
-            isActive: _currentStep >= 1,
-            state: _currentStep > 1 ? StepState.complete : StepState.indexed,
-            content: _buildLocationStep(),
-          ),
-          Step(
-            title: const Text('Details'),
-            isActive: _currentStep >= 2,
-            state: _currentStep > 2 ? StepState.complete : StepState.indexed,
-            content: _buildDetailsStep(),
-          ),
-          Step(
-            title: const Text('Features'),
-            isActive: _currentStep >= 3,
-            state: _currentStep > 3 ? StepState.complete : StepState.indexed,
-            content: _buildFeaturesStep(),
-          ),
-          Step(
-            title: const Text('Review & Publish'),
-            isActive: _currentStep >= 4,
-            content: _buildReviewStep(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBasicDetailsStep() {
-    return Form(
-      key: _basicFormKey,
-      child: Column(
-        children: [
-          TextFormField(
-            controller: _titleController,
-            decoration: const InputDecoration(labelText: 'Title'),
-            validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _descriptionController,
-            decoration: const InputDecoration(labelText: 'Description'),
-            maxLines: 5,
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            value: _propertyType,
-            decoration: const InputDecoration(labelText: 'Property Type'),
-            items: const [
-              DropdownMenuItem(value: 'detached', child: Text('Detached')),
-              DropdownMenuItem(
-                  value: 'semi_detached', child: Text('Semi-Detached')),
-              DropdownMenuItem(value: 'terraced', child: Text('Terraced')),
-              DropdownMenuItem(
-                  value: 'flat', child: Text('Flat/Apartment')),
-              DropdownMenuItem(value: 'bungalow', child: Text('Bungalow')),
-              DropdownMenuItem(value: 'cottage', child: Text('Cottage')),
-              DropdownMenuItem(value: 'land', child: Text('Land')),
-              DropdownMenuItem(value: 'other', child: Text('Other')),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _submitting ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: _submitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Publish & continue →'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: TextButton(
+                  onPressed: _submitting
+                      ? null
+                      : () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+              ),
             ],
-            onChanged: (v) => setState(() => _propertyType = v ?? 'detached'),
           ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _priceController,
-            decoration: const InputDecoration(
-              labelText: 'Price',
-              prefixText: '\u00A3 ',
-            ),
-            keyboardType: TextInputType.number,
-            validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-          ),
-        ],
+        ),
       ),
-    );
-  }
-
-  Widget _buildLocationStep() {
-    return Form(
-      key: _locationFormKey,
-      child: Column(
-        children: [
-          TextFormField(
-            controller: _addressLine1Controller,
-            decoration: const InputDecoration(labelText: 'Address Line 1'),
-            validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _addressLine2Controller,
-            decoration: const InputDecoration(labelText: 'Address Line 2'),
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _cityController,
-            decoration: const InputDecoration(labelText: 'City'),
-            validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _countyController,
-            decoration: const InputDecoration(labelText: 'County'),
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _postcodeController,
-            decoration: const InputDecoration(labelText: 'Postcode'),
-            validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailsStep() {
-    return Form(
-      key: _detailsFormKey,
-      child: Column(
-        children: [
-          _buildNumberRow('Bedrooms', _bedrooms, (v) {
-            setState(() => _bedrooms = v);
-          }),
-          const SizedBox(height: 16),
-          _buildNumberRow('Bathrooms', _bathrooms, (v) {
-            setState(() => _bathrooms = v);
-          }),
-          const SizedBox(height: 16),
-          _buildNumberRow('Reception Rooms', _receptionRooms, (v) {
-            setState(() => _receptionRooms = v);
-          }),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _sqftController,
-            decoration: const InputDecoration(
-              labelText: 'Square Feet (optional)',
-            ),
-            keyboardType: TextInputType.number,
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            value: _epcRating,
-            decoration: const InputDecoration(labelText: 'EPC Rating'),
-            items: const [
-              DropdownMenuItem(value: '', child: Text('Not specified')),
-              DropdownMenuItem(value: 'A', child: Text('A')),
-              DropdownMenuItem(value: 'B', child: Text('B')),
-              DropdownMenuItem(value: 'C', child: Text('C')),
-              DropdownMenuItem(value: 'D', child: Text('D')),
-              DropdownMenuItem(value: 'E', child: Text('E')),
-              DropdownMenuItem(value: 'F', child: Text('F')),
-              DropdownMenuItem(value: 'G', child: Text('G')),
-            ],
-            onChanged: (v) => setState(() => _epcRating = v ?? ''),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNumberRow(String label, int value, ValueChanged<int> onChanged) {
-    return Row(
-      children: [
-        Expanded(child: Text(label)),
-        IconButton(
-          onPressed: value > 0
-              ? () => onChanged(value - 1)
-              : null,
-          icon: PhosphorIcon(PhosphorIconsDuotone.minusCircle),
-        ),
-        Text(
-          '$value',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        IconButton(
-          onPressed: () => onChanged(value + 1),
-          icon: PhosphorIcon(PhosphorIconsDuotone.plusCircle),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFeaturesStep() {
-    if (_featuresLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_allFeatures.isEmpty) {
-      return const Text('No features available.');
-    }
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: _allFeatures.map((feature) {
-        final selected = _selectedFeatureIds.contains(feature.id);
-        return FilterChip(
-          label: Text(feature.name),
-          selected: selected,
-          selectedColor: AppTheme.forestMist,
-          checkmarkColor: AppTheme.forestDeep,
-          onSelected: (isSelected) {
-            setState(() {
-              if (isSelected) {
-                _selectedFeatureIds.add(feature.id);
-              } else {
-                _selectedFeatureIds.remove(feature.id);
-              }
-            });
-          },
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildReviewStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Title: ${_titleController.text}',
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        Text('Price: \u00A3${_priceController.text}'),
-        const SizedBox(height: 8),
-        Text('Type: $_propertyType'),
-        const SizedBox(height: 8),
-        Text(
-            'Address: ${_addressLine1Controller.text}, ${_cityController.text} ${_postcodeController.text}'),
-        const SizedBox(height: 8),
-        Text(
-            'Rooms: $_bedrooms bed, $_bathrooms bath, $_receptionRooms reception'),
-        if (_sqftController.text.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text('Size: ${_sqftController.text} sq ft'),
-        ],
-        if (_epcRating.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text('EPC: $_epcRating'),
-        ],
-        if (_selectedFeatureIds.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text(
-              'Features: ${_selectedFeatureIds.length} selected'),
-        ],
-        const Divider(height: 24),
-        DropdownButtonFormField<String>(
-          value: _status,
-          decoration: const InputDecoration(labelText: 'Status'),
-          items: const [
-            DropdownMenuItem(value: 'draft', child: Text('Draft')),
-            DropdownMenuItem(value: 'active', child: Text('Active')),
-          ],
-          onChanged: (v) => setState(() => _status = v ?? 'draft'),
-        ),
-      ],
     );
   }
 }
+

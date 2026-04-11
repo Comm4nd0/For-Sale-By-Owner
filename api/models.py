@@ -108,34 +108,263 @@ class Property(models.Model):
         ('G', 'G'),
     ]
 
+    TENURE_CHOICES = [
+        ('freehold', 'Freehold'),
+        ('leasehold', 'Leasehold'),
+        ('share_of_freehold', 'Share of Freehold'),
+        ('commonhold', 'Commonhold'),
+    ]
+
+    SERVICE_CHARGE_FREQUENCY_CHOICES = [
+        ('monthly', 'Monthly'),
+        ('quarterly', 'Quarterly'),
+        ('annual', 'Annual'),
+    ]
+
+    COUNCIL_TAX_BAND_CHOICES = [
+        ('A', 'A'), ('B', 'B'), ('C', 'C'), ('D', 'D'),
+        ('E', 'E'), ('F', 'F'), ('G', 'G'), ('H', 'H'),
+    ]
+
+    CONSTRUCTION_TYPE_CHOICES = [
+        ('standard', 'Standard brick'),
+        ('timber', 'Timber frame'),
+        ('concrete', 'Concrete'),
+        ('steel', 'Steel frame'),
+        ('cob', 'Cob'),
+        ('other', 'Other'),
+    ]
+
+    ELECTRICITY_SUPPLY_CHOICES = [
+        ('mains', 'Mains'),
+        ('off_grid', 'Off-grid'),
+        ('solar', 'Solar'),
+    ]
+
+    WATER_SUPPLY_CHOICES = [
+        ('mains', 'Mains'),
+        ('private', 'Private'),
+        ('shared', 'Shared'),
+    ]
+
+    SEWERAGE_CHOICES = [
+        ('mains', 'Mains'),
+        ('septic', 'Septic tank'),
+        ('cesspit', 'Cesspit'),
+        ('treatment_plant', 'Treatment plant'),
+    ]
+
+    HEATING_TYPE_CHOICES = [
+        ('gas_central', 'Gas central'),
+        ('electric', 'Electric'),
+        ('oil', 'Oil'),
+        ('lpg', 'LPG'),
+        ('heat_pump', 'Heat pump'),
+        ('none', 'None'),
+    ]
+
+    BROADBAND_SPEED_CHOICES = [
+        ('standard', 'Standard'),
+        ('superfast', 'Superfast'),
+        ('ultrafast', 'Ultrafast'),
+        ('full_fibre', 'Full fibre'),
+        ('unknown', 'Unknown'),
+    ]
+
+    PARKING_TYPE_CHOICES = [
+        ('garage', 'Garage'),
+        ('driveway', 'Driveway'),
+        ('allocated', 'Allocated'),
+        ('permit', 'Permit'),
+        ('on_street', 'On-street'),
+        ('none', 'None'),
+    ]
+
+    LISTED_BUILDING_CHOICES = [
+        ('none', 'None'),
+        ('grade_1', 'Grade I'),
+        ('grade_2_star', 'Grade II*'),
+        ('grade_2', 'Grade II'),
+    ]
+
+    FLOOD_RISK_CHOICES = [
+        ('none', 'None'),
+        ('river', 'River'),
+        ('surface_water', 'Surface water'),
+        ('groundwater', 'Groundwater'),
+        ('multiple', 'Multiple'),
+    ]
+
+    MINING_AREA_CHOICES = [
+        ('none', 'None'),
+        ('coal', 'Coal'),
+        ('tin', 'Tin'),
+        ('other', 'Other'),
+    ]
+
+    KNOTWEED_CHOICES = [
+        ('none', 'Never'),
+        ('present', 'Present'),
+        ('treated', 'Treated'),
+        ('unsure', 'Unsure'),
+    ]
+
+    SOLAR_PANELS_CHOICES = [
+        ('none', 'None'),
+        ('owned', 'Owned'),
+        ('leased', 'Leased'),
+    ]
+
+    RADON_RISK_CHOICES = [
+        ('unknown', 'Unknown'),
+        ('none', 'None'),
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+    ]
+
+    GARDEN_ORIENTATION_CHOICES = [
+        ('none', 'No garden'),
+        ('n', 'North'),
+        ('ne', 'North-East'),
+        ('e', 'East'),
+        ('se', 'South-East'),
+        ('s', 'South'),
+        ('sw', 'South-West'),
+        ('w', 'West'),
+        ('nw', 'North-West'),
+    ]
+
+    CHAIN_STATUS_CHOICES = [
+        ('no_chain', 'No chain'),
+        ('in_chain', 'In chain'),
+        ('part_exchange', 'Part exchange'),
+    ]
+
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='properties'
     )
     title = models.CharField(max_length=200)
     slug = models.SlugField(max_length=220, unique=True, blank=True)
     description = models.TextField(blank=True)
+    brief_description = models.CharField(max_length=300, blank=True)
     property_type = models.CharField(max_length=20, choices=PROPERTY_TYPES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     price = models.DecimalField(max_digits=12, decimal_places=2)
 
-    # Address
-    address_line_1 = models.CharField(max_length=200)
+    # Address (address_line_1 and city relaxed to allow Phase 1 minimum with only a postcode)
+    address_line_1 = models.CharField(max_length=200, blank=True, default='')
     address_line_2 = models.CharField(max_length=200, blank=True)
-    city = models.CharField(max_length=100)
+    city = models.CharField(max_length=100, blank=True, default='')
     county = models.CharField(max_length=100, blank=True)
     postcode = models.CharField(max_length=10)
 
-    # Geolocation (for distance/radius search)
+    # Geolocation (for distance/radius search + pin drop)
     latitude = models.FloatField(null=True, blank=True, db_index=True)
     longitude = models.FloatField(null=True, blank=True, db_index=True)
+    what3words = models.CharField(max_length=100, blank=True, help_text='Optional what3words address, e.g. index.home.raft')
 
     # Details
     bedrooms = models.PositiveIntegerField(default=0)
     bathrooms = models.PositiveIntegerField(default=0)
     reception_rooms = models.PositiveIntegerField(default=0)
     square_feet = models.PositiveIntegerField(null=True, blank=True)
+    floor_area_sqm = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     epc_rating = models.CharField(max_length=1, choices=EPC_RATINGS, blank=True)
     features = models.ManyToManyField(PropertyFeature, blank=True, related_name='properties')
+
+    # Tenure & costs
+    tenure = models.CharField(max_length=20, choices=TENURE_CHOICES, blank=True)
+    lease_years_remaining = models.PositiveIntegerField(null=True, blank=True)
+    ground_rent_amount = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    ground_rent_review_terms = models.TextField(blank=True)
+    service_charge_amount = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    service_charge_frequency = models.CharField(max_length=20, choices=SERVICE_CHARGE_FREQUENCY_CHOICES, blank=True)
+    managing_agent_details = models.TextField(blank=True)
+    council_tax_band = models.CharField(max_length=1, choices=COUNCIL_TAX_BAND_CHOICES, blank=True)
+
+    # Construction & build
+    year_built = models.PositiveIntegerField(null=True, blank=True)
+    construction_type = models.CharField(max_length=20, choices=CONSTRUCTION_TYPE_CHOICES, blank=True)
+    non_standard_construction = models.BooleanField(default=False)
+
+    # Utilities & services
+    electricity_supply = models.CharField(max_length=20, choices=ELECTRICITY_SUPPLY_CHOICES, blank=True)
+    water_supply = models.CharField(max_length=20, choices=WATER_SUPPLY_CHOICES, blank=True)
+    sewerage = models.CharField(max_length=20, choices=SEWERAGE_CHOICES, blank=True)
+    heating_type = models.CharField(max_length=20, choices=HEATING_TYPE_CHOICES, blank=True)
+    broadband_speed = models.CharField(max_length=20, choices=BROADBAND_SPEED_CHOICES, blank=True)
+    broadband_provider = models.CharField(max_length=100, blank=True)
+    broadband_monthly_cost = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    mobile_signal = models.JSONField(null=True, blank=True, help_text='Map of network -> indoor/outdoor rating')
+    parking_type = models.CharField(max_length=20, choices=PARKING_TYPE_CHOICES, blank=True)
+
+    # Rights, restrictions, risks
+    restrictive_covenants = models.BooleanField(default=False)
+    restrictive_covenants_details = models.TextField(blank=True)
+    rights_of_way = models.BooleanField(default=False)
+    rights_of_way_details = models.TextField(blank=True)
+    listed_building = models.CharField(max_length=20, choices=LISTED_BUILDING_CHOICES, blank=True)
+    conservation_area = models.BooleanField(default=False)
+    flood_risk = models.CharField(max_length=20, choices=FLOOD_RISK_CHOICES, blank=True)
+    coastal_erosion_risk = models.BooleanField(default=False)
+    mining_area = models.CharField(max_length=20, choices=MINING_AREA_CHOICES, blank=True)
+    japanese_knotweed = models.CharField(max_length=20, choices=KNOTWEED_CHOICES, blank=True)
+    accessibility_features = models.TextField(blank=True)
+
+    # Building safety (especially flats)
+    cladding_type = models.CharField(max_length=100, blank=True)
+    ews1_available = models.BooleanField(default=False)
+    building_safety_notes = models.TextField(blank=True)
+
+    # Works history (year-based)
+    extensions_year = models.PositiveIntegerField(null=True, blank=True)
+    loft_conversion_year = models.PositiveIntegerField(null=True, blank=True)
+    rewiring_year = models.PositiveIntegerField(null=True, blank=True)
+    reroof_year = models.PositiveIntegerField(null=True, blank=True)
+    new_boiler_year = models.PositiveIntegerField(null=True, blank=True)
+    new_windows_year = models.PositiveIntegerField(null=True, blank=True)
+    damp_proofing_year = models.PositiveIntegerField(null=True, blank=True)
+    works_notes = models.TextField(blank=True, help_text='Free text for permissions, guarantees, details')
+
+    # Warranties
+    nhbc_years_remaining = models.PositiveIntegerField(null=True, blank=True)
+    solar_panels = models.CharField(max_length=20, choices=SOLAR_PANELS_CHOICES, blank=True)
+
+    # Running costs
+    annual_gas_bill = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    annual_electricity_bill = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    annual_water_bill = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+
+    # Environmental & location
+    radon_risk = models.CharField(max_length=20, choices=RADON_RISK_CHOICES, blank=True)
+    noise_sources = models.CharField(max_length=255, blank=True)
+    nearest_station_name = models.CharField(max_length=200, blank=True)
+    nearest_station_distance_km = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    nearby_schools = models.TextField(blank=True)
+
+    # Outside space
+    garden_size_sqm = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    garden_orientation = models.CharField(max_length=10, choices=GARDEN_ORIENTATION_CHOICES, blank=True)
+    outbuildings = models.TextField(blank=True)
+
+    # Chain & availability
+    chain_status = models.CharField(max_length=20, choices=CHAIN_STATUS_CHOICES, blank=True)
+    earliest_completion_date = models.DateField(null=True, blank=True)
+    reason_for_sale = models.TextField(blank=True)
+
+    # Fixtures & fittings
+    fixtures_included = models.TextField(blank=True)
+    fixtures_excluded = models.TextField(blank=True)
+    fixtures_negotiable = models.TextField(blank=True)
+
+    # Extras worth highlighting
+    smart_home = models.BooleanField(default=False)
+    ev_charging = models.BooleanField(default=False)
+    solar_battery_storage = models.BooleanField(default=False)
+    rainwater_harvesting = models.BooleanField(default=False)
+    home_office = models.BooleanField(default=False)
+    pet_friendly_features = models.BooleanField(default=False)
 
     # Video / virtual tour
     video_url = models.URLField(blank=True, help_text='YouTube or Matterport URL for virtual tour')
@@ -171,26 +400,30 @@ class Property(models.Model):
         super().save(*args, **kwargs)
 
     def listing_quality_score(self):
-        """Calculate listing completeness score (0-100) with tips for improvement."""
+        """Calculate listing completeness score (0-100) with tips for improvement.
+
+        Multi-phase friendly: Phase 1 fields (title, price, postcode, bedrooms,
+        one image) are worth about 35 points. Phase 2 fields (everything else)
+        make up the remaining 65.
+        """
         score = 0
         tips = []
 
-        # Title & description (20 points)
+        # -- Phase 1 core (35 pts) --
         if self.title:
             score += 5
-        if self.description:
-            score += 10 if len(self.description) > 200 else 5
-        else:
-            tips.append('Add a detailed description — listings with descriptions get 50% more views')
-        if len(self.description) <= 200 and self.description:
-            tips.append('Expand your description to at least 200 characters for better engagement')
+        if self.price:
+            score += 5
+        if self.postcode:
+            score += 5
+        if self.bedrooms > 0:
+            score += 5
 
-        # Images (25 points)
         image_count = self.images.count()
         if image_count >= 10:
-            score += 25
-        elif image_count >= 5:
             score += 15
+        elif image_count >= 5:
+            score += 10
             tips.append(f'Add {10 - image_count} more photos — listings with 10+ photos get 3x more enquiries')
         elif image_count >= 1:
             score += 5
@@ -198,51 +431,101 @@ class Property(models.Model):
         else:
             tips.append('Add photos — listings without images rarely receive enquiries')
 
-        # Floorplan (10 points)
-        if self.floorplans.exists():
-            score += 10
+        # -- Address details (10 pts) --
+        if self.address_line_1:
+            score += 3
         else:
-            tips.append('Add a floorplan — listings with floorplans get 40% more enquiries')
+            tips.append('Add the street address so buyers know exactly where it is')
+        if self.city:
+            score += 2
+        if self.latitude and self.longitude:
+            score += 3
+        else:
+            tips.append('Drop a pin on the map so you appear in map-based searches')
+        if self.county:
+            score += 2
 
-        # EPC rating (10 points)
+        # -- Description (10 pts) --
+        if self.brief_description:
+            score += 3
+        else:
+            tips.append('Add a brief description — it appears in search results')
+        if self.description:
+            score += 7 if len(self.description) > 200 else 3
+        else:
+            tips.append('Add a detailed description — listings with descriptions get 50% more views')
+
+        # -- Property details (10 pts) --
+        if self.bathrooms > 0:
+            score += 2
+        if self.reception_rooms > 0:
+            score += 2
+        if self.square_feet or self.floor_area_sqm:
+            score += 3
+        else:
+            tips.append('Add the floor area — buyers use this to compare value')
+        if self.year_built:
+            score += 2
+        if self.construction_type:
+            score += 1
+
+        # -- Tenure & running costs (10 pts) --
+        if self.tenure:
+            score += 3
+        else:
+            tips.append('Set the tenure (freehold / leasehold) — legally required material information')
+        if self.council_tax_band:
+            score += 2
+        else:
+            tips.append('Add the council tax band')
         if self.epc_rating:
-            score += 10
+            score += 3
         else:
             tips.append('Add your EPC rating — buyers expect to see energy performance')
+        if self.heating_type:
+            score += 2
 
-        # Price (5 points - always set)
-        if self.price:
-            score += 5
-
-        # Location details (10 points)
-        if self.latitude and self.longitude:
-            score += 5
-        else:
-            tips.append('Add map coordinates to appear in map-based searches')
-        if self.county:
-            score += 5
-
-        # Property details (10 points)
-        if self.bedrooms > 0:
+        # -- Risks & restrictions (10 pts) --
+        if self.flood_risk:
             score += 3
-        if self.bathrooms > 0:
-            score += 3
-        if self.square_feet:
-            score += 4
         else:
-            tips.append('Add the square footage — buyers use this to compare value')
+            tips.append('Disclose the flood risk — this is material information')
+        if self.listed_building:
+            score += 2
+        if self.japanese_knotweed:
+            score += 2
+        if self.mining_area:
+            score += 1
+        if self.parking_type:
+            score += 2
 
-        # Features (5 points)
+        # -- Extras (5 pts) --
         if self.features.exists():
-            score += 5
+            score += 2
         else:
             tips.append('Add property features (garden, parking, etc.) to improve search visibility')
-
-        # Video tour (5 points)
-        if self.video_url:
-            score += 5
+        if self.floorplans.exists():
+            score += 2
         else:
-            tips.append('Add a video tour — virtual tours significantly increase buyer interest')
+            tips.append('Add a floorplan — listings with floorplans get 40% more enquiries')
+        if self.video_url:
+            score += 1
+
+        # -- Fixtures & chain (5 pts) --
+        if self.fixtures_included:
+            score += 2
+        if self.chain_status:
+            score += 2
+        if self.reason_for_sale:
+            score += 1
+
+        # -- Location colour (5 pts) --
+        if self.nearby_schools:
+            score += 2
+        if self.nearest_station_name:
+            score += 2
+        if self.what3words:
+            score += 1
 
         return {'score': min(score, 100), 'tips': tips}
 
@@ -649,6 +932,12 @@ class PropertyDocument(models.Model):
         ('ta10', 'TA10 Fittings & Contents'),
         ('floorplan', 'Floorplan'),
         ('survey', 'Survey Report'),
+        ('gas_safety', 'Gas Safety Certificate'),
+        ('eicr', 'EICR / Electrical Certificate'),
+        ('fensa', 'FENSA / CERTASS Certificate'),
+        ('building_regs', 'Building Regulations Sign-off'),
+        ('planning', 'Planning Permission'),
+        ('ews1', 'EWS1 Form'),
         ('other', 'Other'),
     ]
 

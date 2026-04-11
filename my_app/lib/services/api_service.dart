@@ -147,7 +147,7 @@ class ApiService {
     if (response.statusCode == 201) {
       return Property.fromJson(jsonDecode(response.body));
     }
-    throw Exception('Failed to create property');
+    throw Exception(_extractError(response));
   }
 
   Future<Property> updateProperty(int id, Map<String, dynamic> body) async {
@@ -159,7 +159,61 @@ class ApiService {
     if (response.statusCode == 200) {
       return Property.fromJson(jsonDecode(response.body));
     }
-    throw Exception('Failed to update property');
+    throw Exception(_extractError(response));
+  }
+
+  // ── Postcode lookup (postcodes.io proxy) ────────────────────────────
+  //
+  // Returns lat/lon, admin_district, admin_county, region, country for a
+  // UK postcode. Throws on 404 or network failure. Does NOT return a list
+  // of full addresses — the free postcodes.io API only resolves centroids.
+
+  Future<Map<String, dynamic>> lookupPostcode(String postcode) async {
+    final response = await http
+        .get(Uri.parse(ApiConstants.postcodeLookup(postcode)), headers: _headers)
+        .timeout(_timeout);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    if (response.statusCode == 404) {
+      throw Exception('Postcode not found');
+    }
+    throw Exception(_extractError(response));
+  }
+
+  // ── Brief description auto-generation ───────────────────────────────
+
+  Future<String> generateBriefDescription({
+    required String propertyType,
+    required int bedrooms,
+    int? bathrooms,
+    int? receptionRooms,
+    int? squareFeet,
+    String? location,
+    String? epcRating,
+    List<String> featureNames = const [],
+  }) async {
+    final body = {
+      'brief': true,
+      'property_type': propertyType,
+      'bedrooms': bedrooms,
+      if (bathrooms != null) 'bathrooms': bathrooms,
+      if (receptionRooms != null) 'reception_rooms': receptionRooms,
+      if (squareFeet != null) 'square_feet': squareFeet,
+      if (location != null && location.isNotEmpty) 'location': location,
+      if (epcRating != null && epcRating.isNotEmpty) 'epc_rating': epcRating,
+      if (featureNames.isNotEmpty) 'features': featureNames,
+    };
+    final response = await http.post(
+      Uri.parse(ApiConstants.generateDescription),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return (data['description'] ?? '').toString();
+    }
+    throw Exception(_extractError(response));
   }
 
   Future<void> deleteProperty(int id) async {

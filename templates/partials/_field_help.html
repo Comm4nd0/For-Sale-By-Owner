@@ -1,0 +1,14 @@
+{% comment %}
+Help icon tooltip partial.
+
+Usage:
+    {% include 'partials/_field_help.html' with text="Explanation text" %}
+
+Renders a small '?' button that reveals a popover on hover or click. The
+popover is a plain <span> so it prints/accessible by default. No JS framework
+required — the CSS in listing-form.css handles both hover and click states.
+{% endcomment %}
+<span class="field-help" tabindex="0" role="button" aria-label="What is this?" data-help-popover>
+    <span class="field-help__icon" aria-hidden="true">?</span>
+    <span class="field-help__popover" role="tooltip">{{ text }}</span>
+</span>
