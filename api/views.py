@@ -750,6 +750,52 @@ class ViewingSlotViewSet(viewsets.ModelViewSet):
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
+def bulk_create_viewing_slots(request, property_pk):
+    """Bulk-create recurring weekly viewing slots for multiple days of the week."""
+    prop = get_object_or_404(Property, pk=property_pk)
+    if prop.owner != request.user:
+        raise PermissionDenied("Only the property owner can manage viewing slots.")
+
+    days = request.data.get('days', [])
+    start_time = request.data.get('start_time')
+    end_time = request.data.get('end_time')
+    max_bookings = request.data.get('max_bookings', 1)
+
+    if not days:
+        return Response({'detail': 'At least one day must be selected.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not start_time or not end_time:
+        return Response({'detail': 'start_time and end_time are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        days = [int(d) for d in days]
+        if not all(0 <= d <= 6 for d in days):
+            raise ValueError
+    except (TypeError, ValueError):
+        return Response({'detail': 'days must be integers between 0 (Monday) and 6 (Sunday).'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        max_bookings = int(max_bookings)
+        if max_bookings < 1:
+            raise ValueError
+    except (TypeError, ValueError):
+        return Response({'detail': 'max_bookings must be a positive integer.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    created = []
+    for day in days:
+        slot = ViewingSlot.objects.create(
+            property=prop,
+            day_of_week=day,
+            start_time=start_time,
+            end_time=end_time,
+            max_bookings=max_bookings,
+        )
+        created.append(slot)
+
+    return Response(ViewingSlotSerializer(created, many=True).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
 def book_viewing_slot(request, property_pk, slot_pk):
     """Book a viewing slot (creates a ViewingRequest tied to the slot)."""
     prop = get_object_or_404(Property, pk=property_pk)
