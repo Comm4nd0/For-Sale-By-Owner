@@ -9,6 +9,7 @@ import 'buyer_profile_screen.dart';
 import 'buyer_verification_screen.dart';
 import 'two_factor_screen.dart';
 import 'staff_services_screen.dart';
+import 'my_listings_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class AccountScreen extends StatefulWidget {
@@ -190,6 +191,29 @@ class _AccountScreenState extends State<AccountScreen> {
                 ),
               ),
             ],
+
+            const SizedBox(height: 20),
+
+            // Seller section
+            _buildSectionTitle('Seller Tools'),
+            const SizedBox(height: 8),
+            Card(
+              margin: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  _buildMenuTile(
+                    icon: PhosphorIconsDuotone.house,
+                    title: 'My Listings',
+                    subtitle: 'Create and manage your property listings',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const MyListingsScreen()),
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
             const SizedBox(height: 20),
 
