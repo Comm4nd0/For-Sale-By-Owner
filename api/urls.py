@@ -100,6 +100,11 @@ urlpatterns = [
         name='viewing-slots-detail',
     ),
     path(
+        'properties/<int:property_pk>/viewing-slots/bulk-create/',
+        views.bulk_create_viewing_slots,
+        name='viewing-slots-bulk-create',
+    ),
+    path(
         'properties/<int:property_pk>/viewing-slots/<int:slot_pk>/book/',
         views.book_viewing_slot,
         name='viewing-slot-book',

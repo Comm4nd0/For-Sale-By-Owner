@@ -313,6 +313,49 @@ class ViewingSlotAPITest(TestCase):
         }, format='json')
         self.assertEqual(res.status_code, 403)
 
+    # ── Bulk create tests ──────────────────────────────────────────
+
+    def test_bulk_create_weekly_slots(self):
+        """Owner can bulk-create weekly slots for multiple days at once."""
+        res = self.owner_client.post(
+            f'/api/properties/{self.prop.id}/viewing-slots/bulk-create/',
+            {'days': [0, 2, 4], 'start_time': '14:00', 'end_time': '15:00', 'max_bookings': 2},
+            format='json',
+        )
+        self.assertEqual(res.status_code, 201)
+        data = res.json()
+        self.assertEqual(len(data), 3)
+        created_days = {s['day_of_week'] for s in data}
+        self.assertEqual(created_days, {0, 2, 4})
+        self.assertEqual(ViewingSlot.objects.filter(property=self.prop, day_of_week__in=[0, 2, 4]).count(), 3)
+
+    def test_bulk_create_requires_days(self):
+        """Bulk create returns 400 when no days are provided."""
+        res = self.owner_client.post(
+            f'/api/properties/{self.prop.id}/viewing-slots/bulk-create/',
+            {'days': [], 'start_time': '14:00', 'end_time': '15:00'},
+            format='json',
+        )
+        self.assertEqual(res.status_code, 400)
+
+    def test_bulk_create_non_owner_forbidden(self):
+        """Non-owner cannot use the bulk create endpoint."""
+        res = self.buyer_client.post(
+            f'/api/properties/{self.prop.id}/viewing-slots/bulk-create/',
+            {'days': [1], 'start_time': '14:00', 'end_time': '15:00'},
+            format='json',
+        )
+        self.assertEqual(res.status_code, 403)
+
+    def test_bulk_create_invalid_day(self):
+        """Bulk create rejects day values outside 0–6."""
+        res = self.owner_client.post(
+            f'/api/properties/{self.prop.id}/viewing-slots/bulk-create/',
+            {'days': [7], 'start_time': '14:00', 'end_time': '15:00'},
+            format='json',
+        )
+        self.assertEqual(res.status_code, 400)
+
 
 # ══════════════════════════════════════════════════════════════════
 # PROPERTY FLAGGING / MODERATION TESTS

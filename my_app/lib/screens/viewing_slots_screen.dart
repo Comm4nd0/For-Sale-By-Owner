@@ -48,13 +48,32 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
 
     try {
       final api = context.read<ApiService>();
-      await api.createViewingSlot(widget.propertyId, result);
-      _loadSlots();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Viewing slot added')),
+
+      if (result['bulk'] == true) {
+        // Multi-day weekly bulk create
+        await api.bulkCreateViewingSlots(
+          widget.propertyId,
+          days: (result['days'] as List).cast<int>(),
+          startTime: result['start_time'] as String,
+          endTime: result['end_time'] as String,
+          maxBookings: result['max_bookings'] as int,
         );
+        final count = (result['days'] as List).length;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$count weekly slot${count != 1 ? 's' : ''} added')),
+          );
+        }
+      } else {
+        // Single one-off slot
+        await api.createViewingSlot(widget.propertyId, result);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Viewing slot added')),
+          );
+        }
       }
+      _loadSlots();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -86,6 +105,7 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
       ),
     );
     if (confirmed != true) return;
+    if (!mounted) return;
 
     try {
       final api = context.read<ApiService>();
@@ -116,7 +136,7 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
     return Scaffold(
       appBar: AppBar(title: const Text('Viewing Slots')),
       floatingActionButton: widget.isOwner
-          ? FloatingActionButton(onPressed: _addSlot, child: PhosphorIcon(PhosphorIconsDuotone.plus))
+          ? FloatingActionButton(onPressed: _addSlot, child: const PhosphorIcon(PhosphorIconsDuotone.plus))
           : null,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -134,7 +154,7 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
                             color: AppTheme.forestMist,
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: PhosphorIcon(PhosphorIconsDuotone.calendar, size: 36, color: AppTheme.forestMid),
+                          child: const PhosphorIcon(PhosphorIconsDuotone.calendar, size: 36, color: AppTheme.forestMid),
                         ),
                         const SizedBox(height: 20),
                         const Text(
@@ -221,7 +241,7 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
               )
             : widget.isOwner
                 ? IconButton(
-                    icon: PhosphorIcon(PhosphorIconsDuotone.trash),
+                    icon: const PhosphorIcon(PhosphorIconsDuotone.trash),
                     onPressed: () async {
                       final confirmed = await showDialog<bool>(
                         context: context,
@@ -242,6 +262,7 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
                         ),
                       );
                       if (confirmed != true) return;
+                      if (!mounted) return;
                       final api = context.read<ApiService>();
                       await api.deleteViewingSlot(widget.propertyId, slot.id);
                       _loadSlots();
@@ -262,46 +283,62 @@ class _AddSlotSheet extends StatefulWidget {
   State<_AddSlotSheet> createState() => _AddSlotSheetState();
 }
 
-class _AddSlotSheetState extends State<_AddSlotSheet> {
-  bool _isRecurring = false;
+class _AddSlotSheetState extends State<_AddSlotSheet> with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  // Weekly state
+  final Set<int> _selectedDays = {};
+  TimeOfDay _weeklyStart = const TimeOfDay(hour: 10, minute: 0);
+  TimeOfDay _weeklyEnd   = const TimeOfDay(hour: 11, minute: 0);
+  int _weeklyMaxBookings = 1;
+
+  // One-off state
   DateTime? _selectedDate;
-  int? _selectedDayOfWeek;
-  TimeOfDay _startTime = const TimeOfDay(hour: 10, minute: 0);
-  TimeOfDay _endTime = const TimeOfDay(hour: 11, minute: 0);
-  int _maxBookings = 1;
+  TimeOfDay _oneOffStart = const TimeOfDay(hour: 10, minute: 0);
+  TimeOfDay _oneOffEnd   = const TimeOfDay(hour: 11, minute: 0);
+  int _oneOffMaxBookings = 1;
 
-  static const _dayNames = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday',
-    'Friday', 'Saturday', 'Sunday',
-  ];
+  static const _dayAbbr = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-  String _formatTime(TimeOfDay t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-
-  String _formatDate(DateTime d) =>
-      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
-  bool get _canSave {
-    if (_isRecurring) return _selectedDayOfWeek != null;
-    return _selectedDate != null;
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() => setState(() {}));
   }
 
-  void _save() {
-    if (!_canSave) return;
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
-    final body = <String, dynamic>{
-      'start_time': _formatTime(_startTime),
-      'end_time': _formatTime(_endTime),
-      'max_bookings': _maxBookings,
-    };
+  String _fmt(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
-    if (_isRecurring) {
-      body['day_of_week'] = _selectedDayOfWeek;
-    } else {
-      body['date'] = _formatDate(_selectedDate!);
-    }
+  String _fmtDate(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-    Navigator.pop(context, body);
+  void _saveWeekly() {
+    if (_selectedDays.isEmpty) return;
+    Navigator.pop(context, {
+      'bulk': true,
+      'days': _selectedDays.toList()..sort(),
+      'start_time': _fmt(_weeklyStart),
+      'end_time': _fmt(_weeklyEnd),
+      'max_bookings': _weeklyMaxBookings,
+    });
+  }
+
+  void _saveOneOff() {
+    if (_selectedDate == null) return;
+    Navigator.pop(context, {
+      'bulk': false,
+      'date': _fmtDate(_selectedDate!),
+      'start_time': _fmt(_oneOffStart),
+      'end_time': _fmt(_oneOffEnd),
+      'max_bookings': _oneOffMaxBookings,
+    });
   }
 
   @override
@@ -318,6 +355,7 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Drag handle
             Center(
               child: Container(
                 width: 40,
@@ -333,145 +371,267 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
               'Add Viewing Slot',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
-            // Slot type toggle
-            const Text('Slot Type', style: TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(
-                  value: false,
-                  icon: PhosphorIcon(PhosphorIconsDuotone.calendarCheck, size: 18),
-                  label: Text('One-off'),
+            // Tab bar
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicator: BoxDecoration(
+                  color: AppTheme.forestMid,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                ButtonSegment(
-                  value: true,
-                  icon: PhosphorIcon(PhosphorIconsDuotone.repeat, size: 18),
-                  label: Text('Weekly'),
-                ),
-              ],
-              selected: {_isRecurring},
-              onSelectionChanged: (v) => setState(() {
-                _isRecurring = v.first;
-                _selectedDate = null;
-                _selectedDayOfWeek = null;
-              }),
-            ),
-            const SizedBox(height: 20),
-
-            // Date or day picker
-            if (_isRecurring) ...[
-              const Text('Day of Week', style: TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: List.generate(7, (i) {
-                  final selected = _selectedDayOfWeek == i;
-                  return ChoiceChip(
-                    label: Text(_dayNames[i].substring(0, 3)),
-                    selected: selected,
-                    onSelected: (_) => setState(() => _selectedDayOfWeek = i),
-                    selectedColor: AppTheme.forestMid,
-                    labelStyle: TextStyle(
-                      color: selected ? Colors.white : null,
-                      fontWeight: selected ? FontWeight.bold : null,
+                indicatorSize: TabBarIndicatorSize.tab,
+                labelColor: Colors.white,
+                unselectedLabelColor: AppTheme.slate,
+                labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                tabs: const [
+                  Tab(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        PhosphorIcon(PhosphorIconsDuotone.repeat, size: 16),
+                        SizedBox(width: 6),
+                        Text('Weekly'),
+                      ],
                     ),
-                  );
-                }),
-              ),
-            ] else ...[
-              const Text('Date', style: TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final date = await showDatePicker(
-                    context: context,
-                    initialDate: _selectedDate ?? DateTime.now().add(const Duration(days: 1)),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 90)),
-                  );
-                  if (date != null) setState(() => _selectedDate = date);
-                },
-                icon: PhosphorIcon(PhosphorIconsDuotone.calendar, size: 18),
-                label: Text(
-                  _selectedDate != null
-                      ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
-                      : 'Select a date',
-                ),
-              ),
-            ],
-            const SizedBox(height: 20),
-
-            // Time pickers
-            const Text('Time', style: TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () async {
-                      final t = await showTimePicker(context: context, initialTime: _startTime);
-                      if (t != null) setState(() => _startTime = t);
-                    },
-                    child: Text('Start: ${_startTime.format(context)}'),
                   ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8),
-                  child: Text('to'),
-                ),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () async {
-                      final t = await showTimePicker(context: context, initialTime: _endTime);
-                      if (t != null) setState(() => _endTime = t);
-                    },
-                    child: Text('End: ${_endTime.format(context)}'),
+                  Tab(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        PhosphorIcon(PhosphorIconsDuotone.calendarCheck, size: 16),
+                        SizedBox(width: 6),
+                        Text('One-off'),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 20),
 
-            // Max bookings
-            const Text('Max Bookings', style: TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                IconButton(
-                  onPressed: _maxBookings > 1 ? () => setState(() => _maxBookings--) : null,
-                  icon: PhosphorIcon(PhosphorIconsDuotone.minusCircle),
-                ),
-                Text(
-                  '$_maxBookings',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  onPressed: _maxBookings < 10 ? () => setState(() => _maxBookings++) : null,
-                  icon: PhosphorIcon(PhosphorIconsDuotone.plusCircle),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _maxBookings == 1 ? 'booking per slot' : 'bookings per slot',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Save button
-            ElevatedButton(
-              onPressed: _canSave ? _save : null,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              child: Text(_isRecurring ? 'Add Weekly Slot' : 'Add One-off Slot'),
-            ),
+            // Tab content (shown inline, not via TabBarView, to keep bottom sheet sizing simple)
+            if (_tabController.index == 0) _buildWeeklyPanel(),
+            if (_tabController.index == 1) _buildOneOffPanel(),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildWeeklyPanel() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Select days',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'All selected days will get the same time slot.',
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        ),
+        const SizedBox(height: 12),
+
+        // Day chips
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(7, (i) {
+            final selected = _selectedDays.contains(i);
+            return GestureDetector(
+              onTap: () => setState(() {
+                if (selected) {
+                  _selectedDays.remove(i);
+                } else {
+                  _selectedDays.add(i);
+                }
+              }),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: selected ? AppTheme.forestMid : Colors.grey[100],
+                  border: Border.all(
+                    color: selected ? AppTheme.forestMid : Colors.grey[300]!,
+                    width: 2,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    _dayAbbr[i].substring(0, 2),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: selected ? Colors.white : AppTheme.slate,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 20),
+
+        // Time row
+        const Text('Time', style: TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () async {
+                  final t = await showTimePicker(context: context, initialTime: _weeklyStart);
+                  if (t != null) setState(() => _weeklyStart = t);
+                },
+                child: Text('Start: ${_weeklyStart.format(context)}'),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8),
+              child: Text('to'),
+            ),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () async {
+                  final t = await showTimePicker(context: context, initialTime: _weeklyEnd);
+                  if (t != null) setState(() => _weeklyEnd = t);
+                },
+                child: Text('End: ${_weeklyEnd.format(context)}'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+
+        // Max bookings
+        const Text('Max Bookings', style: TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        _buildBookingsStepper(
+          value: _weeklyMaxBookings,
+          onDecrement: () => setState(() => _weeklyMaxBookings--),
+          onIncrement: () => setState(() => _weeklyMaxBookings++),
+        ),
+        const SizedBox(height: 24),
+
+        ElevatedButton(
+          onPressed: _selectedDays.isNotEmpty ? _saveWeekly : null,
+          style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+          child: Text(
+            _selectedDays.isEmpty
+                ? 'Select at least one day'
+                : 'Add ${_selectedDays.length} Weekly Slot${_selectedDays.length != 1 ? 's' : ''}',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOneOffPanel() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Date picker
+        const Text('Date', style: TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () async {
+            final date = await showDatePicker(
+              context: context,
+              initialDate: _selectedDate ?? DateTime.now().add(const Duration(days: 1)),
+              firstDate: DateTime.now(),
+              lastDate: DateTime.now().add(const Duration(days: 90)),
+            );
+            if (date != null) setState(() => _selectedDate = date);
+          },
+          icon: const PhosphorIcon(PhosphorIconsDuotone.calendar, size: 18),
+          label: Text(
+            _selectedDate != null
+                ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
+                : 'Select a date',
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Time row
+        const Text('Time', style: TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () async {
+                  final t = await showTimePicker(context: context, initialTime: _oneOffStart);
+                  if (t != null) setState(() => _oneOffStart = t);
+                },
+                child: Text('Start: ${_oneOffStart.format(context)}'),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8),
+              child: Text('to'),
+            ),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () async {
+                  final t = await showTimePicker(context: context, initialTime: _oneOffEnd);
+                  if (t != null) setState(() => _oneOffEnd = t);
+                },
+                child: Text('End: ${_oneOffEnd.format(context)}'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+
+        // Max bookings
+        const Text('Max Bookings', style: TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        _buildBookingsStepper(
+          value: _oneOffMaxBookings,
+          onDecrement: () => setState(() => _oneOffMaxBookings--),
+          onIncrement: () => setState(() => _oneOffMaxBookings++),
+        ),
+        const SizedBox(height: 24),
+
+        ElevatedButton(
+          onPressed: _selectedDate != null ? _saveOneOff : null,
+          style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+          child: const Text('Add One-off Slot'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBookingsStepper({
+    required int value,
+    required VoidCallback onDecrement,
+    required VoidCallback onIncrement,
+  }) {
+    return Row(
+      children: [
+        IconButton(
+          onPressed: value > 1 ? onDecrement : null,
+          icon: const PhosphorIcon(PhosphorIconsDuotone.minusCircle),
+        ),
+        Text('$value', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        IconButton(
+          onPressed: value < 10 ? onIncrement : null,
+          icon: const PhosphorIcon(PhosphorIconsDuotone.plusCircle),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          value == 1 ? 'booking per slot' : 'bookings per slot',
+          style: TextStyle(color: Colors.grey[600]),
+        ),
+      ],
     );
   }
 }
