@@ -50,15 +50,13 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
       final api = context.read<ApiService>();
 
       if (result['bulk'] == true) {
-        // Multi-day weekly bulk create
-        await api.bulkCreateViewingSlots(
+        // Multi-day weekly bulk create with per-day schedule
+        await api.bulkCreateViewingSlotsSchedule(
           widget.propertyId,
-          days: (result['days'] as List).cast<int>(),
-          startTime: result['start_time'] as String,
-          endTime: result['end_time'] as String,
+          schedule: (result['schedule'] as List).cast<Map<String, dynamic>>(),
           maxBookings: result['max_bookings'] as int,
         );
-        final count = (result['days'] as List).length;
+        final count = (result['schedule'] as List).length;
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('$count weekly slot${count != 1 ? 's' : ''} added')),
@@ -288,8 +286,8 @@ class _AddSlotSheetState extends State<_AddSlotSheet> with SingleTickerProviderS
 
   // Weekly state
   final Set<int> _selectedDays = {};
-  TimeOfDay _weeklyStart = const TimeOfDay(hour: 10, minute: 0);
-  TimeOfDay _weeklyEnd   = const TimeOfDay(hour: 11, minute: 0);
+  final Map<int, TimeOfDay> _dayStarts = {};
+  final Map<int, TimeOfDay> _dayEnds = {};
   int _weeklyMaxBookings = 1;
 
   // One-off state
@@ -321,11 +319,14 @@ class _AddSlotSheetState extends State<_AddSlotSheet> with SingleTickerProviderS
 
   void _saveWeekly() {
     if (_selectedDays.isEmpty) return;
+    final schedule = (_selectedDays.toList()..sort()).map((d) {
+      final start = _dayStarts[d] ?? const TimeOfDay(hour: 10, minute: 0);
+      final end = _dayEnds[d] ?? const TimeOfDay(hour: 11, minute: 0);
+      return {'day': d, 'start_time': _fmt(start), 'end_time': _fmt(end)};
+    }).toList();
     Navigator.pop(context, {
       'bulk': true,
-      'days': _selectedDays.toList()..sort(),
-      'start_time': _fmt(_weeklyStart),
-      'end_time': _fmt(_weeklyEnd),
+      'schedule': schedule,
       'max_bookings': _weeklyMaxBookings,
     });
   }
@@ -424,7 +425,10 @@ class _AddSlotSheetState extends State<_AddSlotSheet> with SingleTickerProviderS
     );
   }
 
+  static const _dayFull = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
   Widget _buildWeeklyPanel() {
+    final sortedDays = _selectedDays.toList()..sort();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -434,7 +438,7 @@ class _AddSlotSheetState extends State<_AddSlotSheet> with SingleTickerProviderS
         ),
         const SizedBox(height: 4),
         Text(
-          'All selected days will get the same time slot.',
+          'Tap the days, then set the time for each day below.',
           style: TextStyle(fontSize: 12, color: Colors.grey[600]),
         ),
         const SizedBox(height: 12),
@@ -448,8 +452,12 @@ class _AddSlotSheetState extends State<_AddSlotSheet> with SingleTickerProviderS
               onTap: () => setState(() {
                 if (selected) {
                   _selectedDays.remove(i);
+                  _dayStarts.remove(i);
+                  _dayEnds.remove(i);
                 } else {
                   _selectedDays.add(i);
+                  _dayStarts[i] = const TimeOfDay(hour: 10, minute: 0);
+                  _dayEnds[i] = const TimeOfDay(hour: 11, minute: 0);
                 }
               }),
               child: AnimatedContainer(
@@ -480,36 +488,60 @@ class _AddSlotSheetState extends State<_AddSlotSheet> with SingleTickerProviderS
         ),
         const SizedBox(height: 20),
 
-        // Time row
-        const Text('Time', style: TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () async {
-                  final t = await showTimePicker(context: context, initialTime: _weeklyStart);
-                  if (t != null) setState(() => _weeklyStart = t);
-                },
-                child: Text('Start: ${_weeklyStart.format(context)}'),
+        // Per-day time pickers
+        if (sortedDays.isNotEmpty) ...[
+          const Text('Time per day', style: TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          ...sortedDays.map((d) {
+            final start = _dayStarts[d] ?? const TimeOfDay(hour: 10, minute: 0);
+            final end = _dayEnds[d] ?? const TimeOfDay(hour: 11, minute: 0);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 70,
+                    child: Text(
+                      _dayAbbr[d],
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.forestDeep),
+                    ),
+                  ),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () async {
+                        final t = await showTimePicker(context: context, initialTime: start);
+                        if (t != null) setState(() => _dayStarts[d] = t);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        textStyle: const TextStyle(fontSize: 13),
+                      ),
+                      child: Text(start.format(context)),
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 6),
+                    child: Text('to', style: TextStyle(fontSize: 12)),
+                  ),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () async {
+                        final t = await showTimePicker(context: context, initialTime: end);
+                        if (t != null) setState(() => _dayEnds[d] = t);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        textStyle: const TextStyle(fontSize: 13),
+                      ),
+                      child: Text(end.format(context)),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
-              child: Text('to'),
-            ),
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () async {
-                  final t = await showTimePicker(context: context, initialTime: _weeklyEnd);
-                  if (t != null) setState(() => _weeklyEnd = t);
-                },
-                child: Text('End: ${_weeklyEnd.format(context)}'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
+            );
+          }),
+          const SizedBox(height: 12),
+        ],
 
         // Max bookings
         const Text('Max Bookings', style: TextStyle(fontWeight: FontWeight.w600)),

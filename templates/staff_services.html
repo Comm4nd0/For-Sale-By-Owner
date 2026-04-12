@@ -152,9 +152,7 @@
             return;
         }
         try {
-            const resp = await fetch('/api/staff/service-stats/', {
-                headers: { 'Authorization': `Token ${Auth.token()}`, 'Content-Type': 'application/json' }
-            });
+            const resp = await Auth.authFetch('/api/staff/service-stats/');
             if (resp.status === 403 || resp.status === 401) {
                 document.getElementById('access-denied').style.display = 'block';
                 return;
@@ -263,9 +261,9 @@
     window.staffApp = {
         async quickAction(providerId, action) {
             try {
-                const resp = await fetch('/api/staff/service-actions/', {
+                const resp = await Auth.authFetch('/api/staff/service-actions/', {
                     method: 'POST',
-                    headers: { 'Authorization': `Token ${Auth.token()}`, 'Content-Type': 'application/json' },
+                    headers: Auth.headers(),
                     body: JSON.stringify({ provider_ids: [providerId], action })
                 });
                 if (resp.ok) location.reload();
@@ -274,9 +272,9 @@
         },
         async verify(providerId) {
             try {
-                const resp = await fetch(`/api/service-providers/${providerId}/validate/`, {
+                const resp = await Auth.authFetch(`/api/service-providers/${providerId}/validate/`, {
                     method: 'POST',
-                    headers: { 'Authorization': `Token ${Auth.token()}`, 'Content-Type': 'application/json' },
+                    headers: Auth.headers(),
                     body: JSON.stringify({ is_verified: true })
                 });
                 if (resp.ok) location.reload();
@@ -298,9 +296,9 @@
         if (selectedIds.size === 0) return;
         if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} ${selectedIds.size} provider(s)?`)) return;
         try {
-            const resp = await fetch('/api/staff/service-actions/', {
+            const resp = await Auth.authFetch('/api/staff/service-actions/', {
                 method: 'POST',
-                headers: { 'Authorization': `Token ${Auth.token()}`, 'Content-Type': 'application/json' },
+                headers: Auth.headers(),
                 body: JSON.stringify({ provider_ids: Array.from(selectedIds), action })
             });
             if (resp.ok) location.reload();

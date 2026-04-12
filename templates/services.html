@@ -10,8 +10,23 @@
 
     .search-bar { display: flex; gap: 0.75rem; margin-top: 1.25rem; flex-wrap: wrap; }
     .search-bar input { flex: 1; min-width: 200px; padding: 0.6rem 0.75rem; border: none; border-radius: 6px; font-size: 0.95rem; font-family: inherit; }
-    .search-bar select { padding: 0.6rem 0.75rem; border: none; border-radius: 6px; font-size: 0.95rem; font-family: inherit; min-width: 180px; }
     .search-bar .btn { white-space: nowrap; }
+
+    .category-typeahead-wrap { position: relative; min-width: 220px; }
+    .category-typeahead-wrap input { width: 100%; padding: 0.6rem 0.75rem; border: none; border-radius: 6px; font-size: 0.95rem; font-family: inherit; box-sizing: border-box; }
+    .typeahead-dropdown {
+        display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+        background: white; border: 1px solid #E2E2E2; border-radius: 0 0 8px 8px; max-height: 260px;
+        overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    .typeahead-dropdown.open { display: block; }
+    .typeahead-item {
+        padding: 0.5rem 0.75rem; cursor: pointer; font-size: 0.9rem; color: #115E66;
+        display: flex; align-items: center; gap: 0.5rem;
+    }
+    .typeahead-item:hover, .typeahead-item.highlighted { background: #D1E8E2; }
+    .typeahead-item .material-icons { font-size: 1rem; color: #8FA3A8; }
+    .typeahead-item .provider-count { margin-left: auto; font-size: 0.75rem; color: #8FA3A8; }
 
     .categories-strip { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
     .cat-chip {
@@ -81,9 +96,12 @@
         <p>Trusted professionals to help you buy, sell and move home</p>
         <div class="search-bar">
             <input type="text" id="location-input" placeholder="Enter town, county or postcode prefix..." value="">
-            <select id="category-select">
-                <option value="">All Categories</option>
-            </select>
+            <div class="category-typeahead-wrap">
+                <input type="text" id="category-input" placeholder="Search categories..." autocomplete="off"
+                       onfocus="openTypeahead()" oninput="filterTypeahead()" onkeydown="handleTypeaheadKey(event)">
+                <div class="typeahead-dropdown" id="typeahead-dropdown"></div>
+                <input type="hidden" id="category-select" value="">
+            </div>
             <button class="btn btn-primary" onclick="applySearch()">Search</button>
         </div>
     </div>
@@ -262,6 +280,78 @@
         loadNextPage();
     }
 
+    // ── Typeahead ────────────────────────────────────────────
+    let highlightedIdx = -1;
+
+    function openTypeahead() {
+        filterTypeahead();
+        document.getElementById('typeahead-dropdown').classList.add('open');
+    }
+
+    function closeTypeahead() {
+        setTimeout(() => {
+            document.getElementById('typeahead-dropdown').classList.remove('open');
+            highlightedIdx = -1;
+        }, 150);
+    }
+
+    document.getElementById('category-input').addEventListener('blur', closeTypeahead);
+
+    function filterTypeahead() {
+        const q = document.getElementById('category-input').value.toLowerCase().trim();
+        const dd = document.getElementById('typeahead-dropdown');
+        const matches = q
+            ? categories.filter(c => c.name.toLowerCase().includes(q))
+            : categories;
+
+        let html = `<div class="typeahead-item" onclick="selectTypeaheadCategory('', '')">
+            <span class="material-icons">apps</span>All Categories
+        </div>`;
+        matches.forEach((c, i) => {
+            html += `<div class="typeahead-item" onclick="selectTypeaheadCategory('${c.slug}', '${escHtml(c.name)}')">
+                <span class="material-icons">${c.icon || 'build'}</span>${escHtml(c.name)}
+                ${c.provider_count != null ? `<span class="provider-count">${c.provider_count}</span>` : ''}
+            </div>`;
+        });
+        dd.innerHTML = html;
+        dd.classList.add('open');
+        highlightedIdx = -1;
+    }
+
+    function selectTypeaheadCategory(slug, name) {
+        document.getElementById('category-select').value = slug;
+        document.getElementById('category-input').value = name;
+        document.getElementById('typeahead-dropdown').classList.remove('open');
+        activeCategory = slug;
+        updateCategoryChips();
+        updateTitle();
+        resetAndLoad();
+    }
+
+    function handleTypeaheadKey(e) {
+        const dd = document.getElementById('typeahead-dropdown');
+        const items = dd.querySelectorAll('.typeahead-item');
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            highlightedIdx = Math.min(highlightedIdx + 1, items.length - 1);
+            items.forEach((el, i) => el.classList.toggle('highlighted', i === highlightedIdx));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            highlightedIdx = Math.max(highlightedIdx - 1, 0);
+            items.forEach((el, i) => el.classList.toggle('highlighted', i === highlightedIdx));
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (highlightedIdx >= 0 && items[highlightedIdx]) {
+                items[highlightedIdx].click();
+            } else {
+                applySearch();
+            }
+        } else if (e.key === 'Escape') {
+            dd.classList.remove('open');
+            document.getElementById('category-input').blur();
+        }
+    }
+
     function applySearch() {
         const loc = document.getElementById('location-input').value.trim();
         const cat = document.getElementById('category-select').value;
@@ -274,6 +364,7 @@
     function clearFilters() {
         document.getElementById('location-input').value = '';
         document.getElementById('category-select').value = '';
+        document.getElementById('category-input').value = '';
         activeCategory = '';
         updateCategoryChips();
         updateTitle();
@@ -283,6 +374,8 @@
     function selectCategory(slug) {
         activeCategory = activeCategory === slug ? '' : slug;
         document.getElementById('category-select').value = activeCategory;
+        const cat = categories.find(c => c.slug === activeCategory);
+        document.getElementById('category-input').value = cat ? cat.name : '';
         updateCategoryChips();
         updateTitle();
         resetAndLoad();
@@ -314,13 +407,6 @@
         .then(r => r.json())
         .then(data => {
             categories = data;
-            const select = document.getElementById('category-select');
-            categories.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.slug;
-                opt.textContent = c.name;
-                select.appendChild(opt);
-            });
             updateCategoryChips();
         })
         .catch(() => {});

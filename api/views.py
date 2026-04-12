@@ -751,15 +751,64 @@ class ViewingSlotViewSet(viewsets.ModelViewSet):
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def bulk_create_viewing_slots(request, property_pk):
-    """Bulk-create recurring weekly viewing slots for multiple days of the week."""
+    """Bulk-create recurring weekly viewing slots for multiple days of the week.
+
+    Accepts two payload formats:
+
+    1. Shared time (legacy): { days: [0,1,2], start_time, end_time, max_bookings }
+       All days get the same time.
+
+    2. Per-day schedule: { schedule: [{ day: 0, start_time: "10:00", end_time: "11:00" }, ...], max_bookings }
+       Each day gets its own time.
+    """
     prop = get_object_or_404(Property, pk=property_pk)
     if prop.owner != request.user:
         raise PermissionDenied("Only the property owner can manage viewing slots.")
 
+    schedule = request.data.get('schedule')
+    max_bookings = request.data.get('max_bookings', 1)
+
+    try:
+        max_bookings = int(max_bookings)
+        if max_bookings < 1:
+            raise ValueError
+    except (TypeError, ValueError):
+        return Response({'detail': 'max_bookings must be a positive integer.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Per-day schedule format
+    if schedule:
+        if not isinstance(schedule, list) or len(schedule) == 0:
+            return Response({'detail': 'schedule must be a non-empty list.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        created = []
+        for entry in schedule:
+            day = entry.get('day')
+            st = entry.get('start_time')
+            et = entry.get('end_time')
+            if day is None or not st or not et:
+                return Response({'detail': 'Each schedule entry needs day, start_time and end_time.'}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                day = int(day)
+                if not (0 <= day <= 6):
+                    raise ValueError
+            except (TypeError, ValueError):
+                return Response({'detail': 'day must be an integer between 0 (Monday) and 6 (Sunday).'}, status=status.HTTP_400_BAD_REQUEST)
+
+            slot = ViewingSlot.objects.create(
+                property=prop,
+                day_of_week=day,
+                start_time=st,
+                end_time=et,
+                max_bookings=entry.get('max_bookings', max_bookings),
+            )
+            created.append(slot)
+
+        return Response(ViewingSlotSerializer(created, many=True).data, status=status.HTTP_201_CREATED)
+
+    # Legacy shared-time format
     days = request.data.get('days', [])
     start_time = request.data.get('start_time')
     end_time = request.data.get('end_time')
-    max_bookings = request.data.get('max_bookings', 1)
 
     if not days:
         return Response({'detail': 'At least one day must be selected.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -772,13 +821,6 @@ def bulk_create_viewing_slots(request, property_pk):
             raise ValueError
     except (TypeError, ValueError):
         return Response({'detail': 'days must be integers between 0 (Monday) and 6 (Sunday).'}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        max_bookings = int(max_bookings)
-        if max_bookings < 1:
-            raise ValueError
-    except (TypeError, ValueError):
-        return Response({'detail': 'max_bookings must be a positive integer.'}, status=status.HTTP_400_BAD_REQUEST)
 
     created = []
     for day in days:

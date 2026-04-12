@@ -1088,6 +1088,26 @@ class ApiService {
     throw Exception('Failed to bulk-create viewing slots');
   }
 
+  Future<List<ViewingSlot>> bulkCreateViewingSlotsSchedule(
+    int propertyId, {
+    required List<Map<String, dynamic>> schedule,
+    required int maxBookings,
+  }) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.viewingSlotsBulkCreate(propertyId)),
+      headers: _headers,
+      body: jsonEncode({
+        'schedule': schedule,
+        'max_bookings': maxBookings,
+      }),
+    );
+    if (response.statusCode == 201) {
+      final data = jsonDecode(response.body) as List;
+      return data.map((json) => ViewingSlot.fromJson(json)).toList();
+    }
+    throw Exception('Failed to bulk-create viewing slots');
+  }
+
   Future<void> deleteViewingSlot(int propertyId, int slotId) async {
     final response = await http.delete(
       Uri.parse(ApiConstants.viewingSlot(propertyId, slotId)),

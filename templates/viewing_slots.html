@@ -88,6 +88,32 @@
         document.querySelectorAll('.day-chip').forEach((chip, i) => {
             chip.classList.toggle('selected', selectedDays.has(i));
         });
+        renderPerDayTimes();
+    }
+
+    function renderPerDayTimes() {
+        const container = document.getElementById('per-day-times');
+        if (!container) return;
+        const sorted = [...selectedDays].sort();
+        if (sorted.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        container.innerHTML = sorted.map(d => `
+            <div class="form-row-3" style="margin-bottom:0.5rem; align-items:end;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-weight:600;color:#115E66;">${DAY_FULL[d]}</label>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Start</label>
+                    <input type="time" id="day-start-${d}" value="10:00">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>End</label>
+                    <input type="time" id="day-end-${d}" value="11:00">
+                </div>
+            </div>
+        `).join('');
     }
 
     function switchTab(tab) {
@@ -147,18 +173,9 @@
                         <!-- Weekly panel -->
                         <div id="panel-weekly" class="slot-panel active">
                             <p class="day-chips-label">Select days</p>
-                            <p class="day-chips-hint">Tap the days you want to add slots for — all selected days will use the same time below.</p>
+                            <p class="day-chips-hint">Tap the days you want to add slots for, then set the time for each day below.</p>
                             <div class="day-chips">${dayChips}</div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Start Time</label>
-                                    <input type="time" id="weekly-start" value="10:00" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>End Time</label>
-                                    <input type="time" id="weekly-end" value="11:00" required>
-                                </div>
-                            </div>
+                            <div id="per-day-times"></div>
                             <div class="form-group" style="max-width:160px;">
                                 <label>Max Bookings per Slot</label>
                                 <input type="number" id="weekly-max" value="1" min="1" max="50" required>
@@ -255,17 +272,22 @@
             showMsg('Please select at least one day.', 'error');
             return;
         }
-        const startTime = document.getElementById('weekly-start').value;
-        const endTime   = document.getElementById('weekly-end').value;
-        const maxBook   = parseInt(document.getElementById('weekly-max').value) || 1;
+        const maxBook = parseInt(document.getElementById('weekly-max').value) || 1;
 
-        if (!startTime || !endTime) {
-            showMsg('Please set both a start and end time.', 'error');
-            return;
-        }
-        if (startTime >= endTime) {
-            showMsg('End time must be after start time.', 'error');
-            return;
+        // Build per-day schedule
+        const schedule = [];
+        for (const d of [...selectedDays].sort()) {
+            const st = document.getElementById(`day-start-${d}`)?.value;
+            const et = document.getElementById(`day-end-${d}`)?.value;
+            if (!st || !et) {
+                showMsg(`Please set both start and end time for ${DAY_FULL[d]}.`, 'error');
+                return;
+            }
+            if (st >= et) {
+                showMsg(`End time must be after start time for ${DAY_FULL[d]}.`, 'error');
+                return;
+            }
+            schedule.push({ day: d, start_time: st, end_time: et });
         }
 
         const btn = document.querySelector('#panel-weekly .btn-primary');
@@ -279,9 +301,7 @@
                     method: 'POST',
                     headers: Auth.headers(),
                     body: JSON.stringify({
-                        days: [...selectedDays],
-                        start_time: startTime,
-                        end_time: endTime,
+                        schedule: schedule,
                         max_bookings: maxBook,
                     }),
                 }
