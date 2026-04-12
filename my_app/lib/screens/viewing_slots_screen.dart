@@ -640,4 +640,28 @@ class _AddSlotSheetState extends State<_AddSlotSheet> with SingleTickerProviderS
     );
   }
 
-  Wid
+  Widget _buildBookingsStepper({
+    required int value,
+    required VoidCallback onDecrement,
+    required VoidCallback onIncrement,
+  }) {
+    return Row(
+      children: [
+        IconButton(
+          onPressed: value > 1 ? onDecrement : null,
+          icon: PhosphorIcon(PhosphorIconsDuotone.minusCircle),
+        ),
+        Text('$value', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        IconButton(
+          onPressed: value < 10 ? onIncrement : null,
+          icon: PhosphorIcon(PhosphorIconsDuotone.plusCircle),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          value == 1 ? 'booking per slot' : 'bookings per slot',
+          style: TextStyle(color: Colors.grey[600]),
+        ),
+      ],
+    );
+  }
+}
