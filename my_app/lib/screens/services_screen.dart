@@ -24,15 +24,18 @@ class ServicesScreen extends StatefulWidget {
 
 class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
   final TextEditingController _locationController = TextEditingController();
+  final TextEditingController _categorySearchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
   List<ServiceCategory> _categories = [];
+  List<ServiceCategory> _filteredCategories = [];
   List<ServiceProvider> _providers = [];
   String? _selectedCategory;
   bool _isLoading = false;
   bool _hasMore = true;
   int _page = 1;
   String? _error;
+  bool _showCategorySearch = false;
 
   @override
   void initState() {
@@ -45,6 +48,7 @@ class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
   @override
   void dispose() {
     _locationController.dispose();
+    _categorySearchController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -60,7 +64,10 @@ class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
     try {
       final apiService = context.read<ApiService>();
       final cats = await withRetry(() => apiService.getServiceCategories());
-      if (mounted) setState(() => _categories = cats);
+      if (mounted) setState(() {
+        _categories = cats;
+        _filteredCategories = cats;
+      });
     } catch (_) {}
   }
 
@@ -129,8 +136,25 @@ class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
   }
 
   void _selectCategory(String? slug) {
-    setState(() => _selectedCategory = _selectedCategory == slug ? null : slug);
+    setState(() {
+      _selectedCategory = _selectedCategory == slug ? null : slug;
+      _showCategorySearch = false;
+      _categorySearchController.clear();
+      _filteredCategories = _categories;
+    });
     _loadProviders();
+  }
+
+  void _filterCategories(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredCategories = _categories;
+      } else {
+        _filteredCategories = _categories
+            .where((c) => c.name.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+      }
+    });
   }
 
   PhosphorIconData _categoryIcon(String iconName) {
@@ -232,17 +256,64 @@ class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
               ],
             ),
           ),
-          // Category chips
-          if (_categories.isNotEmpty)
+          // Category search + chips
+          if (_categories.isNotEmpty) ...[
+            if (_showCategorySearch)
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: TextField(
+                  controller: _categorySearchController,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: 'Search categories...',
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => setState(() {
+                        _showCategorySearch = false;
+                        _categorySearchController.clear();
+                        _filteredCategories = _categories;
+                      }),
+                    ),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                  onChanged: _filterCategories,
+                ),
+              ),
             SizedBox(
               height: 56,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                itemCount: _categories.length + 1,
+                itemCount: _filteredCategories.length + 2, // +1 for All, +1 for search icon
                 separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
                   if (index == 0) {
+                    // Search toggle
+                    return ActionChip(
+                      avatar: PhosphorIcon(
+                        PhosphorIconsDuotone.magnifyingGlass,
+                        size: 16,
+                        color: AppTheme.forestMid,
+                      ),
+                      label: const Text('Search'),
+                      onPressed: () => setState(() => _showCategorySearch = !_showCategorySearch),
+                      backgroundColor: _showCategorySearch ? AppTheme.forestMist : Colors.white,
+                      labelStyle: const TextStyle(
+                        color: AppTheme.forestDeep,
+                        fontSize: 13,
+                      ),
+                      side: BorderSide(color: Colors.grey[300]!),
+                    );
+                  }
+                  if (index == 1) {
                     final isSelected = _selectedCategory == null;
                     return FilterChip(
                       avatar: PhosphorIcon(
@@ -250,7 +321,7 @@ class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
                         size: 16,
                         color: isSelected ? Colors.white : AppTheme.forestMid,
                       ),
-                      label: Text('All'),
+                      label: const Text('All'),
                       selected: isSelected,
                       onSelected: (_) => _selectCategory(null),
                       selectedColor: AppTheme.forestMid,
@@ -264,7 +335,7 @@ class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
                       side: BorderSide.none,
                     );
                   }
-                  final cat = _categories[index - 1];
+                  final cat = _filteredCategories[index - 2];
                   final isSelected = _selectedCategory == cat.slug;
                   return FilterChip(
                     avatar: PhosphorIcon(
@@ -292,6 +363,7 @@ class _ServicesScreenState extends State<ServicesScreen> with AutoRetryMixin {
                 },
               ),
             ),
+          ],
           // Results
           Expanded(
             child: RefreshIndicator(

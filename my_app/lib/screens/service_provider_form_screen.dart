@@ -94,10 +94,32 @@ class _ServiceProviderFormScreenState extends State<ServiceProviderFormScreen> {
       await apiService.createServiceProvider(body);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Service registered successfully!')),
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: Row(
+              children: const [
+                Icon(Icons.check_circle, color: Color(0xFF19747E)),
+                SizedBox(width: 8),
+                Text('Registration Submitted'),
+              ],
+            ),
+            content: const Text(
+              'Your service has been submitted and is awaiting review by our team. '
+              'We\'ll notify you by email once it has been approved. '
+              'This usually takes 1–2 business days.\n\n'
+              'No further action is needed from you.',
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Got it'),
+              ),
+            ],
+          ),
         );
-        Navigator.pop(context, true);
+        if (mounted) Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {

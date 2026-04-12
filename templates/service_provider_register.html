@@ -231,7 +231,7 @@
             }
 
             const result = await res.json();
-            window.location.href = '/my-service/';
+            window.location.href = '/my-service/?registered=1';
         } catch (err) {
             msgEl.className = 'alert alert-error';
             msgEl.textContent = err.message || 'Failed to save. Please try again.';
