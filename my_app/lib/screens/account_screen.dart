@@ -23,6 +23,7 @@ class _AccountScreenState extends State<AccountScreen> {
   String _firstName = '';
   String _lastName = '';
   String _email = '';
+  String _userType = 'Buyer';
   bool _loading = true;
 
   @override
@@ -45,6 +46,7 @@ class _AccountScreenState extends State<AccountScreen> {
           _firstName = profile.firstName;
           _lastName = profile.lastName;
           _email = profile.email;
+          _userType = profile.userType;
           _loading = false;
         });
       }
@@ -161,6 +163,25 @@ class _AccountScreenState extends State<AccountScreen> {
                                     ),
                                   ),
                                 ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.forestMid.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    _userType,
+                                    style: TextStyle(
+                                      color: AppTheme.forestMid,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),

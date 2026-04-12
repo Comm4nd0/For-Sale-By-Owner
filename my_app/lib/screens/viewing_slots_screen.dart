@@ -134,7 +134,7 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
     return Scaffold(
       appBar: AppBar(title: const Text('Viewing Slots')),
       floatingActionButton: widget.isOwner
-          ? FloatingActionButton(onPressed: _addSlot, child: const PhosphorIcon(PhosphorIconsDuotone.plus))
+          ? FloatingActionButton(onPressed: _addSlot, child: PhosphorIcon(PhosphorIconsDuotone.plus))
           : null,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -152,7 +152,7 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
                             color: AppTheme.forestMist,
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const PhosphorIcon(PhosphorIconsDuotone.calendar, size: 36, color: AppTheme.forestMid),
+                          child: PhosphorIcon(PhosphorIconsDuotone.calendar, size: 36, color: AppTheme.forestMid),
                         ),
                         const SizedBox(height: 20),
                         const Text(
@@ -239,7 +239,7 @@ class _ViewingSlotsScreenState extends State<ViewingSlotsScreen> with AutoRetryM
               )
             : widget.isOwner
                 ? IconButton(
-                    icon: const PhosphorIcon(PhosphorIconsDuotone.trash),
+                    icon: PhosphorIcon(PhosphorIconsDuotone.trash),
                     onPressed: () async {
                       final confirmed = await showDialog<bool>(
                         context: context,
@@ -390,14 +390,14 @@ class _AddSlotSheetState extends State<_AddSlotSheet> with SingleTickerProviderS
                 labelColor: Colors.white,
                 unselectedLabelColor: AppTheme.slate,
                 labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                tabs: const [
+                tabs: [
                   Tab(
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         PhosphorIcon(PhosphorIconsDuotone.repeat, size: 16),
-                        SizedBox(width: 6),
-                        Text('Weekly'),
+                        const SizedBox(width: 6),
+                        const Text('Weekly'),
                       ],
                     ),
                   ),
@@ -406,8 +406,8 @@ class _AddSlotSheetState extends State<_AddSlotSheet> with SingleTickerProviderS
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         PhosphorIcon(PhosphorIconsDuotone.calendarCheck, size: 16),
-                        SizedBox(width: 6),
-                        Text('One-off'),
+                        const SizedBox(width: 6),
+                        const Text('One-off'),
                       ],
                     ),
                   ),
@@ -424,8 +424,6 @@ class _AddSlotSheetState extends State<_AddSlotSheet> with SingleTickerProviderS
       ),
     );
   }
-
-  static const _dayFull = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   Widget _buildWeeklyPanel() {
     final sortedDays = _selectedDays.toList()..sort();
@@ -583,7 +581,7 @@ class _AddSlotSheetState extends State<_AddSlotSheet> with SingleTickerProviderS
             );
             if (date != null) setState(() => _selectedDate = date);
           },
-          icon: const PhosphorIcon(PhosphorIconsDuotone.calendar, size: 18),
+          icon: PhosphorIcon(PhosphorIconsDuotone.calendar, size: 18),
           label: Text(
             _selectedDate != null
                 ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
@@ -642,28 +640,4 @@ class _AddSlotSheetState extends State<_AddSlotSheet> with SingleTickerProviderS
     );
   }
 
-  Widget _buildBookingsStepper({
-    required int value,
-    required VoidCallback onDecrement,
-    required VoidCallback onIncrement,
-  }) {
-    return Row(
-      children: [
-        IconButton(
-          onPressed: value > 1 ? onDecrement : null,
-          icon: const PhosphorIcon(PhosphorIconsDuotone.minusCircle),
-        ),
-        Text('$value', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        IconButton(
-          onPressed: value < 10 ? onIncrement : null,
-          icon: const PhosphorIcon(PhosphorIconsDuotone.plusCircle),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          value == 1 ? 'booking per slot' : 'bookings per slot',
-          style: TextStyle(color: Colors.grey[600]),
-        ),
-      ],
-    );
-  }
-}
+  Wid

@@ -30,15 +30,23 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    user_type = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
             'id', 'email', 'first_name', 'last_name', 'phone',
-            'dark_mode', 'is_staff',
+            'dark_mode', 'is_staff', 'user_type',
             'notification_enquiries', 'notification_viewings',
             'notification_price_drops', 'notification_saved_searches',
         ]
-        read_only_fields = ['id', 'email', 'is_staff']
+        read_only_fields = ['id', 'email', 'is_staff', 'user_type']
+
+    def get_user_type(self, obj):
+        """Return the user's role: Service Provider, Buyer, or Staff."""
+        if hasattr(obj, 'service_provider'):
+            return 'Service Provider'
+        return 'Buyer'
 
 
 class RelativeImageField(serializers.ImageField):

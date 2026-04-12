@@ -13,6 +13,7 @@ class AuthService extends ChangeNotifier {
   String? _lastName;
   bool _isStaff = false;
   bool _isLoading = false;
+  String _userType = 'Buyer';
 
   String? get token => _token;
   int? get userId => _userId;
@@ -20,6 +21,7 @@ class AuthService extends ChangeNotifier {
   String? get firstName => _firstName;
   String? get lastName => _lastName;
   bool get isStaff => _isStaff;
+  String get userType => _userType;
   bool get isAuthenticated => _token != null;
   bool get isLoading => _isLoading;
 
@@ -58,6 +60,7 @@ class AuthService extends ChangeNotifier {
       if (profileResponse.statusCode == 200) {
         final profileData = jsonDecode(profileResponse.body);
         _isStaff = profileData['is_staff'] ?? false;
+        _userType = profileData['user_type'] ?? 'Buyer';
       }
     } catch (e) {
       debugPrint('Fetch user error: $e');
