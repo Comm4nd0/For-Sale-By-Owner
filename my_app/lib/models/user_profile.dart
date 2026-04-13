@@ -10,6 +10,7 @@ class UserProfile {
   final bool notificationViewings;
   final bool notificationPriceDrops;
   final bool notificationSavedSearches;
+  final String userType;
 
   UserProfile({
     required this.id,
@@ -23,6 +24,7 @@ class UserProfile {
     required this.notificationViewings,
     required this.notificationPriceDrops,
     required this.notificationSavedSearches,
+    this.userType = 'Buyer',
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -38,6 +40,7 @@ class UserProfile {
       notificationViewings: json['notification_viewings'] ?? true,
       notificationPriceDrops: json['notification_price_drops'] ?? true,
       notificationSavedSearches: json['notification_saved_searches'] ?? true,
+      userType: json['user_type'] ?? 'Buyer',
     );
   }
 }

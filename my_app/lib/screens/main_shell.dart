@@ -145,7 +145,9 @@ class _MainShellState extends State<MainShell> {
                 BottomNavigationBarItem(
                   icon: PhosphorIcon(PhosphorIconsDuotone.user),
                   activeIcon: PhosphorIcon(PhosphorIconsDuotone.user),
-                  label: 'Account',
+                  label: authService.firstName != null && authService.firstName!.isNotEmpty
+                      ? 'Account (\${authService.firstName})'
+                      : 'Account',
                 ),
               ]
             : [
