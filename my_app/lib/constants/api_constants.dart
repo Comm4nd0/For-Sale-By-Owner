@@ -275,17 +275,6 @@ class ApiConstants {
   static String get twoFaDisable => '$apiUrl/2fa/disable/';
   static String get twoFaVerify => '$apiUrl/2fa/verify/';
 
-  // #45 Community Forum
-  static String get forumCategories => '$apiUrl/forum-categories/';
-  static String get forumTopics => '$apiUrl/forum-topics/';
-  static String forumTopicDetail(int id) => '$apiUrl/forum-topics/$id/';
-  static String forumTopicPosts(int topicId) =>
-      '$apiUrl/forum-topics/$topicId/posts/';
-  static String forumPostDetail(int topicId, int postId) =>
-      '$apiUrl/forum-topics/$topicId/posts/$postId/';
-  static String forumMarkSolution(int postId) =>
-      '$apiUrl/forum-posts/$postId/mark-solution/';
-
   // WebSocket
   static String get _wsBaseUrl =>
       baseUrl.replaceFirst('http', 'ws');

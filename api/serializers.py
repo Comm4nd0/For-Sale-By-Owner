@@ -16,7 +16,6 @@ from .models import (
     OpenHouseEvent, OpenHouseRSVP,
     ConveyancerQuoteRequest, ConveyancerQuote,
     NeighbourhoodReview, BoardOrder, BuyerProfile,
-    ForumCategory, ForumTopic, ForumPost,
 )
 
 User = get_user_model()
@@ -851,58 +850,3 @@ class BuyerProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'user', 'created_at', 'updated_at']
 
 
-# ── #45 Forum Serializers ────────────────────────────────────────
-
-class ForumPostSerializer(serializers.ModelSerializer):
-    author_name = serializers.SerializerMethodField()
-
-    class Meta:
-        model = ForumPost
-        fields = [
-            'id', 'topic', 'author', 'author_name',
-            'content', 'is_solution',
-            'created_at', 'updated_at',
-        ]
-        read_only_fields = ['id', 'author', 'is_solution', 'created_at', 'updated_at']
-
-    def get_author_name(self, obj):
-        return obj.author.get_full_name() or obj.author.email
-
-
-class ForumTopicSerializer(serializers.ModelSerializer):
-    author_name = serializers.SerializerMethodField()
-    reply_count = serializers.IntegerField(read_only=True)
-    category_name = serializers.CharField(source='category.name', read_only=True)
-
-    class Meta:
-        model = ForumTopic
-        fields = [
-            'id', 'category', 'category_name',
-            'author', 'author_name',
-            'title', 'slug', 'content',
-            'is_pinned', 'is_locked', 'view_count',
-            'reply_count',
-            'created_at', 'updated_at',
-        ]
-        read_only_fields = [
-            'id', 'author', 'slug', 'is_pinned', 'is_locked',
-            'view_count', 'created_at', 'updated_at',
-        ]
-
-    def get_author_name(self, obj):
-        return obj.author.get_full_name() or obj.author.email
-
-
-class ForumTopicDetailSerializer(ForumTopicSerializer):
-    posts = ForumPostSerializer(many=True, read_only=True)
-
-    class Meta(ForumTopicSerializer.Meta):
-        fields = ForumTopicSerializer.Meta.fields + ['posts']
-
-
-class ForumCategorySerializer(serializers.ModelSerializer):
-    topic_count = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = ForumCategory
-        fields = ['id', 'name', 'slug', 'description', 'icon', 'order', 'topic_count']

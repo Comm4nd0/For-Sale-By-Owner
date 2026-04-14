@@ -29,7 +29,6 @@ from .models import (
     OpenHouseEvent, OpenHouseRSVP,
     ConveyancerQuoteRequest, ConveyancerQuote,
     NeighbourhoodReview, BoardOrder, BuyerProfile,
-    ForumCategory, ForumTopic, ForumPost,
 )
 
 User = get_user_model()
@@ -1162,102 +1161,6 @@ class TwoFactorAuthAPITest(TestCase):
 
 
 # ══════════════════════════════════════════════════════════════════
-# #45 COMMUNITY FORUM
-# ══════════════════════════════════════════════════════════════════
-
-@override_settings(REST_FRAMEWORK=TEST_REST_FRAMEWORK, STORAGES=TEST_STORAGES)
-class ForumAPITest(TestCase):
-    def setUp(self):
-        self.user = make_user(email='user@test.com')
-        self.user2 = make_user(email='user2@test.com')
-        self.client = auth_client(self.user)
-        self.category = ForumCategory.objects.create(name='General', slug='general')
-
-    def test_list_categories(self):
-        res = APIClient().get('/api/forum-categories/')
-        self.assertEqual(res.status_code, 200)
-
-    def test_create_topic(self):
-        res = self.client.post('/api/forum-topics/', {
-            'category': self.category.id,
-            'title': 'First time buyer tips?',
-            'content': 'Looking for advice on buying my first home.',
-        }, format='json')
-        self.assertEqual(res.status_code, 201)
-
-    def test_list_topics(self):
-        ForumTopic.objects.create(
-            category=self.category, author=self.user,
-            title='Test Topic', content='Content',
-        )
-        res = APIClient().get('/api/forum-topics/')
-        self.assertEqual(res.status_code, 200)
-
-    def test_filter_topics_by_category(self):
-        ForumTopic.objects.create(
-            category=self.category, author=self.user,
-            title='General Topic', content='Content',
-        )
-        other_cat = ForumCategory.objects.create(name='Legal', slug='legal')
-        ForumTopic.objects.create(
-            category=other_cat, author=self.user,
-            title='Legal Topic', content='Content',
-        )
-        res = APIClient().get('/api/forum-topics/?category=general')
-        self.assertEqual(res.status_code, 200)
-        results = res.data['results'] if 'results' in res.data else res.data
-        self.assertEqual(len(results), 1)
-
-    def test_search_topics(self):
-        ForumTopic.objects.create(
-            category=self.category, author=self.user,
-            title='Mortgage advice needed', content='Details',
-        )
-        res = APIClient().get('/api/forum-topics/?search=mortgage')
-        self.assertEqual(res.status_code, 200)
-        results = res.data['results'] if 'results' in res.data else res.data
-        self.assertEqual(len(results), 1)
-
-    def test_retrieve_topic_increments_views(self):
-        topic = ForumTopic.objects.create(
-            category=self.category, author=self.user,
-            title='View Counter Test', content='Content',
-        )
-        initial_views = topic.view_count
-        APIClient().get(f'/api/forum-topics/{topic.id}/')
-        topic.refresh_from_db()
-        self.assertEqual(topic.view_count, initial_views + 1)
-
-    def test_create_post_reply(self):
-        topic = ForumTopic.objects.create(
-            category=self.category, author=self.user,
-            title='Help needed', content='How do I sell?',
-        )
-        res = self.client.post(f'/api/forum-topics/{topic.id}/posts/', {
-            'topic': topic.id,
-            'content': 'You should list it here!',
-        }, format='json')
-        self.assertEqual(res.status_code, 201)
-
-    def test_list_posts(self):
-        topic = ForumTopic.objects.create(
-            category=self.category, author=self.user,
-            title='Topic', content='Content',
-        )
-        ForumPost.objects.create(topic=topic, author=self.user, content='Reply')
-        res = APIClient().get(f'/api/forum-topics/{topic.id}/posts/')
-        self.assertEqual(res.status_code, 200)
-
-    def test_create_topic_requires_auth(self):
-        res = APIClient().post('/api/forum-topics/', {
-            'category': self.category.id,
-            'title': 'No Auth',
-            'content': 'Should fail',
-        }, format='json')
-        self.assertEqual(res.status_code, 401)
-
-
-# ══════════════════════════════════════════════════════════════════
 # SERVICE PROVIDER TESTS
 # ══════════════════════════════════════════════════════════════════
 
@@ -1480,9 +1383,6 @@ class NewWebPageTests(TestCase):
 
     def test_stamp_duty_calculator(self):
         self.assertEqual(self.client.get('/stamp-duty-calculator/').status_code, 200)
-
-    def test_forum(self):
-        self.assertEqual(self.client.get('/forum/').status_code, 200)
 
     def test_conveyancing(self):
         self.assertEqual(self.client.get('/conveyancing/').status_code, 200)

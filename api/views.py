@@ -37,7 +37,6 @@ from .models import (
     OpenHouseEvent, OpenHouseRSVP,
     ConveyancerQuoteRequest, ConveyancerQuote,
     NeighbourhoodReview, BoardOrder, BuyerProfile,
-    ForumCategory, ForumTopic, ForumPost,
 )
 from .serializers import (
     PropertySerializer, PropertyListSerializer, PropertyImageSerializer,
@@ -57,8 +56,6 @@ from .serializers import (
     OpenHouseEventSerializer, OpenHouseRSVPSerializer,
     ConveyancerQuoteRequestSerializer, ConveyancerQuoteSerializer,
     NeighbourhoodReviewSerializer, BoardOrderSerializer, BuyerProfileSerializer,
-    ForumCategorySerializer, ForumTopicSerializer, ForumTopicDetailSerializer,
-    ForumPostSerializer,
 )
 
 
@@ -2940,92 +2937,6 @@ def verify_2fa(request):
         'auth_token': token.key,
         'message': '2FA verified successfully.',
     })
-
-
-# ── #45 Community Forum ──────────────────────────────────────────
-
-class ForumCategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    """List forum categories."""
-    serializer_class = ForumCategorySerializer
-    permission_classes = [permissions.AllowAny]
-    queryset = ForumCategory.objects.all()
-
-
-class ForumTopicViewSet(viewsets.ModelViewSet):
-    """CRUD for forum topics."""
-
-    def get_serializer_class(self):
-        if self.action == 'retrieve':
-            return ForumTopicDetailSerializer
-        return ForumTopicSerializer
-
-    def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            return [permissions.AllowAny()]
-        return [permissions.IsAuthenticated()]
-
-    def get_queryset(self):
-        qs = ForumTopic.objects.select_related('category', 'author')
-        category_slug = self.request.query_params.get('category')
-        if category_slug:
-            qs = qs.filter(category__slug=category_slug)
-        search = self.request.query_params.get('search')
-        if search:
-            qs = qs.filter(Q(title__icontains=search) | Q(content__icontains=search))
-        return qs
-
-    def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
-
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        # Increment view count
-        ForumTopic.objects.filter(pk=instance.pk).update(view_count=F('view_count') + 1)
-        instance.refresh_from_db()
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
-
-
-class ForumPostViewSet(viewsets.ModelViewSet):
-    """CRUD for forum posts (replies to topics)."""
-    serializer_class = ForumPostSerializer
-
-    def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            return [permissions.AllowAny()]
-        return [permissions.IsAuthenticated()]
-
-    def get_queryset(self):
-        topic_pk = self.kwargs.get('topic_pk')
-        if topic_pk:
-            return ForumPost.objects.filter(topic_id=topic_pk)
-        return ForumPost.objects.all()
-
-    def perform_create(self, serializer):
-        topic_pk = self.kwargs.get('topic_pk')
-        topic = get_object_or_404(ForumTopic, pk=topic_pk)
-        if topic.is_locked:
-            raise PermissionDenied('This topic is locked.')
-        serializer.save(author=self.request.user, topic=topic)
-
-    def perform_destroy(self, instance):
-        if instance.author != self.request.user:
-            raise PermissionDenied()
-        instance.delete()
-
-
-@api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
-def mark_solution(request, post_pk):
-    """Mark a forum post as the solution (by topic author only)."""
-    post = get_object_or_404(ForumPost, pk=post_pk)
-    if post.topic.author != request.user:
-        raise PermissionDenied('Only the topic author can mark a solution.')
-    # Unmark any existing solution
-    ForumPost.objects.filter(topic=post.topic, is_solution=True).update(is_solution=False)
-    post.is_solution = True
-    post.save(update_fields=['is_solution'])
-    return Response(ForumPostSerializer(post).data)
 
 
 # ── Staff Service Management ────────────────────────────────────

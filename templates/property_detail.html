@@ -1,13 +1,30 @@
 {% extends "base.html" %}
 
 {% block title %}Property Details - For Sale By Owner{% endblock %}
+{% block meta_description %}View this property listed directly by the owner on For Sale By Owner. No estate agent fees, no commission.{% endblock %}
 
 {% block meta_tags %}
 <meta property="og:site_name" content="For Sale By Owner">
-<meta property="og:type" content="website">
+<meta property="og:type" content="product">
 <meta property="og:title" id="og-title" content="Property Details - For Sale By Owner">
 <meta property="og:description" id="og-desc" content="View this property on For Sale By Owner">
 <meta property="og:image" id="og-image" content="">
+<meta property="og:url" content="https://for-sale-by-owner.co.uk{{ request.path }}">
+<meta property="og:locale" content="en_GB">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" id="tw-title" content="Property Details - For Sale By Owner">
+<meta name="twitter:description" id="tw-desc" content="View this property on For Sale By Owner">
+<meta name="twitter:image" id="tw-image" content="">
+{% endblock %}
+
+{% block extra_structured_data %}
+<script type="application/ld+json" id="property-jsonld">
+{
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "Property listing"
+}
+</script>
 {% endblock %}
 
 {% block extra_css %}
@@ -757,10 +774,53 @@
             images = p.images || [];
 
             // Update page title and OG tags for social sharing
-            document.title = `${p.title} - \u00A3${Number(p.price).toLocaleString()} - For Sale By Owner`;
-            document.getElementById('og-title')?.setAttribute('content', `${p.title} - \u00A3${Number(p.price).toLocaleString()}`);
-            document.getElementById('og-desc')?.setAttribute('content', `${p.bedrooms} bed ${p.property_type_display} in ${p.city} - ${p.address_line_1}`);
-            if (p.primary_image) document.getElementById('og-image')?.setAttribute('content', window.location.origin + p.primary_image);
+            const priceStr = `\u00A3${Number(p.price).toLocaleString()}`;
+            const titleFull = `${p.title} - ${priceStr} - For Sale By Owner`;
+            const descFull = `${p.bedrooms} bed ${p.property_type_display} in ${p.city} - ${p.address_line_1}`;
+            document.title = titleFull;
+            document.getElementById('og-title')?.setAttribute('content', `${p.title} - ${priceStr}`);
+            document.getElementById('og-desc')?.setAttribute('content', descFull);
+            document.getElementById('tw-title')?.setAttribute('content', `${p.title} - ${priceStr}`);
+            document.getElementById('tw-desc')?.setAttribute('content', descFull);
+            const metaDesc = document.querySelector('meta[name="description"]');
+            if (metaDesc) metaDesc.setAttribute('content', descFull);
+            if (p.primary_image) {
+                const imgUrl = window.location.origin + p.primary_image;
+                document.getElementById('og-image')?.setAttribute('content', imgUrl);
+                document.getElementById('tw-image')?.setAttribute('content', imgUrl);
+            }
+
+            // Structured data — RealEstateListing / Residence for Google
+            try {
+                const jsonLd = {
+                    "@context": "https://schema.org",
+                    "@type": ["Product", "Residence"],
+                    "name": p.title,
+                    "description": p.description || descFull,
+                    "url": window.location.href,
+                    "image": (p.images || []).map(i => window.location.origin + i.image).filter(Boolean),
+                    "numberOfBedrooms": p.bedrooms,
+                    "numberOfBathroomsTotal": p.bathrooms,
+                    "address": {
+                        "@type": "PostalAddress",
+                        "streetAddress": p.address_line_1,
+                        "addressLocality": p.city,
+                        "postalCode": p.postcode,
+                        "addressCountry": "GB"
+                    },
+                    "offers": {
+                        "@type": "Offer",
+                        "price": Number(p.price),
+                        "priceCurrency": "GBP",
+                        "availability": p.status === 'active'
+                            ? "https://schema.org/InStock"
+                            : "https://schema.org/OutOfStock",
+                        "url": window.location.href
+                    }
+                };
+                const ldEl = document.getElementById('property-jsonld');
+                if (ldEl) ldEl.textContent = JSON.stringify(jsonLd);
+            } catch (e) { /* non-critical */ }
 
             // Track in recently viewed
             RecentlyViewed.add(p);

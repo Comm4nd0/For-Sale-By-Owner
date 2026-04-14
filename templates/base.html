@@ -4,14 +4,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}For Sale By Owner{% endblock %}</title>
+    <title>{% block title %}For Sale By Owner — Sell Direct. Keep More.{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}Sell your UK property directly to buyers with no estate agent fees and no commission. List free, stay in control, keep 100% of your sale price.{% endblock %}">
     {% block meta_tags %}
     <meta property="og:site_name" content="For Sale By Owner">
-    <meta property="og:type" content="website">
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}For Sale By Owner — Sell Direct. Keep More.{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Sell your UK property directly to buyers with no estate agent fees and no commission. List free, stay in control, keep 100% of your sale price.{% endblock %}">
+    <meta property="og:url" content="{% block og_url %}https://for-sale-by-owner.co.uk{{ request.path }}{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}https://for-sale-by-owner.co.uk{% static 'img/og-default.jpg' %}{% endblock %}">
+    <meta property="og:image:alt" content="{% block og_image_alt %}For Sale By Owner — sell your UK home without an estate agent{% endblock %}">
+    <meta property="og:locale" content="en_GB">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}For Sale By Owner — Sell Direct. Keep More.{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}Sell your UK property directly. No estate agent fees, no commission, list free.{% endblock %}">
+    <meta name="twitter:image" content="{% block twitter_image %}https://for-sale-by-owner.co.uk{% static 'img/og-default.jpg' %}{% endblock %}">
     {% endblock %}
+    <link rel="canonical" href="{% block canonical_url %}https://for-sale-by-owner.co.uk{{ request.path }}{% endblock %}">
     <link rel="icon" type="image/svg+xml" href="{% static 'img/favicon.svg' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon-32.png' %}">
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/apple-touch-icon.png' %}">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "Organization",
+                "@id": "https://for-sale-by-owner.co.uk/#organization",
+                "name": "For Sale By Owner",
+                "url": "https://for-sale-by-owner.co.uk/",
+                "logo": "https://for-sale-by-owner.co.uk{% static 'img/logo-dark.svg' %}",
+                "description": "UK platform that enables property owners to list and sell their homes directly, without estate agents or commission.",
+                "areaServed": "GB"
+            },
+            {
+                "@type": "WebSite",
+                "@id": "https://for-sale-by-owner.co.uk/#website",
+                "url": "https://for-sale-by-owner.co.uk/",
+                "name": "For Sale By Owner",
+                "publisher": { "@id": "https://for-sale-by-owner.co.uk/#organization" },
+                "inLanguage": "en-GB",
+                "potentialAction": {
+                    "@type": "SearchAction",
+                    "target": "https://for-sale-by-owner.co.uk/search/?location={search_term_string}",
+                    "query-input": "required name=search_term_string"
+                }
+            }
+        ]
+    }
+    </script>
+    {% block extra_structured_data %}{% endblock %}
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1A2C33; background: #F5F8F9; }
@@ -47,6 +89,14 @@
         .nav-dropdown:hover .nav-dropdown-menu { display: block; }
         .nav-dropdown.open .nav-dropdown-menu { display: block; }
         .nav-dropdown-end .nav-dropdown-menu { right: 0; left: auto; }
+        /* Nav CTAs (persistent, always-visible) */
+        .nav-cta { display: inline-flex; align-items: center; gap: 0.35rem; margin-left: 1.25rem; padding: 0.45rem 1rem; border-radius: 999px; font-size: 0.9rem; font-weight: 600; text-decoration: none; transition: background 0.2s, color 0.2s, border-color 0.2s; }
+        .nav-cta-primary { background: #D8943B; color: #1E4635; border: 1px solid #D8943B; }
+        .nav-cta-primary:hover { background: #E6A24D; border-color: #E6A24D; color: #1E4635; }
+        .nav-cta-outline { background: transparent; color: white; border: 1px solid rgba(255,255,255,0.6); }
+        .nav-cta-outline:hover { background: rgba(255,255,255,0.12); border-color: white; color: white; }
+        .nav-link-inline { color: rgba(255,255,255,0.85); text-decoration: none; margin-left: 1.5rem; font-size: 0.95rem; background: none; border: none; cursor: pointer; font-family: inherit; padding: 0; }
+        .nav-link-inline:hover { color: white; }
         @media (max-width: 768px) {
             header .logo svg { height: 44px; }
             .hamburger { display: flex; }
@@ -69,6 +119,10 @@
             nav .nav-links .nav-drawer-header .nav-brand svg { height: 36px; width: auto; }
             nav .nav-links a { margin: 0; padding: 0.85rem 1.25rem; font-size: 1rem; border-bottom: 1px solid rgba(255,255,255,0.06); display: block; }
             nav .nav-links a:hover { background: rgba(255,255,255,0.08); }
+            /* Mobile drawer CTA treatment — full-width stacked pills at top of drawer */
+            .nav-cta { display: block; margin: 0.75rem 1rem 0; text-align: center; padding: 0.75rem 1rem; font-size: 1rem; }
+            .nav-cta + .nav-cta { margin-top: 0.5rem; }
+            .nav-link-inline { display: block; margin: 0; padding: 0.85rem 1.25rem; font-size: 1rem; border-bottom: 1px solid rgba(255,255,255,0.06); text-align: left; width: 100%; }
             .nav-dropdown { position: static; }
             .nav-dropdown-toggle { margin: 0; padding: 0.85rem 1.25rem; font-size: 1rem; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; width: 100%; justify-content: space-between; }
             .nav-dropdown:hover .nav-dropdown-menu { display: none; }
@@ -212,7 +266,9 @@
                         <button class="nav-close" id="nav-close-btn" aria-label="Close menu">&times;</button>
                     </div>
                     <a href="/">Home</a>
+                    <a href="/how-it-works/">How It Works</a>
                     <span id="nav-auth"></span>
+                    <span id="nav-cta"></span>
                 </div>
             </nav>
         </div>
@@ -550,6 +606,7 @@
         // Render nav based on auth state
         (function() {
             const nav = document.getElementById('nav-auth');
+            const ctaSlot = document.getElementById('nav-cta');
             if (Auth.isLoggedIn()) {
                 nav.innerHTML = `
                     <div class="nav-dropdown">
@@ -584,7 +641,6 @@
                             <a href="/price-comparison/" role="menuitem">Price Comparison</a>
                         </div>
                     </div>
-                    <a href="/forum/">Forum</a>
                     <a href="/dashboard/" id="nav-dashboard-link">Dashboard</a>
                     <a href="/staff/services/" id="nav-staff-link" style="display:none;">Staff</a>
                     <div class="nav-dropdown nav-dropdown-end">
@@ -607,9 +663,19 @@
                         </div>
                     </div>
                     <a href="/services/">Services</a>
-                    <a href="/forum/">Forum</a>
-                    <a href="#" onclick="AuthModal.open('login'); return false;">Login</a>
+                    <button type="button" class="nav-link-inline" onclick="AuthModal.open('login'); return false;">Sign In</button>
                 `;
+            }
+            // Persistent CTA: "List Your Property" for everyone, plus Sign Up for anonymous
+            if (ctaSlot) {
+                if (Auth.isLoggedIn()) {
+                    ctaSlot.innerHTML = `<a href="/properties/new/" class="nav-cta nav-cta-primary">+ List Your Property</a>`;
+                } else {
+                    ctaSlot.innerHTML = `
+                        <a href="#" onclick="AuthModal.open('register'); return false;" class="nav-cta nav-cta-outline">Sign Up</a>
+                        <a href="/properties/new/" class="nav-cta nav-cta-primary">+ List Your Property</a>
+                    `;
+                }
             }
             initNavDropdowns();
 

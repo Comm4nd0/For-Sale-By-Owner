@@ -1,10 +1,18 @@
 """URL configuration for fsbo_backend project."""
 from django.contrib import admin
+from django.contrib.sitemaps.views import sitemap
 from django.urls import path, include
 from django.conf import settings
 from django.views.generic import TemplateView
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.static import serve as static_serve
+
+from api.sitemaps import PropertySitemap, StaticViewSitemap
+
+sitemaps = {
+    'static': StaticViewSitemap,
+    'properties': PropertySitemap,
+}
 
 
 class CSRFTemplateView(TemplateView):
@@ -70,7 +78,6 @@ urlpatterns = [
 
     # New feature pages
     path('stamp-duty-calculator/', CSRFTemplateView.as_view(template_name='stamp_duty_calculator.html'), name='stamp-duty-calculator'),
-    path('forum/', CSRFTemplateView.as_view(template_name='forum.html'), name='forum'),
     path('conveyancing/', CSRFTemplateView.as_view(template_name='conveyancing.html'), name='conveyancing'),
     path('price-comparison/', CSRFTemplateView.as_view(template_name='price_comparison.html'), name='price-comparison'),
 
@@ -78,6 +85,10 @@ urlpatterns = [
     path('terms/', CSRFTemplateView.as_view(template_name='terms.html'), name='terms'),
     path('privacy/', CSRFTemplateView.as_view(template_name='privacy.html'), name='privacy'),
     path('cookies/', CSRFTemplateView.as_view(template_name='cookies.html'), name='cookies'),
+
+    # SEO
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
+    path('robots.txt', TemplateView.as_view(template_name='robots.txt', content_type='text/plain'), name='robots-txt'),
 
     # Always serve media files (user-uploaded images) regardless of DEBUG setting
     path('media/<path:path>', serve_media, name='serve-media'),

@@ -411,13 +411,7 @@ void main() {
       expect(find.text('House Price Lookup'), findsOneWidget);
       expect(find.text('Price Comparison'), findsOneWidget);
       expect(find.text('Stamp Duty Calculator'), findsOneWidget);
-      // Scroll down to find items that may be off-screen
-      await tester.scrollUntilVisible(
-        find.text('Neighbourhood Reviews'), 200,
-        scrollable: find.byType(Scrollable),
-      );
       expect(find.text('Neighbourhood Reviews'), findsOneWidget);
-      expect(find.text('Community Forum'), findsOneWidget);
     });
 
     testWidgets('shows descriptive subtitle text', (tester) async {
