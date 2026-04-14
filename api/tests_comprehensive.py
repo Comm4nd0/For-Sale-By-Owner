@@ -25,7 +25,7 @@ from .models import (
     Offer, PropertyDocument, PropertyFlag,
     ServiceCategory, ServiceProvider, ServiceProviderReview,
     SubscriptionTier, ServiceProviderSubscription,
-    BuyerVerification, ConveyancingCase, ConveyancingStep,
+    BuyerVerification,
     OpenHouseEvent, OpenHouseRSVP,
     ConveyancerQuoteRequest, ConveyancerQuote,
     NeighbourhoodReview, BoardOrder, BuyerProfile,
@@ -645,86 +645,6 @@ class BuyerVerificationAPITest(TestCase):
 # ══════════════════════════════════════════════════════════════════
 # #31 CONVEYANCING PROGRESS TRACKER
 # ══════════════════════════════════════════════════════════════════
-
-@override_settings(REST_FRAMEWORK=TEST_REST_FRAMEWORK, STORAGES=TEST_STORAGES,
-                   CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
-class ConveyancingCaseAPITest(TestCase):
-    def setUp(self):
-        self.owner = make_user(email='owner@test.com')
-        self.buyer = make_user(email='buyer@test.com')
-        self.prop = make_property(self.owner)
-        self.offer = Offer.objects.create(
-            property=self.prop, buyer=self.buyer,
-            amount=Decimal('245000'), status='accepted',
-        )
-        self.buyer_client = auth_client(self.buyer)
-        self.owner_client = auth_client(self.owner)
-
-    def test_create_conveyancing_case(self):
-        res = self.buyer_client.post('/api/conveyancing-cases/', {
-            'offer': self.offer.id,
-            'property': self.prop.id,
-        }, format='json')
-        self.assertEqual(res.status_code, 201)
-        # Verify default steps were created
-        case = ConveyancingCase.objects.get(pk=res.data['id'])
-        self.assertEqual(case.steps.count(), 14)
-        # First step should be auto-completed
-        first_step = case.steps.order_by('order').first()
-        self.assertEqual(first_step.step_type, 'offer_accepted')
-        self.assertEqual(first_step.status, 'completed')
-
-    def test_cannot_create_without_accepted_offer(self):
-        pending_offer = Offer.objects.create(
-            property=self.prop, buyer=self.buyer,
-            amount=Decimal('240000'), status='submitted',
-        )
-        res = self.buyer_client.post('/api/conveyancing-cases/', {
-            'offer': pending_offer.id,
-        }, format='json')
-        self.assertEqual(res.status_code, 400)
-
-    def test_update_conveyancing_step(self):
-        # Create the case with steps
-        case = ConveyancingCase.objects.create(
-            property=self.prop, offer=self.offer,
-            buyer=self.buyer, seller=self.owner,
-        )
-        step = ConveyancingStep.objects.create(
-            case=case, step_type='solicitors_instructed', order=2,
-        )
-        res = self.buyer_client.patch(
-            f'/api/conveyancing-cases/{case.id}/steps/{step.id}/',
-            {'status': 'completed', 'notes': 'Done!'},
-            format='json',
-        )
-        self.assertEqual(res.status_code, 200)
-        self.assertEqual(res.data['status'], 'completed')
-
-    def test_non_participant_cannot_update_step(self):
-        case = ConveyancingCase.objects.create(
-            property=self.prop, offer=self.offer,
-            buyer=self.buyer, seller=self.owner,
-        )
-        step = ConveyancingStep.objects.create(
-            case=case, step_type='solicitors_instructed', order=2,
-        )
-        other = make_user(email='other@test.com')
-        res = auth_client(other).patch(
-            f'/api/conveyancing-cases/{case.id}/steps/{step.id}/',
-            {'status': 'completed'},
-            format='json',
-        )
-        self.assertEqual(res.status_code, 403)
-
-    def test_list_conveyancing_cases(self):
-        ConveyancingCase.objects.create(
-            property=self.prop, offer=self.offer,
-            buyer=self.buyer, seller=self.owner,
-        )
-        res = self.buyer_client.get('/api/conveyancing-cases/')
-        self.assertEqual(res.status_code, 200)
-
 
 # ══════════════════════════════════════════════════════════════════
 # #32 AI-POWERED LISTING DESCRIPTION GENERATOR

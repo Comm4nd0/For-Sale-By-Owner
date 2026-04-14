@@ -1297,45 +1297,322 @@ class ApiService {
     throw Exception('Failed to load verification status');
   }
 
-  // ── #31 Conveyancing Tracker ──────────────────────────────────────
+  // ── Sale Tracker ──────────────────────────────────────────────────
 
-  Future<List<dynamic>> getConveyancingCases() async {
+  Future<List<dynamic>> getSales() async {
     final response = await http.get(
-      Uri.parse(ApiConstants.conveyancingCases),
+      Uri.parse(ApiConstants.sales),
       headers: _authHeaders,
     );
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return data is List ? data : (data['results'] ?? []);
     }
-    throw Exception('Failed to load conveyancing cases');
+    throw Exception('Failed to load sales');
   }
 
-  Future<Map<String, dynamic>> createConveyancingCase(int offerId) async {
+  Future<Map<String, dynamic>> getSaleDetail(int id) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.saleDetail(id)),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to load sale detail');
+  }
+
+  Future<Map<String, dynamic>> createSale(Map<String, dynamic> data) async {
     final response = await http.post(
-      Uri.parse(ApiConstants.conveyancingCases),
+      Uri.parse(ApiConstants.sales),
       headers: _authJsonHeaders,
-      body: jsonEncode({'offer': offerId}),
+      body: jsonEncode(data),
     );
     if (response.statusCode == 201) {
       return jsonDecode(response.body);
     }
-    throw Exception('Failed to create conveyancing case');
+    final error = _extractError(response);
+    throw Exception(error);
   }
 
-  Future<Map<String, dynamic>> updateConveyancingStep(
-      int caseId, int stepId, String status, {String? notes}) async {
-    final body = <String, dynamic>{'status': status};
-    if (notes != null) body['notes'] = notes;
+  Future<Map<String, dynamic>> updateSale(int id, Map<String, dynamic> data) async {
     final response = await http.patch(
-      Uri.parse(ApiConstants.conveyancingStepUpdate(caseId, stepId)),
+      Uri.parse(ApiConstants.saleDetail(id)),
+      headers: _authJsonHeaders,
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to update sale');
+  }
+
+  Future<Map<String, dynamic>> getSaleDashboard(int id) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.saleDashboard(id)),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to load dashboard');
+  }
+
+  Future<Map<String, dynamic>> getSaleReadiness(int id) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.saleReadiness(id)),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to load readiness');
+  }
+
+  Future<Map<String, dynamic>> instructSale(int id, {String? overrideReason}) async {
+    final body = <String, dynamic>{};
+    if (overrideReason != null) {
+      body['override'] = true;
+      body['reason'] = overrideReason;
+    }
+    final response = await http.post(
+      Uri.parse(ApiConstants.saleInstruct(id)),
       headers: _authJsonHeaders,
       body: jsonEncode(body),
     );
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     }
-    throw Exception('Failed to update step');
+    final error = _extractError(response);
+    throw Exception(error);
+  }
+
+  Future<List<dynamic>> getSaleTimeline(int id) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.saleTimeline(id)),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to load timeline');
+  }
+
+  Future<List<dynamic>> getSaleTasks(int saleId) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.saleTasks(saleId)),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data is List ? data : (data['results'] ?? []);
+    }
+    throw Exception('Failed to load tasks');
+  }
+
+  Future<Map<String, dynamic>> updateTask(int saleId, int taskId, Map<String, dynamic> data) async {
+    final response = await http.patch(
+      Uri.parse(ApiConstants.saleTaskDetail(saleId, taskId)),
+      headers: _authJsonHeaders,
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to update task');
+  }
+
+  Future<Map<String, dynamic>> reassignTask(int saleId, int taskId, String newOwner, {String reason = ''}) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.saleTaskReassign(saleId, taskId)),
+      headers: _authJsonHeaders,
+      body: jsonEncode({'new_owner': newOwner, 'reason': reason}),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to reassign task');
+  }
+
+  Future<Map<String, dynamic>> completeTask(int saleId, int taskId) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.saleTaskComplete(saleId, taskId)),
+      headers: _authJsonHeaders,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to complete task');
+  }
+
+  Future<List<dynamic>> getSaleDocuments(int saleId) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.saleDocuments(saleId)),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data is List ? data : (data['results'] ?? []);
+    }
+    throw Exception('Failed to load documents');
+  }
+
+  Future<List<dynamic>> getSaleDocumentChecklist(int saleId) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.saleDocumentChecklist(saleId)),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to load checklist');
+  }
+
+  Future<Map<String, dynamic>> uploadSaleDocument(int saleId, String filePath, {String? title, int? documentId}) async {
+    final uri = Uri.parse(ApiConstants.saleDocuments(saleId));
+    final request = http.MultipartRequest('POST', uri)
+      ..headers.addAll(_authHeaders)
+      ..files.add(await http.MultipartFile.fromPath('file', filePath));
+    if (title != null) request.fields['title'] = title;
+    if (documentId != null) request.fields['document_id'] = documentId.toString();
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to upload document');
+  }
+
+  Future<void> deleteSaleDocument(int saleId, int docId) async {
+    final response = await http.delete(
+      Uri.parse(ApiConstants.saleDocumentDetail(saleId, docId)),
+      headers: _authHeaders,
+    );
+    if (response.statusCode != 204) {
+      throw Exception('Failed to delete document');
+    }
+  }
+
+  Future<List<dynamic>> getSaleContactLog(int saleId) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.saleContactLog(saleId)),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data is List ? data : (data['results'] ?? []);
+    }
+    throw Exception('Failed to load contact log');
+  }
+
+  Future<Map<String, dynamic>> createContactLog(int saleId, Map<String, dynamic> data) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.saleContactLog(saleId)),
+      headers: _authJsonHeaders,
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to create contact log');
+  }
+
+  Future<List<dynamic>> getSaleEnquiries(int saleId) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.saleEnquiries(saleId)),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data is List ? data : (data['results'] ?? []);
+    }
+    throw Exception('Failed to load enquiries');
+  }
+
+  Future<Map<String, dynamic>> createEnquiry(int saleId, Map<String, dynamic> data) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.saleEnquiries(saleId)),
+      headers: _authJsonHeaders,
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to create enquiry');
+  }
+
+  Future<Map<String, dynamic>> reassignEnquiry(int saleId, int eqId, String newOwner) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.saleEnquiryReassign(saleId, eqId)),
+      headers: _authJsonHeaders,
+      body: jsonEncode({'new_owner': newOwner}),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to reassign enquiry');
+  }
+
+  Future<List<dynamic>> getSalePrompts(int saleId) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.salePrompts(saleId)),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data is List ? data : (data['results'] ?? []);
+    }
+    throw Exception('Failed to load prompts');
+  }
+
+  Future<Map<String, dynamic>> generatePrompt(int saleId, String counterpartyType, String level, {List<int>? taskIds}) async {
+    final body = <String, dynamic>{
+      'counterparty_type': counterpartyType,
+      'level': level,
+    };
+    if (taskIds != null) body['task_ids'] = taskIds;
+    final response = await http.post(
+      Uri.parse(ApiConstants.salePromptsGenerate(saleId)),
+      headers: _authJsonHeaders,
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to generate prompt');
+  }
+
+  Future<Map<String, dynamic>> markPromptSent(int saleId, int promptId) async {
+    final response = await http.patch(
+      Uri.parse(ApiConstants.salePromptDetail(saleId, promptId)),
+      headers: _authJsonHeaders,
+      body: jsonEncode({'sent_marker': true}),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to mark prompt as sent');
+  }
+
+  Future<Map<String, dynamic>> getGdprExport() async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.gdprExport),
+      headers: _authHeaders,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to export data');
+  }
+
+  Future<void> gdprDelete() async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.gdprDelete),
+      headers: _authJsonHeaders,
+    );
+    if (response.statusCode != 204) {
+      throw Exception('Failed to delete data');
+    }
   }
 
   // ── #32 AI Description Generator ──────────────────────────────────

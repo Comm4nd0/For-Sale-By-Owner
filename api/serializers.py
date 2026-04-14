@@ -12,7 +12,7 @@ from .models import (
     ChatRoom, ChatMessage,
     ViewingSlot, ViewingSlotBooking,
     Offer, PropertyDocument, PropertyFlag,
-    BuyerVerification, ConveyancingCase, ConveyancingStep,
+    BuyerVerification,
     OpenHouseEvent, OpenHouseRSVP,
     ConveyancerQuoteRequest, ConveyancerQuote,
     NeighbourhoodReview, BoardOrder, BuyerProfile,
@@ -720,59 +720,6 @@ class BuyerVerificationSerializer(serializers.ModelSerializer):
             'created_at', 'reviewed_at',
         ]
         read_only_fields = ['id', 'user', 'status', 'created_at', 'reviewed_at']
-
-
-# ── #31 Conveyancing Serializers ─────────────────────────────────
-
-class ConveyancingStepSerializer(serializers.ModelSerializer):
-    step_type_display = serializers.CharField(
-        source='get_step_type_display', read_only=True
-    )
-    status_display = serializers.CharField(
-        source='get_status_display', read_only=True
-    )
-
-    class Meta:
-        model = ConveyancingStep
-        fields = [
-            'id', 'step_type', 'step_type_display',
-            'status', 'status_display', 'notes',
-            'completed_at', 'order', 'created_at', 'updated_at',
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
-
-
-class ConveyancingCaseSerializer(serializers.ModelSerializer):
-    steps = ConveyancingStepSerializer(many=True, read_only=True)
-    property_title = serializers.CharField(source='property.title', read_only=True)
-    buyer_name = serializers.SerializerMethodField()
-    seller_name = serializers.SerializerMethodField()
-    progress_percentage = serializers.SerializerMethodField()
-
-    class Meta:
-        model = ConveyancingCase
-        fields = [
-            'id', 'property', 'property_title', 'offer',
-            'buyer', 'buyer_name', 'seller', 'seller_name',
-            'status', 'buyer_solicitor', 'seller_solicitor',
-            'target_completion_date', 'notes', 'steps',
-            'progress_percentage',
-            'created_at', 'updated_at',
-        ]
-        read_only_fields = ['id', 'buyer', 'seller', 'created_at', 'updated_at']
-
-    def get_buyer_name(self, obj):
-        return obj.buyer.get_full_name() or obj.buyer.email
-
-    def get_seller_name(self, obj):
-        return obj.seller.get_full_name() or obj.seller.email
-
-    def get_progress_percentage(self, obj):
-        steps = obj.steps.exclude(status='not_applicable')
-        if not steps.exists():
-            return 0
-        completed = steps.filter(status='completed').count()
-        return round((completed / steps.count()) * 100)
 
 
 # ── #37 Open House Serializers ───────────────────────────────────

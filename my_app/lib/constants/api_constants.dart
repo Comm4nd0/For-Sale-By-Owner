@@ -174,12 +174,44 @@ class ApiConstants {
   static String buyerVerificationStatus(int userId) =>
       '$apiUrl/buyers/$userId/verification/';
 
-  // #31 Conveyancing Tracker
-  static String get conveyancingCases => '$apiUrl/conveyancing-cases/';
-  static String conveyancingCaseDetail(int id) =>
-      '$apiUrl/conveyancing-cases/$id/';
-  static String conveyancingStepUpdate(int caseId, int stepId) =>
-      '$apiUrl/conveyancing-cases/$caseId/steps/$stepId/';
+  // Sale Tracker
+  static String get saleTrackerBase => '${apiUrl.replaceFirst('/api', '/api/sale-tracker')}';
+  static String get sales => '$saleTrackerBase/sales/';
+  static String saleDetail(int id) => '$saleTrackerBase/sales/$id/';
+  static String saleDashboard(int id) => '$saleTrackerBase/sales/$id/dashboard/';
+  static String saleReadiness(int id) => '$saleTrackerBase/sales/$id/readiness/';
+  static String saleInstruct(int id) => '$saleTrackerBase/sales/$id/instruct/';
+  static String saleTimeline(int id) => '$saleTrackerBase/sales/$id/timeline/';
+  static String saleStages(int saleId) => '$saleTrackerBase/sales/$saleId/stages/';
+  static String saleTasks(int saleId) => '$saleTrackerBase/sales/$saleId/tasks/';
+  static String saleTaskDetail(int saleId, int taskId) =>
+      '$saleTrackerBase/sales/$saleId/tasks/$taskId/';
+  static String saleTaskReassign(int saleId, int taskId) =>
+      '$saleTrackerBase/sales/$saleId/tasks/$taskId/reassign/';
+  static String saleTaskComplete(int saleId, int taskId) =>
+      '$saleTrackerBase/sales/$saleId/tasks/$taskId/complete/';
+  static String saleDocuments(int saleId) =>
+      '$saleTrackerBase/sales/$saleId/documents/';
+  static String saleDocumentDetail(int saleId, int docId) =>
+      '$saleTrackerBase/sales/$saleId/documents/$docId/';
+  static String saleDocumentChecklist(int saleId) =>
+      '$saleTrackerBase/sales/$saleId/documents/checklist/';
+  static String saleContactLog(int saleId) =>
+      '$saleTrackerBase/sales/$saleId/contact-log/';
+  static String saleEnquiries(int saleId) =>
+      '$saleTrackerBase/sales/$saleId/enquiries/';
+  static String saleEnquiryDetail(int saleId, int eqId) =>
+      '$saleTrackerBase/sales/$saleId/enquiries/$eqId/';
+  static String saleEnquiryReassign(int saleId, int eqId) =>
+      '$saleTrackerBase/sales/$saleId/enquiries/$eqId/reassign/';
+  static String salePrompts(int saleId) =>
+      '$saleTrackerBase/sales/$saleId/prompts/';
+  static String salePromptDetail(int saleId, int promptId) =>
+      '$saleTrackerBase/sales/$saleId/prompts/$promptId/';
+  static String salePromptsGenerate(int saleId) =>
+      '$saleTrackerBase/sales/$saleId/prompts/generate/';
+  static String get gdprExport => '$saleTrackerBase/gdpr/export/';
+  static String get gdprDelete => '$saleTrackerBase/gdpr/delete/';
 
   // #32 AI Description Generator
   static String get generateDescription => '$apiUrl/generate-description/';

@@ -17,6 +17,10 @@ import 'chat_screen.dart';
 import '../widgets/scroll_to_top_button.dart';
 import '../utils/auto_retry.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../models/sale.dart';
+import '../widgets/sale_tracker_card.dart';
+import 'sale_tracker/sale_tracker_dashboard_screen.dart';
+import 'sale_tracker/sale_tracker_setup_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -31,6 +35,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool _statsLoading = true;
   String? _statsError;
   NotificationCounts? _counts;
+  Sale? _activeSale;
 
   late Future<List<ViewingRequest>> _viewingsFuture;
   late Future<List<Offer>> _offersFuture;
@@ -54,6 +59,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       _loadViewings();
       _loadOffers();
       _loadMessages();
+      _loadActiveSale();
     } else {
       _statsLoading = false;
       _viewingsFuture = Future.value([]);
@@ -93,6 +99,25 @@ class _DashboardScreenState extends State<DashboardScreen>
           _statsLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _loadActiveSale() async {
+    try {
+      final apiService = context.read<ApiService>();
+      final sales = await apiService.getSales();
+      if (mounted && sales.isNotEmpty) {
+        final activeSales = sales.where(
+          (s) => s['status'] == 'active',
+        ).toList();
+        if (activeSales.isNotEmpty) {
+          setState(() {
+            _activeSale = Sale.fromJson(activeSales.first);
+          });
+        }
+      }
+    } catch (_) {
+      // Sale tracker not critical for dashboard load
     }
   }
 
@@ -216,6 +241,41 @@ class _DashboardScreenState extends State<DashboardScreen>
       ),
       body: Column(
         children: [
+          if (_activeSale != null)
+            SaleTrackerCard(
+              sale: _activeSale!,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SaleTrackerDashboardScreen(
+                      saleId: _activeSale!.id,
+                    ),
+                  ),
+                );
+              },
+            ),
+          if (_activeSale == null && context.read<AuthService>().userType == 'Seller')
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const SaleTrackerSetupScreen(),
+                    ),
+                  ).then((_) => _loadActiveSale());
+                },
+                icon: Icon(PhosphorIconsDuotone.chartLine,
+                    size: 18, color: AppTheme.forestMid),
+                label: const Text('Start Sale Tracker'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.forestMid,
+                  side: const BorderSide(color: AppTheme.forestMid),
+                ),
+              ),
+            ),
           _buildStatsSection(),
           Expanded(
             child: TabBarView(
