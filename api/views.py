@@ -964,7 +964,14 @@ class PropertyDocumentViewSet(viewsets.ModelViewSet):
         prop = get_object_or_404(Property, pk=self.kwargs['property_pk'])
         if prop.owner != self.request.user:
             raise PermissionDenied("Only the property owner can upload documents.")
-        serializer.save(property=prop, uploaded_by=self.request.user)
+        # Auto-fill title from the document type display name when the client omits it
+        title = serializer.validated_data.get('title') or ''
+        if not title:
+            document_type = serializer.validated_data.get('document_type', 'other')
+            title = dict(PropertyDocument.DOCUMENT_TYPES).get(
+                document_type, document_type.replace('_', ' ').title()
+            )
+        serializer.save(property=prop, uploaded_by=self.request.user, title=title)
 
     def perform_update(self, serializer):
         if serializer.instance.property.owner != self.request.user:
