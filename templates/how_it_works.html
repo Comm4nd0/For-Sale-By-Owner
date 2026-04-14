@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}How It Works — For Sale By Owner{% endblock %}
+
+{% block meta_description %}See exactly how to sell your UK property without an estate agent — list for free, handle viewings and offers directly, and complete the sale with guided conveyancing. No commission, no hidden fees.{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hiw-hero {
+        background: linear-gradient(135deg, #115E66 0%, #19747E 100%);
+        color: #FFFFFF;
+        padding: 3rem 0 2.5rem;
+        margin: -2rem 0 2.5rem;
+        text-align: center;
+    }
+    .hiw-hero h1 { font-size: 2rem; margin: 0 0 0.6rem; color: #FFFFFF; }
+    .hiw-hero p { font-size: 1.05rem; opacity: 0.9; max-width: 640px; margin: 0 auto; }
+
+    .hiw-section {
+        background: #FFFFFF;
+        border: 1px solid #E8EDEF;
+        border-radius: 12px;
+        padding: 2rem 1.75rem;
+        margin-bottom: 2rem;
+    }
+    .hiw-step-head {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    .hiw-step-number {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: #D8943B;
+        color: #1E4635;
+        font-weight: 700;
+        font-size: 1.15rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+        flex-shrink: 0;
+    }
+    .hiw-step-head h2 { color: #115E66; margin: 0; font-size: 1.35rem; }
+    .hiw-section p { color: #4A5C62; line-height: 1.6; margin: 0 0 1rem; }
+    .hiw-section ul { color: #4A5C62; line-height: 1.65; padding-left: 1.25rem; margin: 0 0 1rem; }
+    .hiw-section ul li { margin-bottom: 0.4rem; }
+    .hiw-section a { color: #19747E; font-weight: 600; text-decoration: none; }
+    .hiw-section a:hover { text-decoration: underline; }
+
+    .hiw-icon {
+        width: 44px;
+        height: 44px;
+        color: #19747E;
+        flex-shrink: 0;
+    }
+
+    .hiw-faq {
+        background: #F5F8F9;
+        border-radius: 12px;
+        padding: 2rem 1.75rem;
+        margin-bottom: 2.5rem;
+        border: 1px solid #E8EDEF;
+    }
+    .hiw-faq h2 { color: #115E66; font-size: 1.35rem; margin: 0 0 1.25rem; }
+    .hiw-faq-item { margin-bottom: 1.25rem; }
+    .hiw-faq-item:last-child { margin-bottom: 0; }
+    .hiw-faq-item h3 { color: #115E66; font-size: 1rem; margin: 0 0 0.35rem; }
+    .hiw-faq-item p { color: #4A5C62; font-size: 0.95rem; line-height: 1.55; margin: 0; }
+    .hiw-faq-item a { color: #19747E; font-weight: 600; text-decoration: none; }
+    .hiw-faq-item a:hover { text-decoration: underline; }
+
+    .hiw-cta {
+        background: linear-gradient(135deg, #115E66 0%, #19747E 100%);
+        color: #FFFFFF;
+        text-align: center;
+        padding: 2.5rem 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+    .hiw-cta h2 { color: #FFFFFF; font-size: 1.5rem; margin: 0 0 0.6rem; }
+    .hiw-cta p { color: #FFFFFF; opacity: 0.9; margin: 0 0 1.5rem; font-size: 1rem; }
+    .hiw-cta-buttons { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+    .hiw-cta .btn-primary {
+        background: #D8943B;
+        color: #1E4635;
+        padding: 0.8rem 1.6rem;
+        border-radius: 6px;
+        font-weight: 700;
+        text-decoration: none;
+        display: inline-block;
+    }
+    .hiw-cta .btn-primary:hover { background: #E8A44B; }
+    .hiw-cta .btn-secondary {
+        background: transparent;
+        color: #FFFFFF;
+        border: 2px solid rgba(255,255,255,0.6);
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+    }
+    .hiw-cta .btn-secondary:hover { border-color: #FFFFFF; }
+
+    @media (max-width: 768px) {
+        .hiw-hero { padding: 2.25rem 0 2rem; }
+        .hiw-hero h1 { font-size: 1.55rem; }
+        .hiw-hero p { font-size: 0.95rem; }
+        .hiw-step-head h2 { font-size: 1.15rem; }
+        .hiw-section { padding: 1.5rem 1.25rem; }
+        .hiw-faq { padding: 1.5rem 1.25rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hiw-hero">
+    <div class="container">
+        <h1>How selling on For Sale By Owner works</h1>
+        <p>Three simple steps from listing your property to completing the sale &mdash; with no estate agent, no commission, and no hidden fees. Ever.</p>
+    </div>
+</section>
+
+<section class="hiw-section" aria-labelledby="step-1">
+    <div class="hiw-step-head">
+        <div class="hiw-step-number" aria-hidden="true">1</div>
+        <svg class="hiw-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 20 L24 8 L40 20 V40 a2 2 0 0 1 -2 2 H10 a2 2 0 0 1 -2 -2 Z"/>
+            <path d="M18 42 V28 h12 v14"/>
+            <circle cx="34" cy="14" r="6" fill="#D8943B" stroke="none"/>
+            <path d="M34 11 v6 M31 14 h6" stroke="#1E4635"/>
+        </svg>
+        <h2 id="step-1">List your property</h2>
+    </div>
+    <p>Create your free listing in minutes. You&rsquo;ll add the essentials &mdash; address, price, property type, bedrooms and bathrooms &mdash; along with photos and a description that helps buyers picture themselves in your home. No card required and no commission, ever.</p>
+    <ul>
+        <li><strong>Price with confidence.</strong> Use our <a href="/house-prices/">sold price data</a> to see what similar properties in your area have sold for, and the <a href="/price-comparison/">price comparison tool</a> to sanity-check your asking price.</li>
+        <li><strong>Photos that sell.</strong> Bright, decluttered rooms shot in landscape perform best. You can upload up to the standard gallery size and reorder them any time from your dashboard.</li>
+        <li><strong>Floorplans and documents.</strong> Attach a floorplan and your EPC so serious buyers can do their homework before booking a viewing.</li>
+    </ul>
+    <p><a href="/properties/new/">Start your free listing &rarr;</a></p>
+</section>
+
+<section class="hiw-section" aria-labelledby="step-2">
+    <div class="hiw-step-head">
+        <div class="hiw-step-number" aria-hidden="true">2</div>
+        <svg class="hiw-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="24" cy="24" r="18"/>
+            <path d="M6 24 h36 M24 6 a22 22 0 0 1 0 36 M24 6 a22 22 0 0 0 0 36"/>
+            <circle cx="36" cy="14" r="4" fill="#D8943B" stroke="none"/>
+        </svg>
+        <h2 id="step-2">Share with buyers</h2>
+    </div>
+    <p>Once you publish, your listing appears instantly in <a href="/search/">property search</a> and is matched against buyers&rsquo; <a href="/saved-searches/">saved searches</a> &mdash; so the right people hear about it without you lifting a finger.</p>
+    <ul>
+        <li><strong>Viewings on your terms.</strong> Open the availability slots that suit you. Buyers request a time, you confirm, and everyone gets an automatic reminder.</li>
+        <li><strong>Message buyers directly.</strong> Every enquiry lands in your inbox. Answer questions, share extra info, and build a shortlist of serious buyers &mdash; without a middleman re-phrasing what was said.</li>
+        <li><strong>Stay organised.</strong> Your dashboard shows saves, messages, viewing requests and offers in one place, so you always know who&rsquo;s interested and what needs a reply.</li>
+    </ul>
+</section>
+
+<section class="hiw-section" aria-labelledby="step-3">
+    <div class="hiw-step-head">
+        <div class="hiw-step-number" aria-hidden="true">3</div>
+        <svg class="hiw-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M10 22 a14 14 0 1 1 28 0 a14 14 0 1 1 -28 0"/>
+            <path d="M17 24 l5 5 l9 -11"/>
+            <circle cx="38" cy="12" r="4" fill="#D8943B" stroke="none"/>
+        </svg>
+        <h2 id="step-3">Sell direct</h2>
+    </div>
+    <p>When a buyer is ready, they submit a formal <a href="/offers/">offer</a> through the platform. You can accept, reject, or counter &mdash; and once terms are agreed, the sale moves into the legal stage.</p>
+    <ul>
+        <li><strong>Guided conveyancing.</strong> Our <a href="/conveyancing/">sale tracker</a> walks you step-by-step through the England &amp; Wales conveyancing process, so nothing slips through the cracks between offer-accepted and completion day.</li>
+        <li><strong>Keep the full sale price.</strong> Because there&rsquo;s no estate agent in the middle, every pound agreed in the offer is yours &mdash; minus only your solicitor&rsquo;s fees and the usual disbursements.</li>
+        <li><strong>Complete and hand over the keys.</strong> Once contracts exchange and completion funds clear, the property is sold. That&rsquo;s it.</li>
+    </ul>
+</section>
+
+<section class="hiw-faq" aria-labelledby="hiw-faq-heading">
+    <h2 id="hiw-faq-heading">What about&hellip;?</h2>
+    <div class="hiw-faq-item">
+        <h3>&hellip;the cost?</h3>
+        <p>Listing is free. Browsing is free. Messaging and offers are free. We don&rsquo;t charge commission and we don&rsquo;t take a cut of the sale. The only money that changes hands is between you, your buyer, and your solicitor.</p>
+    </div>
+    <div class="hiw-faq-item">
+        <h3>&hellip;the legal side?</h3>
+        <p>You&rsquo;ll still need a solicitor or licensed conveyancer &mdash; that&rsquo;s true whether you use an estate agent or not. Our <a href="/conveyancing/">conveyancing tracker</a> shows you every step so you can keep your solicitor accountable and the chain moving.</p>
+    </div>
+    <div class="hiw-faq-item">
+        <h3>&hellip;how this compares to a traditional agent?</h3>
+        <p>A typical high-street agent charges 1.0–1.8% of the sale price. On a £350,000 home that&rsquo;s £3,500–£6,300. See the full <a href="/price-comparison/">side-by-side comparison</a> &mdash; the savings go straight into your pocket.</p>
+    </div>
+</section>
+
+<section class="hiw-cta">
+    <h2>Ready to list your property?</h2>
+    <p>Create your free listing in minutes. No card, no commission, no surprises.</p>
+    <div class="hiw-cta-buttons">
+        <a href="/register/" class="btn-primary">Create your free listing</a>
+        <a href="/login/" class="btn-secondary">Already have an account?</a>
+    </div>
+</section>
+{% endblock %}
