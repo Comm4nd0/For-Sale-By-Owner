@@ -23,6 +23,7 @@ class StaticViewSitemap(Sitemap):
             'stamp-duty-calculator',
             'conveyancing',
             'price-comparison',
+            'how-it-works',
             'terms',
             'privacy',
             'cookies',

@@ -80,6 +80,7 @@ urlpatterns = [
     path('stamp-duty-calculator/', CSRFTemplateView.as_view(template_name='stamp_duty_calculator.html'), name='stamp-duty-calculator'),
     path('conveyancing/', CSRFTemplateView.as_view(template_name='conveyancing.html'), name='conveyancing'),
     path('price-comparison/', CSRFTemplateView.as_view(template_name='price_comparison.html'), name='price-comparison'),
+    path('how-it-works/', CSRFTemplateView.as_view(template_name='how_it_works.html'), name='how-it-works'),
 
     # Legal pages
     path('terms/', CSRFTemplateView.as_view(template_name='terms.html'), name='terms'),
