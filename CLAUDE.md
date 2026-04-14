@@ -190,6 +190,16 @@ Services: web (Gunicorn), db (PostgreSQL), redis, celery, celery-beat
 - Feature branches for new work
 - No pre-commit hooks configured
 
+**Before starting any task, pull the latest code on both `development` and `main`.** Stale local branches cause avoidable merge conflicts (especially on `my_app/pubspec.yaml` version bumps) and lead to work being built on top of commits that have already been superseded. Run this at the start of every session:
+
+```bash
+git fetch origin
+git checkout development && git pull --ff-only origin development
+git fetch origin main:main   # updates local main without switching branches
+```
+
+Then return to the working branch for the task (typically `development` or a feature branch off it).
+
 ## Version Bumping
 
 The app version must be bumped for every code change. Update the version in `my_app/pubspec.yaml` (e.g. `version: 1.0.8+10` — increment the build number `+N` for every change, bump the semantic version for releases).
