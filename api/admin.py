@@ -17,7 +17,6 @@ from .models import (
     OpenHouseEvent, OpenHouseRSVP,
     ConveyancerQuoteRequest, ConveyancerQuote,
     NeighbourhoodReview, BoardOrder, BuyerProfile,
-    ForumCategory, ForumTopic, ForumPost,
 )
 from .notifications import notify_listing_approved, notify_listing_rejected
 
@@ -407,22 +406,3 @@ class BuyerProfileAdmin(admin.ModelAdmin):
     list_filter = ['is_first_time_buyer', 'is_cash_buyer', 'mortgage_approved']
 
 
-@admin.register(ForumCategory)
-class ForumCategoryAdmin(admin.ModelAdmin):
-    list_display = ['name', 'slug', 'icon', 'order']
-    list_editable = ['order']
-    prepopulated_fields = {'slug': ('name',)}
-
-
-@admin.register(ForumTopic)
-class ForumTopicAdmin(admin.ModelAdmin):
-    list_display = ['title', 'category', 'author', 'is_pinned', 'is_locked', 'view_count', 'created_at']
-    list_filter = ['category', 'is_pinned', 'is_locked']
-    list_editable = ['is_pinned', 'is_locked']
-    search_fields = ['title', 'content']
-
-
-@admin.register(ForumPost)
-class ForumPostAdmin(admin.ModelAdmin):
-    list_display = ['topic', 'author', 'is_solution', 'created_at']
-    list_filter = ['is_solution']

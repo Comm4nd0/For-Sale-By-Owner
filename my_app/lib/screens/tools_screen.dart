@@ -5,7 +5,6 @@ import 'mortgage_calculator_screen.dart';
 import 'house_prices_screen.dart';
 import 'price_comparison_screen.dart';
 import 'stamp_duty_screen.dart';
-import 'forum_screen.dart';
 import 'neighbourhood_review_screen.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -79,16 +78,6 @@ class ToolsScreen extends StatelessWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const NeighbourhoodReviewScreen()),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _ToolCard(
-            icon: PhosphorIconsDuotone.chatsCircle,
-            title: 'Community Forum',
-            subtitle: 'Discuss buying, selling, and property topics.',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ForumScreen()),
             ),
           ),
         ],

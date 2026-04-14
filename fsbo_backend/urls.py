@@ -70,7 +70,6 @@ urlpatterns = [
 
     # New feature pages
     path('stamp-duty-calculator/', CSRFTemplateView.as_view(template_name='stamp_duty_calculator.html'), name='stamp-duty-calculator'),
-    path('forum/', CSRFTemplateView.as_view(template_name='forum.html'), name='forum'),
     path('conveyancing/', CSRFTemplateView.as_view(template_name='conveyancing.html'), name='conveyancing'),
     path('price-comparison/', CSRFTemplateView.as_view(template_name='price_comparison.html'), name='price-comparison'),
 

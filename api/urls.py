@@ -18,8 +18,6 @@ router.register(r'quote-requests', views.ConveyancerQuoteRequestViewSet, basenam
 router.register(r'conveyancer-quotes', views.ConveyancerQuoteViewSet, basename='conveyancer-quote')
 router.register(r'neighbourhood-reviews', views.NeighbourhoodReviewViewSet, basename='neighbourhood-review')
 router.register(r'board-orders', views.BoardOrderViewSet, basename='board-order')
-router.register(r'forum-categories', views.ForumCategoryViewSet, basename='forum-category')
-router.register(r'forum-topics', views.ForumTopicViewSet, basename='forum-topic')
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -246,19 +244,4 @@ urlpatterns = [
     path('2fa/confirm/', views.confirm_2fa, name='2fa-confirm'),
     path('2fa/disable/', views.disable_2fa, name='2fa-disable'),
     path('2fa/verify/', views.verify_2fa, name='2fa-verify'),
-
-    # #45 Forum posts (nested under topics)
-    path(
-        'forum-topics/<int:topic_pk>/posts/',
-        views.ForumPostViewSet.as_view({'get': 'list', 'post': 'create'}),
-        name='forum-posts-list',
-    ),
-    path(
-        'forum-topics/<int:topic_pk>/posts/<int:pk>/',
-        views.ForumPostViewSet.as_view({
-            'get': 'retrieve', 'patch': 'partial_update', 'delete': 'destroy'
-        }),
-        name='forum-posts-detail',
-    ),
-    path('forum-posts/<int:post_pk>/mark-solution/', views.mark_solution, name='mark-solution'),
 ]
