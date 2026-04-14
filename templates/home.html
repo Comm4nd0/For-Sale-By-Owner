@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}For Sale By Owner — Sell Direct. Keep More.{% endblock %}
+{% block title %}For Sale By Owner — Sell Your UK Home Without an Estate Agent{% endblock %}
+{% block meta_description %}Sell your UK property directly to buyers with no estate agent fees, no commission and no hidden charges. List your home free in minutes and keep 100% of your sale.{% endblock %}
+{% block og_title %}For Sale By Owner — Sell Your UK Home Without an Estate Agent{% endblock %}
+{% block og_description %}Sell your UK property directly. No estate agent fees, no commission, list free in minutes.{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -124,6 +127,66 @@
     .feature-item h4 { color: #115E66; margin-bottom: 0.4rem; }
     .feature-item p { color: #4A5C62; font-size: 0.9rem; line-height: 1.5; }
 
+    /* Hero image caption overlay */
+    .hero-caption {
+        position: absolute;
+        bottom: 0.75rem;
+        right: 1rem;
+        z-index: 2;
+        background: rgba(17, 94, 102, 0.7);
+        color: #F5F8F9;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        padding: 0.25rem 0.65rem;
+        border-radius: 4px;
+        backdrop-filter: blur(4px);
+        opacity: 0;
+        transition: opacity 1.2s ease-in-out;
+        pointer-events: none;
+    }
+    .hero-caption.active { opacity: 1; }
+
+    /* How It Works — 3-step flow */
+    .how-it-works {
+        background: #FFFFFF;
+        padding: 3.5rem 0 3rem;
+        text-align: center;
+        border-bottom: 1px solid #E8EDEF;
+    }
+    .how-it-works h3 { color: #115E66; font-size: 1.6rem; margin-bottom: 0.5rem; }
+    .how-it-works .lead { color: #4A5C62; font-size: 1rem; margin-bottom: 2.5rem; }
+    .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; max-width: 960px; margin: 0 auto; position: relative; }
+    .step {
+        background: #F5F8F9;
+        border-radius: 12px;
+        padding: 1.75rem 1.25rem 1.5rem;
+        position: relative;
+        border: 1px solid #E8EDEF;
+        text-align: left;
+    }
+    .step-number {
+        position: absolute;
+        top: -18px;
+        left: 1.25rem;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #D8943B;
+        color: #1E4635;
+        font-weight: 700;
+        font-size: 1.05rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+    .step-icon { width: 48px; height: 48px; margin-bottom: 0.85rem; color: #19747E; }
+    .step h4 { color: #115E66; margin: 0 0 0.35rem; font-size: 1.1rem; }
+    .step p { color: #4A5C62; font-size: 0.92rem; line-height: 1.5; margin: 0; }
+    .how-it-works .cta-row { margin-top: 2.25rem; }
+    .how-it-works .cta-row a { color: #19747E; font-weight: 600; text-decoration: none; font-size: 0.95rem; }
+    .how-it-works .cta-row a:hover { text-decoration: underline; }
+
     @media (max-width: 768px) {
         .hero { padding: 2.5rem 0 2rem; }
         .hero-bg img { filter: blur(2px); }
@@ -132,6 +195,8 @@
         .filter-row { grid-template-columns: 1fr; }
         .search-card { padding: 1.25rem; }
         .features-grid { grid-template-columns: 1fr; gap: 1rem; }
+        .steps-grid { grid-template-columns: 1fr; gap: 1.75rem; }
+        .hero-caption { font-size: 0.7rem; padding: 0.2rem 0.5rem; }
     }
 </style>
 {% endblock %}
@@ -139,12 +204,44 @@
 {% block content %}
 <div class="hero">
     <div class="hero-bg">
-        <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1600&q=80" alt="" class="active">
-        <img src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1600&q=80" alt="">
-        <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1600&q=80" alt="">
-        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1600&q=80" alt="">
-        <img src="https://images.unsplash.com/photo-1605146769289-440113cc3d00?w=1600&q=80" alt="">
+        <img
+            src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&q=75&w=1200"
+            srcset="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&q=75&w=800 800w, https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&q=75&w=1200 1200w, https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&q=75&w=1600 1600w"
+            sizes="100vw"
+            alt="Bright open-plan living room with natural light"
+            data-caption="Modern family home"
+            fetchpriority="high"
+            class="active">
+        <img
+            src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&q=75&w=1200"
+            srcset="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&q=75&w=800 800w, https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&q=75&w=1200 1200w, https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&q=75&w=1600 1600w"
+            sizes="100vw"
+            alt="Contemporary UK home interior with wood flooring"
+            data-caption="Contemporary townhouse"
+            loading="lazy">
+        <img
+            src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&q=75&w=1200"
+            srcset="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&q=75&w=800 800w, https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&q=75&w=1200 1200w, https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&q=75&w=1600 1600w"
+            sizes="100vw"
+            alt="Period cottage exterior with garden"
+            data-caption="Cotswolds cottage"
+            loading="lazy">
+        <img
+            src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&q=75&w=1200"
+            srcset="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&q=75&w=800 800w, https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&q=75&w=1200 1200w, https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&q=75&w=1600 1600w"
+            sizes="100vw"
+            alt="Detached suburban house with driveway"
+            data-caption="Suburban detached"
+            loading="lazy">
+        <img
+            src="https://images.unsplash.com/photo-1605146769289-440113cc3d00?auto=format&q=75&w=1200"
+            srcset="https://images.unsplash.com/photo-1605146769289-440113cc3d00?auto=format&q=75&w=800 800w, https://images.unsplash.com/photo-1605146769289-440113cc3d00?auto=format&q=75&w=1200 1200w, https://images.unsplash.com/photo-1605146769289-440113cc3d00?auto=format&q=75&w=1600 1600w"
+            sizes="100vw"
+            alt="Bright modern bedroom with large window"
+            data-caption="City flat"
+            loading="lazy">
     </div>
+    <div class="hero-caption active" id="hero-caption" aria-hidden="true">Modern family home</div>
     <div class="container">
         <div class="hero-logo">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 100" width="460" height="88">
@@ -281,6 +378,47 @@
     </div>
 </div>
 
+<section class="how-it-works" aria-labelledby="hiw-heading">
+    <div class="container">
+        <h3 id="hiw-heading">How it works</h3>
+        <p class="lead">Three steps from listing your property to closing the sale &mdash; no estate agent required.</p>
+        <div class="steps-grid">
+            <div class="step">
+                <div class="step-number" aria-hidden="true">1</div>
+                <svg class="step-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M8 20 L24 8 L40 20 V40 a2 2 0 0 1 -2 2 H10 a2 2 0 0 1 -2 -2 Z"/>
+                    <path d="M18 42 V28 h12 v14"/>
+                    <circle cx="34" cy="14" r="6" fill="#D8943B" stroke="none"/>
+                    <path d="M34 11 v6 M31 14 h6" stroke="#1E4635"/>
+                </svg>
+                <h4>List your property</h4>
+                <p>Create your free listing in minutes &mdash; add photos, price, and key details. No card required, no commission, ever.</p>
+            </div>
+            <div class="step">
+                <div class="step-number" aria-hidden="true">2</div>
+                <svg class="step-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="24" cy="24" r="18"/>
+                    <path d="M6 24 h36 M24 6 a22 22 0 0 1 0 36 M24 6 a22 22 0 0 0 0 36"/>
+                    <circle cx="36" cy="14" r="4" fill="#D8943B" stroke="none"/>
+                </svg>
+                <h4>Share with buyers</h4>
+                <p>Your listing appears in search results instantly. Handle viewing requests, messages and offers directly from your dashboard.</p>
+            </div>
+            <div class="step">
+                <div class="step-number" aria-hidden="true">3</div>
+                <svg class="step-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M10 22 a14 14 0 1 1 28 0 a14 14 0 1 1 -28 0"/>
+                    <path d="M17 24 l5 5 l9 -11"/>
+                    <circle cx="38" cy="12" r="4" fill="#D8943B" stroke="none"/>
+                </svg>
+                <h4>Sell direct</h4>
+                <p>Accept an offer, agree terms and complete the sale. We&rsquo;ll guide you through conveyancing so nothing slips through the cracks.</p>
+            </div>
+        </div>
+        <p class="cta-row"><a href="/how-it-works/">See the full process &rarr;</a></p>
+    </div>
+</section>
+
 <div class="free-banner">
     <div class="container">
         <h3><span class="free-highlight">100% FREE</span> for Buyers &amp; Sellers. Forever.</h3>
@@ -333,15 +471,26 @@
         window.location.href = '/search/' + (params.toString() ? '?' + params.toString() : '');
     });
 
-    // Cycle hero background images
+    // Cycle hero background images + matching caption overlay
     (function() {
         const images = document.querySelectorAll('.hero-bg img');
+        const caption = document.getElementById('hero-caption');
         if (images.length < 2) return;
         let current = 0;
         setInterval(() => {
             images[current].classList.remove('active');
             current = (current + 1) % images.length;
             images[current].classList.add('active');
+            if (caption) {
+                const label = images[current].getAttribute('data-caption');
+                if (label) {
+                    caption.classList.remove('active');
+                    setTimeout(() => {
+                        caption.textContent = label;
+                        caption.classList.add('active');
+                    }, 300);
+                }
+            }
         }, 6000);
     })();
 </script>

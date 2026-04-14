@@ -536,6 +536,60 @@ class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
           ),
         ),
 
+        // How It Works — 3-step flow
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 32, 24, 4),
+            child: Text(
+              'How it works',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.forestDeep,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+            child: Text(
+              'Three steps from listing to closing the sale.',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.forestMid,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              _stepRow(
+                1,
+                PhosphorIconsDuotone.house,
+                'List your property',
+                'Create your free listing in minutes — add photos, price, and key details.',
+              ),
+              _stepRow(
+                2,
+                PhosphorIconsDuotone.shareNetwork,
+                'Share with buyers',
+                'Your listing appears in search results instantly. Handle viewings and offers from your dashboard.',
+              ),
+              _stepRow(
+                3,
+                PhosphorIconsDuotone.handshake,
+                'Sell direct',
+                'Accept an offer, agree terms and complete the sale — we guide you through conveyancing.',
+              ),
+            ]),
+          ),
+        ),
+
         // Features section
         SliverToBoxAdapter(
           child: Padding(
@@ -617,6 +671,77 @@ class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _stepRow(int number, PhosphorIconData icon, String title, String subtitle) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppTheme.forestMist,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: PhosphorIcon(icon, color: AppTheme.forestMid, size: 24),
+              ),
+              Positioned(
+                top: -6,
+                left: -6,
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: AppTheme.goldEmber,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$number',
+                    style: const TextStyle(
+                      color: AppTheme.forestDeep,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    color: AppTheme.charcoal,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.slate,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -1,0 +1,23 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /auth/
+Disallow: /api/
+Disallow: /dashboard/
+Disallow: /profile/
+Disallow: /my-listings/
+Disallow: /my-service/
+Disallow: /messages/
+Disallow: /offers/
+Disallow: /saved/
+Disallow: /saved-searches/
+Disallow: /staff/
+Disallow: /login/
+Disallow: /register/
+Disallow: /forgot-password/
+Disallow: /password-reset/
+Disallow: /properties/new/
+Disallow: /properties/*/edit/
+Disallow: /properties/*/complete/
+
+Sitemap: https://for-sale-by-owner.co.uk/sitemap.xml
