@@ -1478,6 +1478,71 @@ class PropertyDocumentAPITest(TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]['title'], 'Public')
 
+    def test_upload_document_without_property_in_body(self):
+        """Regression: property is injected from URL; clients must not need to send it.
+        Previously the serializer required 'property' in the request body, causing
+        'This field is required.' even when all visible fields were filled."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        url = f'/api/properties/{self.prop.id}/documents/'
+        data = {
+            'document_type': 'epc',
+            'title': 'Energy Performance Certificate',
+            'file': SimpleUploadedFile('epc.pdf', b'%PDF', content_type='application/pdf'),
+            'is_public': False,
+        }
+        # Note: 'property' is intentionally absent — it comes from the URL kwarg
+        res = self.owner_client.post(url, data, format='multipart')
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual(PropertyDocument.objects.filter(property=self.prop).count(), 1)
+        doc = PropertyDocument.objects.get(property=self.prop)
+        self.assertEqual(doc.document_type, 'epc')
+        self.assertEqual(doc.uploaded_by, self.owner)
+
+    def test_upload_document_without_title_auto_fills(self):
+        """Regression: title is optional; when omitted the view should auto-fill it
+        from the document type display name rather than returning 'This field is required.'"""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        url = f'/api/properties/{self.prop.id}/documents/'
+        data = {
+            'document_type': 'eicr',
+            'file': SimpleUploadedFile('cert.pdf', b'%PDF', content_type='application/pdf'),
+            'is_public': False,
+        }
+        # Note: 'title' is intentionally absent
+        res = self.owner_client.post(url, data, format='multipart')
+        self.assertEqual(res.status_code, 201, res.data)
+        doc = PropertyDocument.objects.get(property=self.prop)
+        # Title should be auto-filled from the EICR document type display name
+        self.assertEqual(doc.title, 'EICR / Electrical Certificate')
+
+    def test_upload_epc_document_end_to_end(self):
+        """Regression: full EPC upload matching the exact client payload — no 'property'
+        field in body, title optional — must succeed with HTTP 201."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        url = f'/api/properties/{self.prop.id}/documents/'
+        data = {
+            'document_type': 'epc',
+            'is_public': False,
+            'file': SimpleUploadedFile('epc.pdf', b'%PDF', content_type='application/pdf'),
+        }
+        res = self.owner_client.post(url, data, format='multipart')
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertIn('id', res.data)
+        self.assertEqual(res.data['document_type'], 'epc')
+        # Title should be auto-filled
+        self.assertEqual(res.data['title'], 'EPC Certificate')
+
+    def test_non_owner_cannot_upload_document(self):
+        """Non-owners should get 403 when trying to upload a document."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        url = f'/api/properties/{self.prop.id}/documents/'
+        data = {
+            'document_type': 'epc',
+            'file': SimpleUploadedFile('epc.pdf', b'%PDF', content_type='application/pdf'),
+        }
+        res = self.buyer_client.post(url, data, format='multipart')
+        self.assertEqual(res.status_code, 403)
+
 
 # ══════════════════════════════════════════════════════════════════
 # IMAGE REORDER TEST

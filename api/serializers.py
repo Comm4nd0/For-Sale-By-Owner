@@ -445,6 +445,8 @@ class PropertyDocumentSerializer(serializers.ModelSerializer):
     document_type_display = serializers.CharField(
         source='get_document_type_display', read_only=True
     )
+    # title is optional — the view auto-fills it from the document type if omitted
+    title = serializers.CharField(required=False, allow_blank=True, max_length=200)
 
     class Meta:
         model = PropertyDocument
@@ -453,7 +455,8 @@ class PropertyDocumentSerializer(serializers.ModelSerializer):
             'document_type', 'document_type_display',
             'title', 'file', 'is_public', 'uploaded_at',
         ]
-        read_only_fields = ['id', 'uploaded_by', 'uploaded_at']
+        # 'property' is injected from the URL kwarg in perform_create, not sent by the client
+        read_only_fields = ['id', 'property', 'uploaded_by', 'uploaded_at']
 
     def get_uploaded_by_name(self, obj):
         return obj.uploaded_by.get_full_name() or obj.uploaded_by.email
