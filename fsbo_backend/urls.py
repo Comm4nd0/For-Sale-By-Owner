@@ -28,6 +28,7 @@ def serve_media(request, path):
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
+    path('api/sale-tracker/', include('sale_tracker.urls')),
     path('auth/', include('djoser.urls')),
     path('auth/', include('djoser.urls.authtoken')),
 

@@ -33,7 +33,7 @@ from .models import (
     ChatRoom, ChatMessage,
     ViewingSlot, ViewingSlotBooking,
     Offer, PropertyDocument, PropertyFlag,
-    BuyerVerification, ConveyancingCase, ConveyancingStep,
+    BuyerVerification,
     OpenHouseEvent, OpenHouseRSVP,
     ConveyancerQuoteRequest, ConveyancerQuote,
     NeighbourhoodReview, BoardOrder, BuyerProfile,
@@ -54,7 +54,6 @@ from .serializers import (
     OfferSerializer, PropertyDocumentSerializer,
     PropertyFlagSerializer,
     BuyerVerificationSerializer,
-    ConveyancingCaseSerializer, ConveyancingStepSerializer,
     OpenHouseEventSerializer, OpenHouseRSVPSerializer,
     ConveyancerQuoteRequestSerializer, ConveyancerQuoteSerializer,
     NeighbourhoodReviewSerializer, BoardOrderSerializer, BuyerProfileSerializer,
@@ -1928,85 +1927,6 @@ def buyer_verification_status(request, user_pk):
         'is_verified_buyer': has_valid,
         'verified_types': types_verified,
     })
-
-
-# ── #31 Conveyancing Progress Tracker ────────────────────────────
-
-class ConveyancingCaseViewSet(viewsets.ModelViewSet):
-    """CRUD for conveyancing cases."""
-    serializer_class = ConveyancingCaseSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-        return ConveyancingCase.objects.filter(
-            Q(buyer=user) | Q(seller=user)
-        ).select_related('property', 'offer', 'buyer', 'seller').prefetch_related('steps')
-
-    def perform_create(self, serializer):
-        offer = serializer.validated_data.get('offer')
-        if not offer:
-            raise ValidationError('An accepted offer is required to create a conveyancing case.')
-        if offer.status != 'accepted':
-            raise ValidationError('Only accepted offers can start conveyancing.')
-        if offer.property.owner != self.request.user and offer.buyer != self.request.user:
-            raise PermissionDenied('You must be the buyer or seller.')
-
-        case = serializer.save(
-            buyer=offer.buyer,
-            seller=offer.property.owner,
-            property=offer.property,
-        )
-        # Create default steps
-        default_steps = [
-            ('offer_accepted', 0),
-            ('memorandum_of_sale', 1),
-            ('solicitors_instructed', 2),
-            ('draft_contract', 3),
-            ('searches_ordered', 4),
-            ('searches_received', 5),
-            ('survey_booked', 6),
-            ('survey_received', 7),
-            ('mortgage_offer', 8),
-            ('enquiries_raised', 9),
-            ('enquiries_answered', 10),
-            ('ready_to_exchange', 11),
-            ('exchanged', 12),
-            ('completion', 13),
-        ]
-        for step_type, order in default_steps:
-            ConveyancingStep.objects.create(
-                case=case, step_type=step_type, order=order,
-                status='completed' if step_type == 'offer_accepted' else 'pending',
-                completed_at=timezone.now() if step_type == 'offer_accepted' else None,
-            )
-
-
-@api_view(['PATCH'])
-@permission_classes([permissions.IsAuthenticated])
-def update_conveyancing_step(request, case_pk, step_pk):
-    """Update a conveyancing step status."""
-    case = get_object_or_404(ConveyancingCase, pk=case_pk)
-    if case.buyer != request.user and case.seller != request.user:
-        raise PermissionDenied('You are not part of this conveyancing case.')
-
-    step = get_object_or_404(ConveyancingStep, pk=step_pk, case=case)
-    new_status = request.data.get('status')
-    if new_status and new_status in dict(ConveyancingStep.STATUS_CHOICES):
-        step.status = new_status
-        if new_status == 'completed':
-            step.completed_at = timezone.now()
-        step.notes = request.data.get('notes', step.notes)
-        step.save()
-
-        # Trigger nudge check
-        try:
-            from .tasks import check_conveyancing_stale_steps
-            check_conveyancing_stale_steps.delay(case.pk)
-        except Exception:
-            pass
-
-    return Response(ConveyancingStepSerializer(step).data)
 
 
 # ── #32 AI-Powered Listing Description Generator ─────────────────

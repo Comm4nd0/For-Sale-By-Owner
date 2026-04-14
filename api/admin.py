@@ -13,7 +13,7 @@ from .models import (
     ChatRoom, ChatMessage,
     ViewingSlot, ViewingSlotBooking,
     Offer, PropertyDocument, PropertyFlag,
-    BuyerVerification, ConveyancingCase, ConveyancingStep,
+    BuyerVerification,
     OpenHouseEvent, OpenHouseRSVP,
     ConveyancerQuoteRequest, ConveyancerQuote,
     NeighbourhoodReview, BoardOrder, BuyerProfile,
@@ -362,19 +362,6 @@ class BuyerVerificationAdmin(admin.ModelAdmin):
     @admin.action(description='Reject verifications')
     def reject_verifications(self, request, qs):
         qs.update(status='rejected', reviewed_at=timezone.now())
-
-
-class ConveyancingStepInline(admin.TabularInline):
-    model = ConveyancingStep
-    extra = 0
-    fields = ['step_type', 'status', 'notes', 'completed_at', 'order']
-
-
-@admin.register(ConveyancingCase)
-class ConveyancingCaseAdmin(admin.ModelAdmin):
-    list_display = ['property', 'buyer', 'seller', 'status', 'created_at']
-    list_filter = ['status']
-    inlines = [ConveyancingStepInline]
 
 
 @admin.register(OpenHouseEvent)

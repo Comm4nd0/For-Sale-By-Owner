@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django_celery_beat',
     # Local
     'api',
+    'sale_tracker',
 ]
 
 # Add daphne and channels if available (requires native dependencies)
