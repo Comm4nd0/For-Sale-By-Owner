@@ -1809,8 +1809,45 @@ def house_price_lookup(request):
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
 def health_check(request):
-    """Health check endpoint for monitoring."""
-    return Response({'status': 'healthy', 'version': '2.0.0'})
+    """Health check endpoint for monitoring and deploy scripts.
+
+    Returns 200 only when the database and cache are both reachable.
+    A non-2xx response tells deploy.sh / monitors that the container
+    should not be serving traffic yet.
+    """
+    checks = {}
+    overall_ok = True
+
+    # Database: a minimal round-trip confirms migrations have run and
+    # the connection pool is alive.
+    try:
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT 1')
+            cursor.fetchone()
+        checks['database'] = 'ok'
+    except Exception as exc:
+        checks['database'] = f'error: {exc.__class__.__name__}'
+        overall_ok = False
+
+    # Cache: set/get a short-lived key. Covers Redis-backed cache in
+    # prod and LocMemCache under USE_SQLITE so the check doesn't lie
+    # in tests.
+    try:
+        cache.set('health-check', '1', 5)
+        if cache.get('health-check') == '1':
+            checks['cache'] = 'ok'
+        else:
+            checks['cache'] = 'error: value mismatch'
+            overall_ok = False
+    except Exception as exc:
+        checks['cache'] = f'error: {exc.__class__.__name__}'
+        overall_ok = False
+
+    return Response(
+        {'status': 'healthy' if overall_ok else 'unhealthy', 'checks': checks},
+        status=status.HTTP_200_OK if overall_ok else status.HTTP_503_SERVICE_UNAVAILABLE,
+    )
 
 
 # ══════════════════════════════════════════════════════════════════
