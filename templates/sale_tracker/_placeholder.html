@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% comment %}
+Shared placeholder for Sale Tracker pages that are wired into urls.py
+but whose full implementation lands in a later phase. Prevents 500s
+from TemplateDoesNotExist while the feature is being built out.
+
+Pages that include this set {% block st_page %} to a label such as
+'documents' so the sub-nav highlights correctly.
+{% endcomment %}
+
+{% block title %}{% block st_title %}Sale Tracker{% endblock %} — For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+{% include "sale_tracker/_shared.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="st-layout">
+    <aside id="st-subnav" class="st-subnav"></aside>
+    <div>
+        <div class="st-page-header">
+            <h2 class="st-page-title">{% block st_heading %}Coming soon{% endblock %}</h2>
+        </div>
+        <div class="st-card st-empty">
+            <p><strong>{% block st_body %}This view is being built next.{% endblock %}</strong></p>
+            <p class="st-meta">Until then, the mobile app has the full feature. The API already exists — only the web UI is catching up.</p>
+            <a id="back-link" href="/sale-tracker/" class="btn btn-secondary">Back to dashboard</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+    ST.saleId = parseInt(window.location.pathname.split('/').filter(Boolean)[1], 10);
+    ST.renderSubnav(ST.saleId, '{% block st_nav %}{% endblock %}');
+    const backLink = document.getElementById('back-link');
+    if (backLink) backLink.href = `/sale-tracker/${ST.saleId}/`;
+</script>
+{% endblock %}

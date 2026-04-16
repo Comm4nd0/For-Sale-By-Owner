@@ -101,6 +101,19 @@ urlpatterns = [
     path('price-comparison/', CSRFTemplateView.as_view(template_name='price_comparison.html'), name='price-comparison'),
     path('how-it-works/', CSRFTemplateView.as_view(template_name='how_it_works.html'), name='how-it-works'),
 
+    # Sale Tracker (web parity with the mobile Sale Tracker feature)
+    path('sale-tracker/', CSRFTemplateView.as_view(template_name='sale_tracker/list.html'), name='sale-tracker-list'),
+    path('sale-tracker/new/', CSRFTemplateView.as_view(template_name='sale_tracker/setup.html'), name='sale-tracker-setup'),
+    path('sale-tracker/<int:sale_id>/', CSRFTemplateView.as_view(template_name='sale_tracker/dashboard.html'), name='sale-tracker-dashboard'),
+    path('sale-tracker/<int:sale_id>/stages/', CSRFTemplateView.as_view(template_name='sale_tracker/stages.html'), name='sale-tracker-stages'),
+    path('sale-tracker/<int:sale_id>/tasks/<int:task_id>/', CSRFTemplateView.as_view(template_name='sale_tracker/task.html'), name='sale-tracker-task'),
+    path('sale-tracker/<int:sale_id>/documents/', CSRFTemplateView.as_view(template_name='sale_tracker/documents.html'), name='sale-tracker-documents'),
+    path('sale-tracker/<int:sale_id>/contact-log/', CSRFTemplateView.as_view(template_name='sale_tracker/contact_log.html'), name='sale-tracker-contact-log'),
+    path('sale-tracker/<int:sale_id>/enquiries/', CSRFTemplateView.as_view(template_name='sale_tracker/enquiries.html'), name='sale-tracker-enquiries'),
+    path('sale-tracker/<int:sale_id>/timeline/', CSRFTemplateView.as_view(template_name='sale_tracker/timeline.html'), name='sale-tracker-timeline'),
+    path('sale-tracker/<int:sale_id>/prompts/', CSRFTemplateView.as_view(template_name='sale_tracker/prompts.html'), name='sale-tracker-prompts'),
+    path('sale-tracker/<int:sale_id>/settings/', CSRFTemplateView.as_view(template_name='sale_tracker/settings.html'), name='sale-tracker-settings'),
+
     # Legal pages
     path('terms/', CSRFTemplateView.as_view(template_name='terms.html'), name='terms'),
     path('privacy/', CSRFTemplateView.as_view(template_name='privacy.html'), name='privacy'),

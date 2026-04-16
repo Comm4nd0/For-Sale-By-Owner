@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}My sales — Sale Tracker — For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+{% include "sale_tracker/_shared.html" %}
+<style>
+    .sale-card { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; transition: box-shadow 0.2s; }
+    .sale-card:hover { box-shadow: 0 2px 8px rgba(26,60,46,0.08); }
+    .sale-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+    .sale-card h3 { margin: 0; color: #115E66; font-size: 1.1rem; }
+    .sale-card h3 a { color: inherit; text-decoration: none; }
+    .sale-card h3 a:hover { text-decoration: underline; }
+    .sale-meta-row { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 0.5rem; color: #4A5C62; font-size: 0.9rem; }
+    .sale-progress { margin-top: 0.75rem; }
+    .sale-progress .bar { height: 6px; background: #E2E2E2; border-radius: 3px; overflow: hidden; }
+    .sale-progress .bar > div { height: 100%; background: #19747E; transition: width 0.3s; }
+    .sale-progress .label { margin-top: 0.25rem; font-size: 0.8rem; color: #4A5C62; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="st-page-header">
+    <h2 class="st-page-title">Sale Tracker</h2>
+    <a href="/sale-tracker/new/" class="btn btn-primary">+ New sale</a>
+</div>
+<div id="error" class="alert alert-error" style="display:none;"></div>
+<div id="sales" class="st-loading">Loading your sales…</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+
+    async function loadSales() {
+        const container = document.getElementById('sales');
+        const errorEl = document.getElementById('error');
+        try {
+            const res = await Auth.authFetch('/api/sale-tracker/sales/', { headers: Auth.headers() });
+            if (!res.ok) throw new Error(`Request failed (${res.status})`);
+            const data = await res.json();
+            const sales = data.results || data;
+
+            if (!sales.length) {
+                container.classList.remove('st-loading');
+                container.innerHTML = `
+                    <div class="st-empty">
+                        <p>You haven't set up any sales yet.</p>
+                        <p class="st-meta">Sale Tracker helps you manage the conveyancing process once your property has an accepted offer — track the stages from instruction through to completion, keep documents in one place, and see who you're waiting on.</p>
+                        <a href="/sale-tracker/new/" class="btn btn-primary">Set up your first sale</a>
+                    </div>`;
+                return;
+            }
+
+            container.classList.remove('st-loading');
+            container.innerHTML = sales.map(s => {
+                const total = s.total_tasks || 0;
+                const done = s.completed_tasks || 0;
+                const pct = total > 0 ? Math.round(done / total * 100) : 0;
+                const stageLabel = s.current_stage_name
+                    ? `Stage ${s.current_stage_number}: ${escHtml(s.current_stage_name)}`
+                    : 'Setup';
+                return `
+                <div class="sale-card">
+                    <div class="sale-card-head">
+                        <div>
+                            <h3><a href="/sale-tracker/${s.id}/">${escHtml(s.property_address || 'Untitled sale')}</a></h3>
+                            <div class="sale-meta-row">
+                                <span>${ST.statusPill(s.status, s.status_display)}</span>
+                                <span>${stageLabel}</span>
+                                ${s.agreed_price ? `<span>Agreed ${ST.formatMoney(s.agreed_price)}</span>` : (s.asking_price ? `<span>Asking ${ST.formatMoney(s.asking_price)}</span>` : '')}
+                            </div>
+                        </div>
+                        <a href="/sale-tracker/${s.id}/" class="btn btn-secondary">Open</a>
+                    </div>
+                    <div class="sale-progress">
+                        <div class="bar"><div style="width:${pct}%"></div></div>
+                        <div class="label">${done} of ${total} tasks complete (${pct}%)</div>
+                    </div>
+                </div>`;
+            }).join('');
+        } catch (err) {
+            container.classList.remove('st-loading');
+            container.innerHTML = '';
+            errorEl.textContent = `Failed to load sales: ${err.message}`;
+            errorEl.style.display = 'block';
+        }
+    }
+
+    loadSales();
+</script>
+{% endblock %}
