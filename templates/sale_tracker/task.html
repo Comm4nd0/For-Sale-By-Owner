@@ -1,5 +1,187 @@
-{% extends "sale_tracker/_placeholder.html" %}
-{% block st_title %}Task — Sale Tracker{% endblock %}
-{% block st_heading %}Task detail{% endblock %}
-{% block st_body %}Task detail UI lands in Phase 2.{% endblock %}
-{% block st_nav %}stages{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Task — Sale Tracker — For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+{% include "sale_tracker/_shared.html" %}
+<style>
+    .task-head { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
+    .task-head h2 { color: #115E66; margin: 0 0 0.25rem; }
+    .task-meta-row { display: flex; gap: 1rem; flex-wrap: wrap; color: #4A5C62; font-size: 0.9rem; margin-top: 0.5rem; }
+    .history-item { padding: 0.6rem 0; border-bottom: 1px solid #F5F8F9; color: #4A5C62; font-size: 0.9rem; }
+    .history-item:last-child { border-bottom: none; }
+    .history-item .when { color: #8FA3A8; font-size: 0.8rem; }
+    .reassign-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    @media (max-width: 500px) { .reassign-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="st-layout">
+    <aside id="st-subnav" class="st-subnav"></aside>
+    <div>
+        <div class="st-page-header">
+            <h2 class="st-page-title">Task</h2>
+            <a id="back-link" href="#" class="btn btn-secondary">Back to stages</a>
+        </div>
+        <div id="error" class="alert alert-error" style="display:none;"></div>
+        <div id="success" class="alert alert-success" style="display:none;"></div>
+        <div id="task-content" class="st-loading">Loading task…</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    ST.saleId = parseInt(pathParts[1], 10);
+    const taskId = parseInt(pathParts[3], 10);
+    ST.renderSubnav(ST.saleId, 'stages');
+    document.getElementById('back-link').href = `/sale-tracker/${ST.saleId}/stages/`;
+
+    async function loadTask() {
+        const content = document.getElementById('task-content');
+        const errorEl = document.getElementById('error');
+        try {
+            const task = await ST.fetch(`tasks/${taskId}/`);
+            content.classList.remove('st-loading');
+
+            const history = task.ownership_history || [];
+            const statusLabel = (task.status_display || task.status || '').replace('_', ' ');
+            const ownerLabel = task.current_owner_display || task.current_owner || '—';
+
+            content.innerHTML = `
+                <div class="task-head">
+                    <h2>${escHtml(task.title)}</h2>
+                    <div>${ST.statusPill(task.status, statusLabel)} · Owner: <strong>${escHtml(ownerLabel)}</strong></div>
+                    <div class="task-meta-row">
+                        ${task.due_date ? `<span>Due ${ST.formatDate(task.due_date)}</span>` : ''}
+                        ${task.awaiting_since ? `<span>Awaiting since ${ST.formatDate(task.awaiting_since)}</span>` : ''}
+                        ${task.completed_at ? `<span>Completed ${ST.formatDate(task.completed_at)}</span>` : ''}
+                    </div>
+                    ${task.description ? `<p class="st-meta" style="margin-top:0.75rem;">${escHtml(task.description)}</p>` : ''}
+                </div>
+
+                ${task.status !== 'done' && task.status !== 'n_a' ? `
+                <div class="st-card">
+                    <h3>Actions</h3>
+                    <div class="st-inline-btns">
+                        <button class="btn btn-primary" id="complete-btn">Mark complete</button>
+                    </div>
+                </div>
+
+                <div class="st-card">
+                    <h3>Reassign</h3>
+                    <p class="st-meta" style="margin-bottom:0.75rem;">Transfer responsibility to another party. An audit entry is added below.</p>
+                    <div class="reassign-grid">
+                        <div class="st-form-group">
+                            <label for="new-owner">New owner</label>
+                            <select id="new-owner">
+                                <option value="seller">Seller (you)</option>
+                                <option value="seller_conveyancer">Your conveyancer</option>
+                                <option value="buyer_conveyancer">Buyer's conveyancer</option>
+                                <option value="buyer">Buyer</option>
+                                <option value="estate_agent">Estate agent</option>
+                                <option value="lender">Lender</option>
+                                <option value="freeholder_or_managing_agent">Freeholder / managing agent</option>
+                                <option value="surveyor">Surveyor</option>
+                                <option value="local_authority_or_search_provider">Local authority / search provider</option>
+                            </select>
+                        </div>
+                        <div class="st-form-group">
+                            <label for="reason">Reason (optional)</label>
+                            <input type="text" id="reason" placeholder="e.g. waiting on survey response">
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" id="reassign-btn">Reassign</button>
+                </div>
+                ` : ''}
+
+                <div class="st-card">
+                    <h3>History</h3>
+                    ${history.length ? history.map(h => `
+                        <div class="history-item">
+                            <strong>${escHtml(h.from_owner_display || h.from_owner)}</strong>
+                            →
+                            <strong>${escHtml(h.to_owner_display || h.to_owner)}</strong>
+                            ${h.reason ? ` — ${escHtml(h.reason)}` : ''}
+                            <div class="when">${ST.formatDate(h.transferred_at)}</div>
+                        </div>
+                    `).join('') : '<p class="st-meta">No ownership changes yet.</p>'}
+                </div>
+
+                ${task.notes ? `
+                <div class="st-card">
+                    <h3>Notes</h3>
+                    <p class="st-meta" style="white-space:pre-wrap;">${escHtml(task.notes)}</p>
+                </div>
+                ` : ''}
+            `;
+
+            const completeBtn = document.getElementById('complete-btn');
+            const reassignBtn = document.getElementById('reassign-btn');
+            if (completeBtn) completeBtn.addEventListener('click', markComplete);
+            if (reassignBtn) reassignBtn.addEventListener('click', reassignTask);
+        } catch (err) {
+            content.classList.remove('st-loading');
+            content.innerHTML = '';
+            errorEl.textContent = `Failed to load task: ${err.message}`;
+            errorEl.style.display = 'block';
+        }
+    }
+
+    async function markComplete() {
+        const btn = document.getElementById('complete-btn');
+        btn.disabled = true;
+        btn.textContent = 'Saving…';
+        try {
+            await ST.fetch(`tasks/${taskId}/complete/`, { method: 'POST' });
+            showSuccess('Task marked complete.');
+            loadTask();
+        } catch (err) {
+            btn.disabled = false;
+            btn.textContent = 'Mark complete';
+            showError(err.message);
+        }
+    }
+
+    async function reassignTask() {
+        const btn = document.getElementById('reassign-btn');
+        const newOwner = document.getElementById('new-owner').value;
+        const reason = document.getElementById('reason').value.trim();
+        btn.disabled = true;
+        btn.textContent = 'Saving…';
+        try {
+            await ST.fetch(`tasks/${taskId}/reassign/`, {
+                method: 'POST',
+                body: JSON.stringify({ new_owner: newOwner, reason }),
+            });
+            showSuccess(`Task reassigned to ${newOwner}.`);
+            loadTask();
+        } catch (err) {
+            btn.disabled = false;
+            btn.textContent = 'Reassign';
+            showError(err.message);
+        }
+    }
+
+    function showError(msg) {
+        const el = document.getElementById('error');
+        el.textContent = msg;
+        el.style.display = 'block';
+        document.getElementById('success').style.display = 'none';
+    }
+
+    function showSuccess(msg) {
+        const el = document.getElementById('success');
+        el.textContent = msg;
+        el.style.display = 'block';
+        document.getElementById('error').style.display = 'none';
+        setTimeout(() => { el.style.display = 'none'; }, 3000);
+    }
+
+    loadTask();
+</script>
+{% endblock %}
