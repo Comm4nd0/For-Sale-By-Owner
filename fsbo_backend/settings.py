@@ -1,13 +1,24 @@
 """Django settings for fsbo_backend project."""
 import os
 from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev-key-change-me')
+# USE_SQLITE is read here so the SECRET_KEY fallback is only allowed during
+# local dev / CI runs that explicitly opt in to SQLite.
+USE_SQLITE = os.getenv('USE_SQLITE', 'False').lower() in ('true', '1', 'yes')
+
+_DEV_SECRET_KEY = 'django-insecure-dev-key-change-me'
+SECRET_KEY = os.getenv('SECRET_KEY', _DEV_SECRET_KEY if USE_SQLITE else '')
+if not SECRET_KEY:
+    raise ImproperlyConfigured(
+        'SECRET_KEY is required. Set the SECRET_KEY environment variable '
+        '(or run with USE_SQLITE=True for local development).'
+    )
 
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
@@ -87,9 +98,8 @@ TEMPLATES = [
 WSGI_APPLICATION = 'fsbo_backend.wsgi.application'
 ASGI_APPLICATION = 'fsbo_backend.asgi.application'
 
-# Database
-USE_SQLITE = os.getenv('USE_SQLITE', 'False').lower() in ('true', '1', 'yes')
-
+# Database (USE_SQLITE is read at the top of this file so the SECRET_KEY
+# fallback can be keyed off it)
 if USE_SQLITE:
     DATABASES = {
         'default': {

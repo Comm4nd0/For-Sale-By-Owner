@@ -2,6 +2,7 @@ import re
 
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
+from .validators import validate_document_file
 from .models import (
     Property, PropertyImage, PropertyFloorplan, PropertyFeature,
     PriceHistory, SavedProperty, PropertyView,
@@ -72,6 +73,10 @@ class PropertyFloorplanSerializer(serializers.ModelSerializer):
         model = PropertyFloorplan
         fields = ['id', 'file', 'title', 'order', 'uploaded_at']
         read_only_fields = ['id', 'uploaded_at']
+
+    def validate_file(self, value):
+        validate_document_file(value)
+        return value
 
 
 class PropertyFeatureSerializer(serializers.ModelSerializer):
@@ -457,6 +462,10 @@ class PropertyDocumentSerializer(serializers.ModelSerializer):
         ]
         # 'property' is injected from the URL kwarg in perform_create, not sent by the client
         read_only_fields = ['id', 'property', 'uploaded_by', 'uploaded_at']
+
+    def validate_file(self, value):
+        validate_document_file(value)
+        return value
 
     def get_uploaded_by_name(self, obj):
         return obj.uploaded_by.get_full_name() or obj.uploaded_by.email

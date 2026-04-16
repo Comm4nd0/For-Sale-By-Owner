@@ -238,11 +238,13 @@ class PropertyImageViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         try:
             return super().create(request, *args, **kwargs)
-        except Exception as e:
-            import traceback
-            logger.error(f"Image upload failed: {e}\n{traceback.format_exc()}")
+        except (PermissionDenied, ValidationError):
+            # Let DRF's exception handler turn these into 4xx responses.
+            raise
+        except Exception:
+            logger.exception("Image upload failed")
             return Response(
-                {"detail": f"Upload error: {type(e).__name__}: {e}"},
+                {"detail": "Upload failed. Please try again."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -2873,6 +2875,15 @@ def _generate_totp(secret, time_step=30):
     return f'{code:06d}'
 
 
+def _totp_matches(secret, submitted_code):
+    """Constant-time comparison of a submitted TOTP code against the expected value."""
+    import hmac
+    if not secret or not submitted_code:
+        return False
+    expected = _generate_totp(secret)
+    return hmac.compare_digest(str(submitted_code), expected)
+
+
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def confirm_2fa(request):
@@ -2883,8 +2894,7 @@ def confirm_2fa(request):
     if not user.two_fa_secret:
         return Response({'error': 'Please set up 2FA first via /api/2fa/setup/'}, status=400)
 
-    expected = _generate_totp(user.two_fa_secret)
-    if code != expected:
+    if not _totp_matches(user.two_fa_secret, code):
         return Response({'error': 'Invalid code. Please try again.'}, status=400)
 
     user.two_fa_enabled = True
@@ -2903,8 +2913,7 @@ def disable_2fa(request):
     if not user.two_fa_enabled:
         return Response({'error': '2FA is not enabled.'}, status=400)
 
-    expected = _generate_totp(user.two_fa_secret)
-    if code != expected:
+    if not _totp_matches(user.two_fa_secret, code):
         return Response({'error': 'Invalid code.'}, status=400)
 
     user.two_fa_enabled = False
@@ -2932,8 +2941,7 @@ def verify_2fa(request):
     if not user.two_fa_enabled:
         return Response({'error': '2FA is not enabled for this account.'}, status=400)
 
-    expected = _generate_totp(user.two_fa_secret)
-    if code != expected:
+    if not _totp_matches(user.two_fa_secret, code):
         return Response({'error': 'Invalid 2FA code.'}, status=400)
 
     # Generate or retrieve token

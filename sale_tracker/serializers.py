@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
+from api.validators import validate_document_file
 from .models import (
     Sale, Stage, Task, TaskOwnershipHistory, Document,
     DocumentDelivery, DocumentAccessLog, ContactLog, Enquiry,
@@ -139,6 +140,10 @@ class DocumentUploadSerializer(serializers.Serializer):
         required=False,
         help_text='ID of existing document record to attach file to',
     )
+
+    def validate_file(self, value):
+        validate_document_file(value)
+        return value
 
 
 class DocumentChecklistItemSerializer(serializers.Serializer):

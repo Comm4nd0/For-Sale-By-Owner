@@ -3,6 +3,23 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import '../constants/api_constants.dart';
+
+/// HTTP client that enforces a request timeout on every call so no single
+/// API request can hang the UI indefinitely.
+class _TimeoutClient extends http.BaseClient {
+  _TimeoutClient(this._inner, this._timeout);
+
+  final http.Client _inner;
+  final Duration _timeout;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    return _inner.send(request).timeout(_timeout);
+  }
+
+  @override
+  void close() => _inner.close();
+}
 import '../models/paginated_response.dart';
 import '../models/property.dart';
 import '../models/property_image.dart';
@@ -42,6 +59,11 @@ class ApiService {
   }
 
   static const _timeout = Duration(seconds: 15);
+
+  /// Shared HTTP client that applies [_timeout] to every request. All API
+  /// calls in this file should go through [_http] rather than the top-level
+  /// `http.get`/`http.post` helpers so that a slow server can't hang the UI.
+  late final http.Client _http = _TimeoutClient(http.Client(), _timeout);
 
   String _extractError(http.Response response) {
     try {
@@ -116,7 +138,7 @@ class ApiService {
 
     final uri =
         Uri.parse(ApiConstants.properties).replace(queryParameters: params);
-    final response = await http.get(uri, headers: _headers);
+    final response = await _http.get(uri, headers: _headers);
 
     if (response.statusCode == 200) {
       return PaginatedResponse.fromJson(
@@ -128,7 +150,7 @@ class ApiService {
   }
 
   Future<Property> getProperty(int id) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.propertyDetail(id)),
       headers: _headers,
     );
@@ -139,7 +161,7 @@ class ApiService {
   }
 
   Future<Property> createProperty(Map<String, dynamic> body) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.properties),
       headers: _headers,
       body: jsonEncode(body),
@@ -151,7 +173,7 @@ class ApiService {
   }
 
   Future<Property> updateProperty(int id, Map<String, dynamic> body) async {
-    final response = await http.patch(
+    final response = await _http.patch(
       Uri.parse(ApiConstants.propertyDetail(id)),
       headers: _headers,
       body: jsonEncode(body),
@@ -204,7 +226,7 @@ class ApiService {
       if (epcRating != null && epcRating.isNotEmpty) 'epc_rating': epcRating,
       if (featureNames.isNotEmpty) 'features': featureNames,
     };
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.generateDescription),
       headers: _headers,
       body: jsonEncode(body),
@@ -217,7 +239,7 @@ class ApiService {
   }
 
   Future<void> deleteProperty(int id) async {
-    final response = await http.delete(
+    final response = await _http.delete(
       Uri.parse(ApiConstants.propertyDetail(id)),
       headers: _headers,
     );
@@ -227,7 +249,7 @@ class ApiService {
   }
 
   Future<List<Property>> getSimilarProperties(int id) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.propertySimilar(id)),
       headers: _headers,
     );
@@ -241,7 +263,7 @@ class ApiService {
   // ── Features ────────────────────────────────────────────────────────
 
   Future<List<PropertyFeature>> getFeatures() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.features),
       headers: _headers,
     );
@@ -271,7 +293,7 @@ class ApiService {
   }
 
   Future<void> deletePropertyImage(int propertyId, int imageId) async {
-    final response = await http.delete(
+    final response = await _http.delete(
       Uri.parse(ApiConstants.propertyImage(propertyId, imageId)),
       headers: _authHeaders,
     );
@@ -292,7 +314,7 @@ class ApiService {
     if (isPrimary != null) body['is_primary'] = isPrimary;
     if (caption != null) body['caption'] = caption;
 
-    final response = await http.patch(
+    final response = await _http.patch(
       Uri.parse(ApiConstants.propertyImage(propertyId, imageId)),
       headers: _headers,
       body: jsonEncode(body),
@@ -303,7 +325,7 @@ class ApiService {
   }
 
   Future<void> reorderImages(int propertyId, List<int> order) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.propertyImagesReorder(propertyId)),
       headers: _headers,
       body: jsonEncode({'order': order}),
@@ -335,7 +357,7 @@ class ApiService {
   }
 
   Future<void> deleteFloorplan(int propertyId, int floorplanId) async {
-    final response = await http.delete(
+    final response = await _http.delete(
       Uri.parse(ApiConstants.propertyFloorplan(propertyId, floorplanId)),
       headers: _authHeaders,
     );
@@ -349,8 +371,8 @@ class ApiService {
   Future<bool> toggleSaveProperty(int propertyId, {required bool save}) async {
     final uri = Uri.parse(ApiConstants.propertySave(propertyId));
     final response = save
-        ? await http.post(uri, headers: _headers)
-        : await http.delete(uri, headers: _headers);
+        ? await _http.post(uri, headers: _headers)
+        : await _http.delete(uri, headers: _headers);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       if (response.body.isNotEmpty) {
@@ -366,7 +388,7 @@ class ApiService {
       {int page = 1}) async {
     final uri = Uri.parse(ApiConstants.savedProperties)
         .replace(queryParameters: {'page': page.toString()});
-    final response = await http.get(uri, headers: _headers);
+    final response = await _http.get(uri, headers: _headers);
 
     if (response.statusCode == 200) {
       return PaginatedResponse.fromJson(
@@ -378,7 +400,7 @@ class ApiService {
   }
 
   Future<void> removeSavedProperty(int id) async {
-    final response = await http.delete(
+    final response = await _http.delete(
       Uri.parse(ApiConstants.savedProperty(id)),
       headers: _headers,
     );
@@ -393,7 +415,7 @@ class ApiService {
       {int page = 1}) async {
     final uri = Uri.parse(ApiConstants.receivedViewings)
         .replace(queryParameters: {'page': page.toString()});
-    final response = await http.get(uri, headers: _headers);
+    final response = await _http.get(uri, headers: _headers);
 
     if (response.statusCode == 200) {
       return PaginatedResponse.fromJson(
@@ -427,7 +449,7 @@ class ApiService {
     }
     if (message != null && message.isNotEmpty) body['message'] = message;
 
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.viewings),
       headers: _headers,
       body: jsonEncode(body),
@@ -443,7 +465,7 @@ class ApiService {
     final body = <String, dynamic>{'status': status};
     if (sellerNotes != null) body['seller_notes'] = sellerNotes;
 
-    final response = await http.patch(
+    final response = await _http.patch(
       Uri.parse(ApiConstants.viewingUpdateStatus(id)),
       headers: _headers,
       body: jsonEncode(body),
@@ -454,7 +476,7 @@ class ApiService {
   }
 
   Future<Reply> replyToViewing(int id, String message) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.viewingReply(id)),
       headers: _headers,
       body: jsonEncode({'message': message}),
@@ -468,7 +490,7 @@ class ApiService {
   // ── Saved Searches ──────────────────────────────────────────────────
 
   Future<List<SavedSearch>> getSavedSearches() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.savedSearches),
       headers: _headers,
     );
@@ -481,7 +503,7 @@ class ApiService {
   }
 
   Future<SavedSearch> createSavedSearch(Map<String, dynamic> body) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.savedSearches),
       headers: _headers,
       body: jsonEncode(body),
@@ -493,7 +515,7 @@ class ApiService {
   }
 
   Future<void> deleteSavedSearch(int id) async {
-    final response = await http.delete(
+    final response = await _http.delete(
       Uri.parse(ApiConstants.savedSearch(id)),
       headers: _headers,
     );
@@ -503,7 +525,7 @@ class ApiService {
   }
 
   Future<void> toggleSearchAlerts(int id, bool enabled) async {
-    final response = await http.patch(
+    final response = await _http.patch(
       Uri.parse(ApiConstants.savedSearch(id)),
       headers: _headers,
       body: jsonEncode({'email_alerts': enabled}),
@@ -516,7 +538,7 @@ class ApiService {
   // ── Dashboard & Notifications ───────────────────────────────────────
 
   Future<DashboardStats> getDashboardStats() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.dashboardStats),
       headers: _headers,
     );
@@ -527,7 +549,7 @@ class ApiService {
   }
 
   Future<NotificationCounts> getNotificationCounts() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.notificationCounts),
       headers: _headers,
     );
@@ -540,7 +562,7 @@ class ApiService {
   // ── Profile ─────────────────────────────────────────────────────────
 
   Future<UserProfile> getProfile() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.profile),
       headers: _headers,
     );
@@ -551,7 +573,7 @@ class ApiService {
   }
 
   Future<UserProfile> updateProfile(Map<String, dynamic> body) async {
-    final response = await http.patch(
+    final response = await _http.patch(
       Uri.parse(ApiConstants.profile),
       headers: _headers,
       body: jsonEncode(body),
@@ -564,7 +586,7 @@ class ApiService {
 
   Future<bool> changePassword(
       String currentPassword, String newPassword, String reNewPassword) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.changePassword),
       headers: _headers,
       body: jsonEncode({
@@ -579,7 +601,7 @@ class ApiService {
   // ── Service Providers ────────────────────────────────────────────────
 
   Future<List<ServiceCategory>> getServiceCategories() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.serviceCategories),
       headers: _headers,
     ).timeout(_timeout);
@@ -603,7 +625,7 @@ class ApiService {
 
     final uri = Uri.parse(ApiConstants.serviceProviders)
         .replace(queryParameters: params);
-    final response = await http.get(uri, headers: _headers).timeout(_timeout);
+    final response = await _http.get(uri, headers: _headers).timeout(_timeout);
 
     if (response.statusCode == 200) {
       return PaginatedResponse.fromJson(
@@ -615,7 +637,7 @@ class ApiService {
   }
 
   Future<ServiceProvider> getServiceProvider(dynamic idOrSlug) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.serviceProviderDetail(idOrSlug)),
       headers: _headers,
     ).timeout(_timeout);
@@ -627,7 +649,7 @@ class ApiService {
 
   Future<ServiceProvider> createServiceProvider(
       Map<String, dynamic> body) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.serviceProviders),
       headers: _headers,
       body: jsonEncode(body),
@@ -641,7 +663,7 @@ class ApiService {
 
   Future<ServiceProvider> updateServiceProvider(
       int id, Map<String, dynamic> body) async {
-    final response = await http.patch(
+    final response = await _http.patch(
       Uri.parse(ApiConstants.serviceProviderDetail(id)),
       headers: _headers,
       body: jsonEncode(body),
@@ -655,7 +677,7 @@ class ApiService {
 
   Future<List<ServiceProviderReview>> getServiceProviderReviews(
       int providerId) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.serviceProviderReviews(providerId)),
       headers: _headers,
     ).timeout(_timeout);
@@ -670,7 +692,7 @@ class ApiService {
 
   Future<ServiceProviderReview> createReview(
       int providerId, int rating, String comment) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.serviceProviderReviews(providerId)),
       headers: _headers,
       body: jsonEncode({'rating': rating, 'comment': comment}),
@@ -682,7 +704,7 @@ class ApiService {
   }
 
   Future<void> deleteReview(int providerId, int reviewId) async {
-    final response = await http.delete(
+    final response = await _http.delete(
       Uri.parse(ApiConstants.serviceProviderReview(providerId, reviewId)),
       headers: _headers,
     );
@@ -692,7 +714,7 @@ class ApiService {
   }
 
   Future<List<ServiceProvider>> getPropertyServices(int propertyId) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.propertyServices(propertyId)),
       headers: _headers,
     );
@@ -706,7 +728,7 @@ class ApiService {
   // ── Staff Service Management ────────────────────────────────────────
 
   Future<Map<String, dynamic>> getServiceProviderStats() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.staffServiceStats),
       headers: _headers,
     ).timeout(_timeout);
@@ -717,7 +739,7 @@ class ApiService {
   }
 
   Future<int> bulkProviderAction(List<int> providerIds, String action) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.staffServiceActions),
       headers: _headers,
       body: jsonEncode({'provider_ids': providerIds, 'action': action}),
@@ -733,7 +755,7 @@ class ApiService {
     final body = <String, dynamic>{};
     if (status != null) body['status'] = status;
     if (isVerified != null) body['is_verified'] = isVerified;
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.serviceProviderValidate(providerId)),
       headers: _headers,
       body: jsonEncode(body),
@@ -747,7 +769,7 @@ class ApiService {
   // ── Subscriptions / Pricing ─────────────────────────────────────────
 
   Future<Map<String, dynamic>> getPricing() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.pricing),
       headers: _headers,
     );
@@ -758,7 +780,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getMySubscription() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.mySubscription),
       headers: _headers,
     );
@@ -769,7 +791,7 @@ class ApiService {
   }
 
   Future<String> createCheckout(String tierSlug, String billingCycle) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.createCheckout),
       headers: _headers,
       body: jsonEncode({
@@ -786,7 +808,7 @@ class ApiService {
   }
 
   Future<String> createPortal() async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.createPortal),
       headers: _headers,
       body: jsonEncode({}),
@@ -802,7 +824,7 @@ class ApiService {
   // ── Chat Rooms ──────────────────────────────────────────────────────
 
   Future<List<ChatRoom>> getChatRooms() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.chatRooms),
       headers: _headers,
     );
@@ -823,7 +845,7 @@ class ApiService {
     if (message != null && message.isNotEmpty) {
       body['message'] = message;
     }
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.chatRooms),
       headers: _headers,
       body: jsonEncode(body),
@@ -835,7 +857,7 @@ class ApiService {
   }
 
   Future<List<ChatMessage>> getChatMessages(int roomId) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.chatMessages(roomId)),
       headers: _headers,
     );
@@ -847,7 +869,7 @@ class ApiService {
   }
 
   Future<ChatMessage> sendChatMessage(int roomId, String content) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.chatMessages(roomId)),
       headers: _headers,
       body: jsonEncode({'message': content}),
@@ -859,7 +881,7 @@ class ApiService {
   }
 
   Future<void> markMessagesRead(int roomId) async {
-    await http.post(
+    await _http.post(
       Uri.parse(ApiConstants.chatMarkRead(roomId)),
       headers: _headers,
     );
@@ -871,7 +893,7 @@ class ApiService {
     final url = received == true
         ? ApiConstants.offersReceived
         : ApiConstants.offers;
-    final response = await http.get(Uri.parse(url), headers: _headers);
+    final response = await _http.get(Uri.parse(url), headers: _headers);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -889,7 +911,7 @@ class ApiService {
     bool isChainFree = false,
     bool mortgageAgreed = false,
   }) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.offers),
       headers: _headers,
       body: jsonEncode({
@@ -912,7 +934,7 @@ class ApiService {
     if (counterAmount != null) body['counter_amount'] = counterAmount.toString();
     if (sellerNotes != null) body['seller_notes'] = sellerNotes;
 
-    final response = await http.patch(
+    final response = await _http.patch(
       Uri.parse(ApiConstants.offerRespond(id)),
       headers: _headers,
       body: jsonEncode(body),
@@ -937,7 +959,7 @@ class ApiService {
     if (isChainFree != null) body['is_chain_free'] = isChainFree;
     if (mortgageAgreed != null) body['mortgage_agreed'] = mortgageAgreed;
 
-    final response = await http.patch(
+    final response = await _http.patch(
       Uri.parse(ApiConstants.offerDetail(id)),
       headers: _headers,
       body: jsonEncode(body),
@@ -949,7 +971,7 @@ class ApiService {
   }
 
   Future<void> withdrawOffer(int id) async {
-    final response = await http.patch(
+    final response = await _http.patch(
       Uri.parse(ApiConstants.offerWithdraw(id)),
       headers: _headers,
     );
@@ -961,7 +983,7 @@ class ApiService {
   // ── Property Documents ─────────────────────────────────────────────
 
   Future<List<PropertyDocument>> getPropertyDocuments(int propertyId) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.propertyDocuments(propertyId)),
       headers: _headers,
     );
@@ -999,7 +1021,7 @@ class ApiService {
   }
 
   Future<void> deletePropertyDocument(int propertyId, int docId) async {
-    final response = await http.delete(
+    final response = await _http.delete(
       Uri.parse(ApiConstants.propertyDocument(propertyId, docId)),
       headers: _headers,
     );
@@ -1014,7 +1036,7 @@ class ApiService {
     final body = <String, dynamic>{'reason': reason};
     if (description != null) body['description'] = description;
 
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.propertyFlag(propertyId)),
       headers: _headers,
       body: jsonEncode(body),
@@ -1028,7 +1050,7 @@ class ApiService {
   // ── Neighbourhood Info ─────────────────────────────────────────────
 
   Future<NeighbourhoodInfo> getNeighbourhoodInfo(int propertyId) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.propertyNeighbourhood(propertyId)),
       headers: _headers,
     );
@@ -1041,7 +1063,7 @@ class ApiService {
   // ── Viewing Slots ─────────────────────────────────────────────────
 
   Future<List<ViewingSlot>> getViewingSlots(int propertyId) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.viewingSlots(propertyId)),
       headers: _headers,
     );
@@ -1053,7 +1075,7 @@ class ApiService {
   }
 
   Future<ViewingSlot> createViewingSlot(int propertyId, Map<String, dynamic> body) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.viewingSlots(propertyId)),
       headers: _headers,
       body: jsonEncode(body),
@@ -1071,7 +1093,7 @@ class ApiService {
     required String endTime,
     required int maxBookings,
   }) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.viewingSlotsBulkCreate(propertyId)),
       headers: _headers,
       body: jsonEncode({
@@ -1093,7 +1115,7 @@ class ApiService {
     required List<Map<String, dynamic>> schedule,
     required int maxBookings,
   }) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.viewingSlotsBulkCreate(propertyId)),
       headers: _headers,
       body: jsonEncode({
@@ -1109,7 +1131,7 @@ class ApiService {
   }
 
   Future<void> deleteViewingSlot(int propertyId, int slotId) async {
-    final response = await http.delete(
+    final response = await _http.delete(
       Uri.parse(ApiConstants.viewingSlot(propertyId, slotId)),
       headers: _headers,
     );
@@ -1124,7 +1146,7 @@ class ApiService {
     String? phone,
     String? message,
   }) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.bookViewingSlot(propertyId, slotId)),
       headers: _headers,
       body: jsonEncode({
@@ -1155,7 +1177,7 @@ class ApiService {
         'term_years': termYears.toString(),
       },
     );
-    final response = await http.get(uri, headers: _headers);
+    final response = await _http.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       return MortgageCalculation.fromJson(jsonDecode(response.body));
     }
@@ -1165,7 +1187,7 @@ class ApiService {
   // ── Bulk Import/Export ────────────────────────────────────────────
 
   Future<Map<String, dynamic>> bulkImportProperties(List<Map<String, dynamic>> properties) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.bulkImport),
       headers: _headers,
       body: jsonEncode({'properties': properties}),
@@ -1177,7 +1199,7 @@ class ApiService {
   }
 
   Future<List<Map<String, dynamic>>> exportProperties() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.exportProperties),
       headers: _headers,
     );
@@ -1191,7 +1213,7 @@ class ApiService {
   // ── Push Notifications ────────────────────────────────────────────
 
   Future<void> registerPushDevice(String token, {String platform = 'android'}) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.pushRegister),
       headers: _headers,
       body: jsonEncode({'token': token, 'platform': platform}),
@@ -1206,7 +1228,7 @@ class ApiService {
   Future<Map<String, dynamic>> getHousePrices(String postcode) async {
     final uri = Uri.parse(ApiConstants.housePrices)
         .replace(queryParameters: {'postcode': postcode});
-    final response = await http.get(uri, headers: _headers);
+    final response = await _http.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
@@ -1217,7 +1239,7 @@ class ApiService {
 
   Future<bool> healthCheck() async {
     try {
-      final response = await http.get(
+      final response = await _http.get(
         Uri.parse(ApiConstants.healthCheck),
       ).timeout(_timeout);
       return response.statusCode == 200;
@@ -1233,7 +1255,7 @@ class ApiService {
   // ── #28 Listing Quality Score ─────────────────────────────────────
 
   Future<Map<String, dynamic>> getListingQualityScore(int propertyId) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.propertyQualityScore(propertyId)),
       headers: _authHeaders,
     );
@@ -1248,7 +1270,7 @@ class ApiService {
   Future<Map<String, dynamic>> getPriceComparison(String postcode) async {
     final uri = Uri.parse(ApiConstants.priceComparison)
         .replace(queryParameters: {'postcode': postcode});
-    final response = await http.get(uri, headers: _headers);
+    final response = await _http.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
@@ -1258,7 +1280,7 @@ class ApiService {
   // ── #30 Buyer Verification ────────────────────────────────────────
 
   Future<List<dynamic>> getBuyerVerifications() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.buyerVerifications),
       headers: _authHeaders,
     );
@@ -1287,7 +1309,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getBuyerVerificationStatus(int userId) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.buyerVerificationStatus(userId)),
       headers: _headers,
     );
@@ -1300,7 +1322,7 @@ class ApiService {
   // ── Sale Tracker ──────────────────────────────────────────────────
 
   Future<List<dynamic>> getSales() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.sales),
       headers: _authHeaders,
     );
@@ -1312,7 +1334,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getSaleDetail(int id) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.saleDetail(id)),
       headers: _authHeaders,
     );
@@ -1323,7 +1345,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> createSale(Map<String, dynamic> data) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.sales),
       headers: _authJsonHeaders,
       body: jsonEncode(data),
@@ -1336,7 +1358,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> updateSale(int id, Map<String, dynamic> data) async {
-    final response = await http.patch(
+    final response = await _http.patch(
       Uri.parse(ApiConstants.saleDetail(id)),
       headers: _authJsonHeaders,
       body: jsonEncode(data),
@@ -1348,7 +1370,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getSaleDashboard(int id) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.saleDashboard(id)),
       headers: _authHeaders,
     );
@@ -1359,7 +1381,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getSaleReadiness(int id) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.saleReadiness(id)),
       headers: _authHeaders,
     );
@@ -1375,7 +1397,7 @@ class ApiService {
       body['override'] = true;
       body['reason'] = overrideReason;
     }
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.saleInstruct(id)),
       headers: _authJsonHeaders,
       body: jsonEncode(body),
@@ -1388,7 +1410,7 @@ class ApiService {
   }
 
   Future<List<dynamic>> getSaleTimeline(int id) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.saleTimeline(id)),
       headers: _authHeaders,
     );
@@ -1399,7 +1421,7 @@ class ApiService {
   }
 
   Future<List<dynamic>> getSaleTasks(int saleId) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.saleTasks(saleId)),
       headers: _authHeaders,
     );
@@ -1411,7 +1433,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> updateTask(int saleId, int taskId, Map<String, dynamic> data) async {
-    final response = await http.patch(
+    final response = await _http.patch(
       Uri.parse(ApiConstants.saleTaskDetail(saleId, taskId)),
       headers: _authJsonHeaders,
       body: jsonEncode(data),
@@ -1423,7 +1445,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> reassignTask(int saleId, int taskId, String newOwner, {String reason = ''}) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.saleTaskReassign(saleId, taskId)),
       headers: _authJsonHeaders,
       body: jsonEncode({'new_owner': newOwner, 'reason': reason}),
@@ -1435,7 +1457,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> completeTask(int saleId, int taskId) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.saleTaskComplete(saleId, taskId)),
       headers: _authJsonHeaders,
     );
@@ -1446,7 +1468,7 @@ class ApiService {
   }
 
   Future<List<dynamic>> getSaleDocuments(int saleId) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.saleDocuments(saleId)),
       headers: _authHeaders,
     );
@@ -1458,7 +1480,7 @@ class ApiService {
   }
 
   Future<List<dynamic>> getSaleDocumentChecklist(int saleId) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.saleDocumentChecklist(saleId)),
       headers: _authHeaders,
     );
@@ -1484,7 +1506,7 @@ class ApiService {
   }
 
   Future<void> deleteSaleDocument(int saleId, int docId) async {
-    final response = await http.delete(
+    final response = await _http.delete(
       Uri.parse(ApiConstants.saleDocumentDetail(saleId, docId)),
       headers: _authHeaders,
     );
@@ -1494,7 +1516,7 @@ class ApiService {
   }
 
   Future<List<dynamic>> getSaleContactLog(int saleId) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.saleContactLog(saleId)),
       headers: _authHeaders,
     );
@@ -1506,7 +1528,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> createContactLog(int saleId, Map<String, dynamic> data) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.saleContactLog(saleId)),
       headers: _authJsonHeaders,
       body: jsonEncode(data),
@@ -1518,7 +1540,7 @@ class ApiService {
   }
 
   Future<List<dynamic>> getSaleEnquiries(int saleId) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.saleEnquiries(saleId)),
       headers: _authHeaders,
     );
@@ -1530,7 +1552,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> createEnquiry(int saleId, Map<String, dynamic> data) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.saleEnquiries(saleId)),
       headers: _authJsonHeaders,
       body: jsonEncode(data),
@@ -1542,7 +1564,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> reassignEnquiry(int saleId, int eqId, String newOwner) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.saleEnquiryReassign(saleId, eqId)),
       headers: _authJsonHeaders,
       body: jsonEncode({'new_owner': newOwner}),
@@ -1554,7 +1576,7 @@ class ApiService {
   }
 
   Future<List<dynamic>> getSalePrompts(int saleId) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.salePrompts(saleId)),
       headers: _authHeaders,
     );
@@ -1571,7 +1593,7 @@ class ApiService {
       'level': level,
     };
     if (taskIds != null) body['task_ids'] = taskIds;
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.salePromptsGenerate(saleId)),
       headers: _authJsonHeaders,
       body: jsonEncode(body),
@@ -1583,7 +1605,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> markPromptSent(int saleId, int promptId) async {
-    final response = await http.patch(
+    final response = await _http.patch(
       Uri.parse(ApiConstants.salePromptDetail(saleId, promptId)),
       headers: _authJsonHeaders,
       body: jsonEncode({'sent_marker': true}),
@@ -1595,7 +1617,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getGdprExport() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.gdprExport),
       headers: _authHeaders,
     );
@@ -1606,7 +1628,7 @@ class ApiService {
   }
 
   Future<void> gdprDelete() async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.gdprDelete),
       headers: _authJsonHeaders,
     );
@@ -1619,7 +1641,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> generateDescription(
       Map<String, dynamic> details) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.generateDescription),
       headers: _authJsonHeaders,
       body: jsonEncode(details),
@@ -1646,7 +1668,7 @@ class ApiService {
         'additional_property': additionalProperty.toString(),
       },
     );
-    final response = await http.get(uri, headers: _headers);
+    final response = await _http.get(uri, headers: _headers);
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     }
@@ -1656,7 +1678,7 @@ class ApiService {
   // ── #36 Property History ──────────────────────────────────────────
 
   Future<Map<String, dynamic>> getPropertyHistory(int propertyId) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.propertyHistory(propertyId)),
       headers: _headers,
     );
@@ -1672,7 +1694,7 @@ class ApiService {
     final url = propertyId != null
         ? ApiConstants.openHouseEvents(propertyId)
         : ApiConstants.openHouseUpcoming;
-    final response = await http.get(Uri.parse(url), headers: _headers);
+    final response = await _http.get(Uri.parse(url), headers: _headers);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return data is List ? data : (data['results'] ?? []);
@@ -1682,7 +1704,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> createOpenHouseEvent(
       int propertyId, Map<String, dynamic> data) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.openHouseEvents(propertyId)),
       headers: _authJsonHeaders,
       body: jsonEncode(data),
@@ -1694,7 +1716,7 @@ class ApiService {
   }
 
   Future<void> deleteOpenHouseEvent(int propertyId, int eventId) async {
-    final response = await http.delete(
+    final response = await _http.delete(
       Uri.parse(ApiConstants.openHouseEventDetail(propertyId, eventId)),
       headers: _authHeaders,
     );
@@ -1705,7 +1727,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> rsvpOpenHouse(int eventId,
       {int attendees = 1, String message = ''}) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.openHouseRsvp(eventId)),
       headers: _authJsonHeaders,
       body: jsonEncode({'attendees': attendees, 'message': message}),
@@ -1717,7 +1739,7 @@ class ApiService {
   }
 
   Future<void> cancelRsvp(int eventId) async {
-    final response = await http.delete(
+    final response = await _http.delete(
       Uri.parse(ApiConstants.openHouseRsvpCancel(eventId)),
       headers: _authHeaders,
     );
@@ -1729,7 +1751,7 @@ class ApiService {
   // ── #38 QR Code Flyers ────────────────────────────────────────────
 
   Future<Map<String, dynamic>> generatePropertyFlyer(int propertyId) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.propertyFlyer(propertyId)),
       headers: _authHeaders,
     );
@@ -1742,7 +1764,7 @@ class ApiService {
   // ── #39 Solicitor/Conveyancer Matching ────────────────────────────
 
   Future<List<dynamic>> getQuoteRequests() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.quoteRequests),
       headers: _authHeaders,
     );
@@ -1756,7 +1778,7 @@ class ApiService {
   Future<Map<String, dynamic>> createQuoteRequest(
       int propertyId, String transactionType,
       {String additionalInfo = ''}) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.quoteRequests),
       headers: _authJsonHeaders,
       body: jsonEncode({
@@ -1773,7 +1795,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> submitConveyancerQuote(
       Map<String, dynamic> data) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.conveyancerQuotes),
       headers: _authJsonHeaders,
       body: jsonEncode(data),
@@ -1785,7 +1807,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> acceptQuote(int quoteId) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.acceptQuote(quoteId)),
       headers: _authHeaders,
     );
@@ -1803,7 +1825,7 @@ class ApiService {
     if (postcodeArea != null) {
       url += '?postcode_area=$postcodeArea';
     }
-    final response = await http.get(Uri.parse(url), headers: _headers);
+    final response = await _http.get(Uri.parse(url), headers: _headers);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return data is List ? data : (data['results'] ?? []);
@@ -1813,7 +1835,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> createNeighbourhoodReview(
       Map<String, dynamic> data) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.neighbourhoodReviews),
       headers: _authJsonHeaders,
       body: jsonEncode(data),
@@ -1829,7 +1851,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> getNeighbourhoodSummary(
       String postcodeArea) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.neighbourhoodSummary(postcodeArea)),
       headers: _headers,
     );
@@ -1842,7 +1864,7 @@ class ApiService {
   // ── #41 Board Orders ──────────────────────────────────────────────
 
   Future<List<dynamic>> getBoardOrders() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.boardOrders),
       headers: _authHeaders,
     );
@@ -1855,7 +1877,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> createBoardOrder(
       int propertyId, String boardType, String deliveryAddress) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.boardOrders),
       headers: _authJsonHeaders,
       body: jsonEncode({
@@ -1871,7 +1893,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getBoardPricing() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.boardPricing),
       headers: _headers,
     );
@@ -1884,7 +1906,7 @@ class ApiService {
   // ── #42 EPC Suggestions ───────────────────────────────────────────
 
   Future<Map<String, dynamic>> getEpcSuggestions(int propertyId) async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.epcSuggestions(propertyId)),
       headers: _headers,
     );
@@ -1897,7 +1919,7 @@ class ApiService {
   // ── #43 Buyer Profile ─────────────────────────────────────────────
 
   Future<Map<String, dynamic>> getBuyerProfile() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.buyerProfile),
       headers: _authHeaders,
     );
@@ -1909,7 +1931,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> updateBuyerProfile(
       Map<String, dynamic> data) async {
-    final response = await http.patch(
+    final response = await _http.patch(
       Uri.parse(ApiConstants.buyerProfile),
       headers: _authJsonHeaders,
       body: jsonEncode(data),
@@ -1921,7 +1943,7 @@ class ApiService {
   }
 
   Future<List<dynamic>> getAffordableProperties() async {
-    final response = await http.get(
+    final response = await _http.get(
       Uri.parse(ApiConstants.affordableProperties),
       headers: _authHeaders,
     );
@@ -1935,7 +1957,7 @@ class ApiService {
   // ── #44 Two-Factor Authentication ─────────────────────────────────
 
   Future<Map<String, dynamic>> setup2FA() async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.twoFaSetup),
       headers: _authHeaders,
     );
@@ -1947,7 +1969,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> confirm2FA(String code) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.twoFaConfirm),
       headers: _authJsonHeaders,
       body: jsonEncode({'code': code}),
@@ -1960,7 +1982,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> disable2FA(String code) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.twoFaDisable),
       headers: _authJsonHeaders,
       body: jsonEncode({'code': code}),
@@ -1973,7 +1995,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> verify2FA(String email, String code) async {
-    final response = await http.post(
+    final response = await _http.post(
       Uri.parse(ApiConstants.twoFaVerify),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'code': code}),

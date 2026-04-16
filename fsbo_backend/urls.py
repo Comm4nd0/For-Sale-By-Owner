@@ -28,9 +28,23 @@ admin.site.site_title = "FSBO Admin"
 admin.site.index_title = "Dashboard"
 
 
+_INLINE_MEDIA_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif'}
+
+
 def serve_media(request, path):
-    """Serve user-uploaded media files."""
-    return static_serve(request, path, document_root=settings.MEDIA_ROOT)
+    """Serve user-uploaded media files.
+
+    Non-image files are served with ``Content-Disposition: attachment`` so
+    that even if a user-uploaded file sneaks past upload validation (for
+    instance an .html renamed to .pdf), the browser downloads it rather
+    than executing it in the site's origin.
+    """
+    import os as _os
+    response = static_serve(request, path, document_root=settings.MEDIA_ROOT)
+    ext = _os.path.splitext(path)[1].lower()
+    if ext not in _INLINE_MEDIA_EXTENSIONS:
+        response['Content-Disposition'] = 'attachment'
+    return response
 
 
 urlpatterns = [
