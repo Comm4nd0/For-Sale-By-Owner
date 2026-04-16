@@ -1124,40 +1124,198 @@ class TwoFactorAuthAPITest(TestCase):
         res = self.client.post('/api/2fa/confirm/', {'code': '000000'}, format='json')
         self.assertEqual(res.status_code, 400)
 
-    def test_disable_2fa(self):
-        self.client.post('/api/2fa/setup/')
+    def _enable_2fa(self):
+        """Helper: fully enable 2FA for self.user and return the secret."""
         from api.views import _generate_totp
+        self.client.post('/api/2fa/setup/')
         self.user.refresh_from_db()
         code = _generate_totp(self.user.two_fa_secret)
         self.client.post('/api/2fa/confirm/', {'code': code}, format='json')
-        # Now disable
         self.user.refresh_from_db()
+        return self.user.two_fa_secret
+
+    def test_disable_2fa_requires_password_and_code(self):
+        self._enable_2fa()
+        from api.views import _generate_totp
         code = _generate_totp(self.user.two_fa_secret)
-        res = self.client.post('/api/2fa/disable/', {'code': code}, format='json')
+
+        # Missing password — rejected even with a valid TOTP code.
+        res = self.client.post(
+            '/api/2fa/disable/',
+            {'code': code},
+            format='json',
+        )
+        self.assertEqual(res.status_code, 400)
+
+        # Wrong password — rejected.
+        res = self.client.post(
+            '/api/2fa/disable/',
+            {'code': code, 'password': 'wrong'},
+            format='json',
+        )
+        self.assertEqual(res.status_code, 400)
+
+        # Correct password + valid code — succeeds.
+        res = self.client.post(
+            '/api/2fa/disable/',
+            {'code': code, 'password': 'testpass123'},
+            format='json',
+        )
         self.assertEqual(res.status_code, 200)
         self.user.refresh_from_db()
         self.assertFalse(self.user.two_fa_enabled)
 
     def test_disable_2fa_not_enabled(self):
-        res = self.client.post('/api/2fa/disable/', {'code': '123456'}, format='json')
+        res = self.client.post(
+            '/api/2fa/disable/',
+            {'code': '123456', 'password': 'testpass123'},
+            format='json',
+        )
         self.assertEqual(res.status_code, 400)
 
-    def test_verify_2fa_login(self):
-        # Enable 2FA for user
-        self.client.post('/api/2fa/setup/')
-        from api.views import _generate_totp
-        self.user.refresh_from_db()
-        code = _generate_totp(self.user.two_fa_secret)
-        self.client.post('/api/2fa/confirm/', {'code': code}, format='json')
-        # Now verify during login
-        self.user.refresh_from_db()
-        code = _generate_totp(self.user.two_fa_secret)
-        res = APIClient().post('/api/2fa/verify/', {
-            'email': 'user@test.com',
-            'code': code,
-        }, format='json')
+    def test_login_without_2fa_returns_token_directly(self):
+        res = APIClient().post(
+            '/auth/token/login/',
+            {'email': 'user@test.com', 'password': 'testpass123'},
+            format='json',
+        )
         self.assertEqual(res.status_code, 200)
         self.assertIn('auth_token', res.data)
+        self.assertNotIn('challenge_id', res.data)
+
+    def test_login_with_2fa_returns_challenge_not_token(self):
+        self._enable_2fa()
+        res = APIClient().post(
+            '/auth/token/login/',
+            {'email': 'user@test.com', 'password': 'testpass123'},
+            format='json',
+        )
+        # 202 because the login is only partially complete — the client
+        # must still present a TOTP code to get a token.
+        self.assertEqual(res.status_code, 202)
+        self.assertTrue(res.data.get('requires_2fa'))
+        self.assertIn('challenge_id', res.data)
+        self.assertNotIn('auth_token', res.data)
+
+    def test_verify_2fa_with_challenge_succeeds(self):
+        self._enable_2fa()
+        from api.views import _generate_totp
+        # Step 1: password login yields a challenge.
+        login_res = APIClient().post(
+            '/auth/token/login/',
+            {'email': 'user@test.com', 'password': 'testpass123'},
+            format='json',
+        )
+        challenge_id = login_res.data['challenge_id']
+        # Step 2: present challenge_id + code to obtain the token.
+        code = _generate_totp(self.user.two_fa_secret)
+        res = APIClient().post(
+            '/api/2fa/verify/',
+            {'challenge_id': challenge_id, 'code': code},
+            format='json',
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('auth_token', res.data)
+
+    def test_verify_2fa_rejects_email_only(self):
+        """The old vulnerable flow (email + code, no challenge) is gone."""
+        self._enable_2fa()
+        from api.views import _generate_totp
+        code = _generate_totp(self.user.two_fa_secret)
+        res = APIClient().post(
+            '/api/2fa/verify/',
+            {'email': 'user@test.com', 'code': code},
+            format='json',
+        )
+        self.assertEqual(res.status_code, 400)
+
+    def test_verify_2fa_rejects_unknown_challenge(self):
+        res = APIClient().post(
+            '/api/2fa/verify/',
+            {'challenge_id': 'does-not-exist', 'code': '123456'},
+            format='json',
+        )
+        self.assertEqual(res.status_code, 400)
+
+    def test_verify_2fa_rejects_expired_challenge(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from api.models import TwoFactorChallenge
+        self._enable_2fa()
+        challenge = TwoFactorChallenge.objects.create(
+            user=self.user,
+            challenge_id='expired-xyz',
+            expires_at=timezone.now() - timedelta(minutes=1),
+        )
+        from api.views import _generate_totp
+        code = _generate_totp(self.user.two_fa_secret)
+        res = APIClient().post(
+            '/api/2fa/verify/',
+            {'challenge_id': challenge.challenge_id, 'code': code},
+            format='json',
+        )
+        self.assertEqual(res.status_code, 400)
+        # Expired challenge should be cleaned up.
+        self.assertFalse(
+            TwoFactorChallenge.objects.filter(challenge_id='expired-xyz').exists()
+        )
+
+    def test_verify_2fa_exhausts_attempts(self):
+        from api.models import TwoFactorChallenge
+        self._enable_2fa()
+        login_res = APIClient().post(
+            '/auth/token/login/',
+            {'email': 'user@test.com', 'password': 'testpass123'},
+            format='json',
+        )
+        challenge_id = login_res.data['challenge_id']
+        # Burn through the attempt budget with wrong codes.
+        for _ in range(TwoFactorChallenge.MAX_ATTEMPTS):
+            APIClient().post(
+                '/api/2fa/verify/',
+                {'challenge_id': challenge_id, 'code': '000000'},
+                format='json',
+            )
+        # The next call — even with a valid code — must be rejected.
+        from api.views import _generate_totp
+        code = _generate_totp(self.user.two_fa_secret)
+        res = APIClient().post(
+            '/api/2fa/verify/',
+            {'challenge_id': challenge_id, 'code': code},
+            format='json',
+        )
+        self.assertEqual(res.status_code, 429)
+        # Challenge is consumed after exhaustion.
+        self.assertFalse(
+            TwoFactorChallenge.objects.filter(challenge_id=challenge_id).exists()
+        )
+
+    def test_verify_2fa_consumes_challenge_on_success(self):
+        from api.models import TwoFactorChallenge
+        self._enable_2fa()
+        login_res = APIClient().post(
+            '/auth/token/login/',
+            {'email': 'user@test.com', 'password': 'testpass123'},
+            format='json',
+        )
+        challenge_id = login_res.data['challenge_id']
+        from api.views import _generate_totp
+        code = _generate_totp(self.user.two_fa_secret)
+        APIClient().post(
+            '/api/2fa/verify/',
+            {'challenge_id': challenge_id, 'code': code},
+            format='json',
+        )
+        # Reusing the same challenge must not work a second time.
+        res = APIClient().post(
+            '/api/2fa/verify/',
+            {'challenge_id': challenge_id, 'code': code},
+            format='json',
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertFalse(
+            TwoFactorChallenge.objects.filter(challenge_id=challenge_id).exists()
+        )
 
 
 # ══════════════════════════════════════════════════════════════════

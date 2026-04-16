@@ -172,6 +172,9 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'user': '1000/hour',
         'anon': '200/hour',
+        # Scope-specific limit on the 2FA verify endpoint — keyed by
+        # challenge_id so rotating IPs does not help a brute-force attack.
+        'two_factor_verify': '10/min',
     },
     'EXCEPTION_HANDLER': 'api.exception_handler.custom_exception_handler',
 }

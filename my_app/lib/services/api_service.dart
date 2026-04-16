@@ -3,23 +3,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import '../constants/api_constants.dart';
-
-/// HTTP client that enforces a request timeout on every call so no single
-/// API request can hang the UI indefinitely.
-class _TimeoutClient extends http.BaseClient {
-  _TimeoutClient(this._inner, this._timeout);
-
-  final http.Client _inner;
-  final Duration _timeout;
-
-  @override
-  Future<http.StreamedResponse> send(http.BaseRequest request) {
-    return _inner.send(request).timeout(_timeout);
-  }
-
-  @override
-  void close() => _inner.close();
-}
 import '../models/paginated_response.dart';
 import '../models/property.dart';
 import '../models/property_image.dart';
@@ -43,6 +26,23 @@ import '../models/property_flag.dart';
 import '../models/viewing_slot.dart';
 import '../models/mortgage_calculation.dart';
 import '../models/neighbourhood_info.dart';
+
+/// HTTP client that enforces a request timeout on every call so no single
+/// API request can hang the UI indefinitely.
+class _TimeoutClient extends http.BaseClient {
+  _TimeoutClient(this._inner, this._timeout);
+
+  final http.Client _inner;
+  final Duration _timeout;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    return _inner.send(request).timeout(_timeout);
+  }
+
+  @override
+  void close() => _inner.close();
+}
 
 class ApiService {
   final String? Function() _getToken;
@@ -1981,11 +1981,17 @@ class ApiService {
         jsonDecode(response.body)['error'] ?? 'Invalid code');
   }
 
-  Future<Map<String, dynamic>> disable2FA(String code) async {
+  /// Disable 2FA for the current user. Requires both the current password
+  /// and a valid TOTP code so that a stolen session token alone cannot
+  /// turn 2FA off.
+  Future<Map<String, dynamic>> disable2FA({
+    required String code,
+    required String password,
+  }) async {
     final response = await _http.post(
       Uri.parse(ApiConstants.twoFaDisable),
       headers: _authJsonHeaders,
-      body: jsonEncode({'code': code}),
+      body: jsonEncode({'code': code, 'password': password}),
     );
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -1994,17 +2000,26 @@ class ApiService {
         jsonDecode(response.body)['error'] ?? 'Failed to disable 2FA');
   }
 
-  Future<Map<String, dynamic>> verify2FA(String email, String code) async {
+  /// Exchange a 2FA challenge_id + TOTP code for an auth token. The
+  /// challenge_id is issued by /auth/token/login/ when the account has
+  /// 2FA enabled. Returns a map containing `auth_token` on success.
+  Future<Map<String, dynamic>> verify2FA({
+    required String challengeId,
+    required String code,
+  }) async {
     final response = await _http.post(
       Uri.parse(ApiConstants.twoFaVerify),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'code': code}),
+      body: jsonEncode({'challenge_id': challengeId, 'code': code}),
     );
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     }
-    throw Exception(
-        jsonDecode(response.body)['error'] ?? 'Verification failed');
+    Map<String, dynamic> body = {};
+    try {
+      body = jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (_) {}
+    throw Exception(body['error'] ?? 'Verification failed');
   }
 
   // ── Enquiry stubs (backend API not yet implemented) ──────────────

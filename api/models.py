@@ -1613,3 +1613,41 @@ class BuyerProfile(models.Model):
         return f"{self.user.email} - {budget}"
 
 
+# ── #44 Two-Factor Authentication Challenge ──────────────────────
+
+class TwoFactorChallenge(models.Model):
+    """A pending second-factor verification issued after a successful
+    email+password login for a user who has 2FA enabled. The client must
+    present the challenge_id plus a valid TOTP code to obtain an auth
+    token. Challenges are short-lived and single-use.
+    """
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='two_factor_challenges',
+    )
+    challenge_id = models.CharField(max_length=64, unique=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+
+    MAX_ATTEMPTS = 5
+    LIFETIME_SECONDS = 300  # 5 minutes
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['challenge_id']),
+            models.Index(fields=['expires_at']),
+        ]
+
+    def __str__(self):
+        return f'2FA challenge {self.challenge_id[:8]}… for {self.user.email}'
+
+    def is_expired(self):
+        from django.utils import timezone
+        return timezone.now() >= self.expires_at
+
+    def is_exhausted(self):
+        return self.attempts >= self.MAX_ATTEMPTS
+
+

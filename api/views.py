@@ -11,7 +11,7 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 from django.contrib.auth import get_user_model
 from rest_framework import viewsets, permissions, status, generics
-from rest_framework.decorators import api_view, permission_classes, action
+from rest_framework.decorators import api_view, permission_classes, action, throttle_classes
 from django.shortcuts import get_object_or_404
 
 User = get_user_model()
@@ -22,6 +22,8 @@ from rest_framework.throttling import UserRateThrottle
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.core.cache import cache
+
+from djoser.views import TokenCreateView as DjoserTokenCreateView
 
 from .models import (
     Property, PropertyImage, PropertyFloorplan, PropertyFeature,
@@ -37,6 +39,7 @@ from .models import (
     OpenHouseEvent, OpenHouseRSVP,
     ConveyancerQuoteRequest, ConveyancerQuote,
     NeighbourhoodReview, BoardOrder, BuyerProfile,
+    TwoFactorChallenge,
 )
 from .serializers import (
     PropertySerializer, PropertyListSerializer, PropertyImageSerializer,
@@ -2906,12 +2909,20 @@ def confirm_2fa(request):
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def disable_2fa(request):
-    """Disable 2FA for the current user."""
+    """Disable 2FA for the current user.
+
+    Requires the user's current password in addition to a valid TOTP
+    code so a stolen session token alone cannot turn 2FA off.
+    """
     user = request.user
     code = request.data.get('code', '')
+    password = request.data.get('password', '')
 
     if not user.two_fa_enabled:
         return Response({'error': '2FA is not enabled.'}, status=400)
+
+    if not password or not user.check_password(password):
+        return Response({'error': 'Password is required to disable 2FA.'}, status=400)
 
     if not _totp_matches(user.two_fa_secret, code):
         return Response({'error': 'Invalid code.'}, status=400)
@@ -2923,35 +2934,141 @@ def disable_2fa(request):
     return Response({'message': '2FA has been disabled.'})
 
 
+# ── Second-factor challenge flow ─────────────────────────────────
+#
+# Login (/auth/token/login/ — overridden below) validates email+password.
+# If the user has 2FA enabled it does NOT return a token; it creates a
+# short-lived TwoFactorChallenge and returns its id. The client then
+# POSTs the challenge_id plus a TOTP code to /api/2fa/verify/ to obtain
+# the auth token. This closes the auth-bypass that existed when
+# /api/2fa/verify/ accepted (email, code) on its own.
+
+
+def _create_2fa_challenge(user):
+    """Create a fresh 2FA challenge for ``user`` and return it."""
+    import secrets as _secrets
+    from datetime import timedelta
+    from .models import TwoFactorChallenge
+
+    challenge = TwoFactorChallenge.objects.create(
+        user=user,
+        challenge_id=_secrets.token_urlsafe(32),
+        expires_at=timezone.now() + timedelta(
+            seconds=TwoFactorChallenge.LIFETIME_SECONDS
+        ),
+    )
+    # Opportunistically purge stale challenges so the table doesn't grow
+    # without bound.
+    TwoFactorChallenge.objects.filter(
+        user=user, expires_at__lt=timezone.now()
+    ).delete()
+    return challenge
+
+
+class TwoFactorVerifyThrottle(UserRateThrottle):
+    """Tight per-IP throttle on the 2FA verify endpoint to resist brute force.
+
+    Uses a dedicated scope so the rate is independent of the generic
+    ``user``/``anon`` throttle rates. Keyed by challenge_id when present
+    so attackers can't circumvent by cycling IPs faster than the global
+    anon limit would allow.
+    """
+    scope = 'two_factor_verify'
+
+    def get_cache_key(self, request, view):
+        challenge_id = request.data.get('challenge_id') if hasattr(request, 'data') else None
+        if challenge_id:
+            return self.cache_format % {
+                'scope': self.scope,
+                'ident': f'chal:{challenge_id}',
+            }
+        return super().get_cache_key(request, view)
+
+
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
+@throttle_classes([TwoFactorVerifyThrottle])
 def verify_2fa(request):
-    """Verify a 2FA code during login."""
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
+    """Exchange a 2FA challenge_id + TOTP code for an auth token.
 
-    email = request.data.get('email', '')
+    Requires a challenge_id issued by a prior successful password login;
+    email alone is no longer accepted. The challenge is deleted on
+    success, expiry, or exhaustion of the attempt budget.
+    """
+    from rest_framework.authtoken.models import Token
+    from .models import TwoFactorChallenge
+
+    challenge_id = request.data.get('challenge_id', '')
     code = request.data.get('code', '')
 
-    try:
-        user = User.objects.get(email=email)
-    except User.DoesNotExist:
-        return Response({'error': 'Invalid credentials.'}, status=400)
+    if not challenge_id or not code:
+        return Response(
+            {'error': 'challenge_id and code are required.'},
+            status=400,
+        )
 
+    try:
+        challenge = TwoFactorChallenge.objects.select_related('user').get(
+            challenge_id=challenge_id
+        )
+    except TwoFactorChallenge.DoesNotExist:
+        return Response({'error': 'Invalid or expired challenge.'}, status=400)
+
+    if challenge.is_expired():
+        challenge.delete()
+        return Response({'error': 'Invalid or expired challenge.'}, status=400)
+
+    if challenge.is_exhausted():
+        challenge.delete()
+        return Response(
+            {'error': 'Too many attempts. Please sign in again.'},
+            status=429,
+        )
+
+    user = challenge.user
     if not user.two_fa_enabled:
-        return Response({'error': '2FA is not enabled for this account.'}, status=400)
+        # The user disabled 2FA between the password step and the code
+        # step — treat as an invalid challenge rather than bypassing.
+        challenge.delete()
+        return Response({'error': 'Invalid or expired challenge.'}, status=400)
+
+    # Record the attempt BEFORE verifying so even a timing-successful
+    # guess costs an attempt slot.
+    TwoFactorChallenge.objects.filter(pk=challenge.pk).update(
+        attempts=F('attempts') + 1
+    )
 
     if not _totp_matches(user.two_fa_secret, code):
         return Response({'error': 'Invalid 2FA code.'}, status=400)
 
-    # Generate or retrieve token
-    from rest_framework.authtoken.models import Token
+    # Success — consume the challenge and issue the token.
+    challenge.delete()
     token, _ = Token.objects.get_or_create(user=user)
+    return Response({'auth_token': token.key})
 
-    return Response({
-        'auth_token': token.key,
-        'message': '2FA verified successfully.',
-    })
+
+class TwoFactorAwareTokenCreateView(DjoserTokenCreateView):
+    """Djoser login wrapper that gates on 2FA.
+
+    If the authenticated user has ``two_fa_enabled=True`` we do not
+    return an auth token; instead we create a TwoFactorChallenge and
+    respond with ``{requires_2fa: true, challenge_id: ...}`` so the
+    client can present the second factor at /api/2fa/verify/.
+    """
+
+    def _action(self, serializer):
+        user = serializer.user
+        if getattr(user, 'two_fa_enabled', False) and user.two_fa_secret:
+            challenge = _create_2fa_challenge(user)
+            return Response(
+                {
+                    'requires_2fa': True,
+                    'challenge_id': challenge.challenge_id,
+                    'expires_in': TwoFactorChallenge.LIFETIME_SECONDS,
+                },
+                status=status.HTTP_202_ACCEPTED,
+            )
+        return super()._action(serializer)
 
 
 # ── Staff Service Management ────────────────────────────────────

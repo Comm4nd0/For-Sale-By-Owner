@@ -8,6 +8,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.static import serve as static_serve
 
 from api.sitemaps import PropertySitemap, StaticViewSitemap
+from api.views import TwoFactorAwareTokenCreateView
 
 sitemaps = {
     'static': StaticViewSitemap,
@@ -52,6 +53,10 @@ urlpatterns = [
     path('api/', include('api.urls')),
     path('api/sale-tracker/', include('sale_tracker.urls')),
     path('auth/', include('djoser.urls')),
+    # Must come BEFORE djoser.urls.authtoken so this override handles
+    # /auth/token/login/ — it gates on 2FA. Djoser's own logout handler
+    # is still picked up from the include below.
+    path('auth/token/login/', TwoFactorAwareTokenCreateView.as_view(), name='login'),
     path('auth/', include('djoser.urls.authtoken')),
 
     # Web pages
