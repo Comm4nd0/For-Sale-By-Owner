@@ -1,5 +1,215 @@
-{% extends "sale_tracker/_placeholder.html" %}
-{% block st_title %}Settings — Sale Tracker{% endblock %}
-{% block st_heading %}Settings{% endblock %}
-{% block st_body %}Settings UI lands in Phase 3.{% endblock %}
-{% block st_nav %}settings{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Settings — Sale Tracker — For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+{% include "sale_tracker/_shared.html" %}
+<style>
+    .settings-form { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.5rem; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+    .section-title { color: #115E66; margin: 1.25rem 0 0.75rem; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .section-title:first-of-type { margin-top: 0; }
+    .danger-zone { background: #f8d7d4; border: 1px solid #e8a9a4; border-radius: 8px; padding: 1rem 1.25rem; margin-top: 1.5rem; }
+    .danger-zone h3 { color: #B03A2E; margin: 0 0 0.5rem; }
+    .danger-zone p { color: #B03A2E; font-size: 0.9rem; margin-bottom: 0.75rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="st-layout">
+    <aside id="st-subnav" class="st-subnav"></aside>
+    <div>
+        <div class="st-page-header">
+            <h2 class="st-page-title">Settings</h2>
+        </div>
+        <div id="error" class="alert alert-error" style="display:none;"></div>
+        <div id="success" class="alert alert-success" style="display:none;"></div>
+
+        <div id="form-wrapper" class="st-loading">Loading…</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+    ST.saleId = parseInt(window.location.pathname.split('/').filter(Boolean)[1], 10);
+    ST.renderSubnav(ST.saleId, 'settings');
+
+    const FIELDS = [
+        { group: 'Property', items: [
+            { id: 'property_address', label: 'Property address', type: 'text' },
+            { id: 'tenure', label: 'Tenure', type: 'select', options: [
+                ['freehold', 'Freehold'], ['leasehold', 'Leasehold'], ['share_of_freehold', 'Share of Freehold'],
+            ] },
+            { id: 'asking_price', label: 'Asking price (£)', type: 'number' },
+            { id: 'agreed_price', label: 'Agreed price (£)', type: 'number' },
+            { id: 'target_exchange_date', label: 'Target exchange', type: 'date' },
+            { id: 'target_completion_date', label: 'Target completion', type: 'date' },
+        ]},
+        { group: 'Buyer', items: [
+            { id: 'buyer_name', label: 'Buyer name', type: 'text' },
+            { id: 'buyer_contact', label: 'Buyer contact', type: 'text' },
+            { id: 'buyer_position', label: 'Buyer position', type: 'select', options: [
+                ['', 'Not known'], ['cash', 'Cash'], ['mortgage', 'Mortgage'], ['chain', 'Chain'],
+            ] },
+            { id: 'chain_length', label: 'Chain length', type: 'number' },
+        ]},
+        { group: 'Your conveyancer', items: [
+            { id: 'seller_conveyancer_name', label: 'Firm', type: 'text' },
+            { id: 'seller_conveyancer_contact', label: 'Contact', type: 'text' },
+        ]},
+        { group: "Buyer's conveyancer", items: [
+            { id: 'buyer_conveyancer_name', label: 'Firm', type: 'text' },
+            { id: 'buyer_conveyancer_contact', label: 'Contact', type: 'text' },
+        ]},
+        { group: 'Estate agent', items: [
+            { id: 'agent_name', label: 'Agent', type: 'text' },
+            { id: 'agent_contact', label: 'Contact', type: 'text' },
+        ]},
+        { group: 'Notifications', items: [
+            { id: 'notification_frequency', label: 'Summary emails', type: 'select', options: [
+                ['realtime', 'Real-time'], ['daily_digest', 'Daily digest'], ['weekly_digest', 'Weekly digest'],
+            ] },
+        ]},
+    ];
+
+    async function loadSale() {
+        const wrapper = document.getElementById('form-wrapper');
+        const errorEl = document.getElementById('error');
+        try {
+            const sale = await ST.fetch('');
+            wrapper.classList.remove('st-loading');
+            wrapper.innerHTML = buildForm(sale);
+            document.getElementById('save-btn').addEventListener('click', saveChanges);
+            document.getElementById('gdpr-delete').addEventListener('click', gdprDelete);
+            document.getElementById('gdpr-export').addEventListener('click', gdprExport);
+        } catch (err) {
+            wrapper.classList.remove('st-loading');
+            errorEl.textContent = `Failed to load: ${err.message}`;
+            errorEl.style.display = 'block';
+        }
+    }
+
+    function buildForm(sale) {
+        const sections = FIELDS.map(({ group, items }) => `
+            <h3 class="section-title">${escHtml(group)}</h3>
+            <div class="form-grid">
+                ${items.map(f => renderField(f, sale[f.id])).join('')}
+            </div>
+        `).join('');
+
+        return `
+            <form class="settings-form" id="settings-form">
+                ${sections}
+                <div style="margin-top:1.5rem;">
+                    <button type="button" class="btn btn-primary" id="save-btn">Save changes</button>
+                </div>
+            </form>
+
+            <div class="danger-zone">
+                <h3>Danger zone</h3>
+                <p>Export downloads a JSON file of all tracker data for this account. Delete anonymises contacts and removes uploaded documents; the sale record stays for audit but is marked cancelled.</p>
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                    <button class="btn btn-secondary" id="gdpr-export">Export my data</button>
+                    <button class="btn btn-danger" id="gdpr-delete">Delete my data</button>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderField(f, value) {
+        const v = value == null ? '' : value;
+        if (f.type === 'select') {
+            const opts = f.options.map(([k, label]) =>
+                `<option value="${escHtml(k)}"${String(v) === String(k) ? ' selected' : ''}>${escHtml(label)}</option>`
+            ).join('');
+            return `
+                <div class="st-form-group">
+                    <label for="f-${f.id}">${escHtml(f.label)}</label>
+                    <select id="f-${f.id}" name="${f.id}">${opts}</select>
+                </div>`;
+        }
+        return `
+            <div class="st-form-group">
+                <label for="f-${f.id}">${escHtml(f.label)}</label>
+                <input id="f-${f.id}" name="${f.id}" type="${f.type}" value="${escHtml(v)}">
+            </div>`;
+    }
+
+    async function saveChanges() {
+        const btn = document.getElementById('save-btn');
+        const errorEl = document.getElementById('error');
+        const successEl = document.getElementById('success');
+        errorEl.style.display = successEl.style.display = 'none';
+
+        const payload = {};
+        for (const { items } of FIELDS) {
+            for (const f of items) {
+                const el = document.getElementById(`f-${f.id}`);
+                if (!el) continue;
+                payload[f.id] = el.value === '' ? null : el.value;
+            }
+        }
+        // Clean up: drop null-valued fields for DRF to treat as unchanged
+        for (const k of Object.keys(payload)) {
+            if (payload[k] === null || payload[k] === '') delete payload[k];
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Saving…';
+        try {
+            await ST.fetch('', {
+                method: 'PATCH',
+                body: JSON.stringify(payload),
+            });
+            successEl.textContent = 'Saved.';
+            successEl.style.display = 'block';
+            setTimeout(() => { successEl.style.display = 'none'; }, 2500);
+        } catch (err) {
+            errorEl.textContent = err.message;
+            errorEl.style.display = 'block';
+        }
+        btn.disabled = false;
+        btn.textContent = 'Save changes';
+    }
+
+    async function gdprExport() {
+        try {
+            const res = await Auth.authFetch('/api/sale-tracker/gdpr/export/', {
+                headers: Auth.headers(),
+            });
+            if (!res.ok) throw new Error(`Export failed (${res.status})`);
+            const data = await res.json();
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sale-tracker-export-${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            alert(err.message);
+        }
+    }
+
+    async function gdprDelete() {
+        if (!confirm('This will anonymise buyer / agent / conveyancer names and delete uploaded documents for ALL your sales. The sale records themselves stay (marked cancelled) for audit. Continue?')) return;
+        if (!confirm('Are you sure? This cannot be undone.')) return;
+        try {
+            const res = await Auth.authFetch('/api/sale-tracker/gdpr/delete/', {
+                method: 'POST',
+                headers: Auth.headers(),
+            });
+            if (!res.ok && res.status !== 204) throw new Error(`Delete failed (${res.status})`);
+            alert('Your tracker data has been deleted.');
+            window.location.href = '/sale-tracker/';
+        } catch (err) {
+            alert(err.message);
+        }
+    }
+
+    loadSale();
+</script>
+{% endblock %}
