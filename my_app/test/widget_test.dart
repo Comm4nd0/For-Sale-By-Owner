@@ -72,6 +72,11 @@ class TestAuthService extends ChangeNotifier implements AuthService {
   bool get isLoading => _isLoading;
 
   @override
+  void Function()? onAuthenticatedHook;
+  @override
+  void Function()? onLogoutHook;
+
+  @override
   Future<void> init() async {}
 
   @override

@@ -6,6 +6,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'constants/app_theme.dart';
 import 'services/auth_service.dart';
 import 'services/api_service.dart';
+import 'services/push_service.dart';
 import 'screens/main_shell.dart';
 
 // Supplied at build time via `--dart-define=SENTRY_DSN=…`. When absent
@@ -20,8 +21,21 @@ const String _sentryEnvironment =
 
 Future<void> _bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Firebase / FCM. Init is best-effort — if the native side isn't
+  // configured (e.g. a dev build without google-services.json on iOS)
+  // PushService.init swallows the error and the rest of the app still
+  // boots. We also pass a token getter to the auth service so it can
+  // register the FCM token after login.
+  await PushService.instance.init();
+
   final authService = AuthService();
+  authService.onAuthenticatedHook = () {
+    PushService.instance.registerDeviceForUser(() => authService.token);
+  };
+  authService.onLogoutHook = PushService.instance.onLogout;
   await authService.init();
+
   runApp(FSBOApp(authService: authService));
 }
 

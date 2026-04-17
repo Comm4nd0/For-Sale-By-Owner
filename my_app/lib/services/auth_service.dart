@@ -38,6 +38,28 @@ class AuthService extends ChangeNotifier {
   bool _isLoading = false;
   String _userType = 'Buyer';
 
+  /// Callbacks the bootstrap wires so non-auth concerns (e.g. push
+  /// notification token registration) can react to auth changes
+  /// without AuthService depending on them.
+  void Function()? onAuthenticatedHook;
+  void Function()? onLogoutHook;
+
+  void _fireAuthenticated() {
+    try {
+      onAuthenticatedHook?.call();
+    } catch (e) {
+      debugPrint('onAuthenticatedHook error: $e');
+    }
+  }
+
+  void _fireLogout() {
+    try {
+      onLogoutHook?.call();
+    } catch (e) {
+      debugPrint('onLogoutHook error: $e');
+    }
+  }
+
   String? get token => _token;
   int? get userId => _userId;
   String? get email => _email;
@@ -52,6 +74,7 @@ class AuthService extends ChangeNotifier {
     _token = await _storage.read(key: 'auth_token');
     if (_token != null) {
       await _fetchCurrentUser();
+      _fireAuthenticated();
     }
     notifyListeners();
   }
@@ -124,6 +147,7 @@ class AuthService extends ChangeNotifier {
         await _fetchCurrentUser();
         _isLoading = false;
         notifyListeners();
+        _fireAuthenticated();
         return LoginResult.success();
       }
 
@@ -165,6 +189,7 @@ class AuthService extends ChangeNotifier {
         await _fetchCurrentUser();
         _isLoading = false;
         notifyListeners();
+        _fireAuthenticated();
         return LoginResult.success();
       }
 
@@ -241,6 +266,7 @@ class AuthService extends ChangeNotifier {
     _lastName = null;
     _isStaff = false;
     await _storage.delete(key: 'auth_token');
+    _fireLogout();
     notifyListeners();
   }
 }
