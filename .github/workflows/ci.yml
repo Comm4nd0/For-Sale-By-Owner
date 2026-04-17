@@ -20,10 +20,14 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
+        # requirements.txt is a pip-compile lock. whitenoise and
+        # psycopg2-binary aren't in the dev set; they're needed only
+        # by the `check --deploy` step below, so we pull them from
+        # the prod lock.
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install whitenoise psycopg2-binary
+          pip install $(grep -E '^(whitenoise|psycopg2-binary)==' requirements-prod.txt)
 
       - name: Run tests
         env:
