@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Stages — Sale Tracker — For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+{% include "sale_tracker/_shared.html" %}
+<style>
+    .stage-card { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+    .stage-card.done { border-left: 4px solid #19747E; }
+    .stage-card.in_progress { border-left: 4px solid #D8943B; }
+    .stage-card.not_started { border-left: 4px solid #E2E2E2; }
+    .stage-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; gap: 1rem; flex-wrap: wrap; }
+    .stage-head h3 { color: #115E66; margin: 0; font-size: 1.05rem; }
+    .stage-dates { color: #8FA3A8; font-size: 0.85rem; }
+    .task-list { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+    .task-list li { padding: 0.5rem 0; border-bottom: 1px solid #F5F8F9; display: flex; justify-content: space-between; gap: 0.75rem; align-items: center; }
+    .task-list li:last-child { border-bottom: none; }
+    .task-list .title { flex: 1; }
+    .task-list .title a { color: #1A2C33; text-decoration: none; }
+    .task-list .title a:hover { color: #19747E; }
+    .task-list .owner { color: #4A5C62; font-size: 0.85rem; }
+    .task-list .task-status { font-size: 0.8rem; }
+    .task-done { color: #8FA3A8; text-decoration: line-through; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="st-layout">
+    <aside id="st-subnav" class="st-subnav"></aside>
+    <div>
+        <div class="st-page-header">
+            <h2 class="st-page-title">Stages</h2>
+        </div>
+        <div id="error" class="alert alert-error" style="display:none;"></div>
+        <div id="stages" class="st-loading">Loading stages…</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+
+    ST.saleId = parseInt(window.location.pathname.split('/').filter(Boolean)[1], 10);
+    ST.renderSubnav(ST.saleId, 'stages');
+
+    async function loadStages() {
+        const content = document.getElementById('stages');
+        const errorEl = document.getElementById('error');
+        try {
+            const stages = await ST.fetch('stages/');
+            const stageList = stages.results || stages;
+            content.classList.remove('st-loading');
+
+            if (!stageList.length) {
+                content.innerHTML = `<p class="st-meta">No stages yet.</p>`;
+                return;
+            }
+
+            content.innerHTML = stageList.map(stage => {
+                const statusClass = stage.status || 'not_started';
+                const statusLabel = (stage.status_display || stage.status || '').replace('_', ' ');
+                const tasks = stage.tasks || [];
+                const taskHtml = tasks.length
+                    ? `<ul class="task-list">${tasks.map(renderTask).join('')}</ul>`
+                    : `<p class="st-meta" style="margin:0.5rem 0 0;">No tasks in this stage.</p>`;
+                return `
+                    <div class="stage-card ${statusClass}">
+                        <div class="stage-head">
+                            <h3>Stage ${stage.stage_number}: ${escHtml(stage.name)}</h3>
+                            <div>
+                                ${ST.statusPill(stage.status, statusLabel)}
+                                <span class="stage-dates" style="margin-left:0.5rem;">
+                                    ${stage.started_at ? `Started ${ST.formatDate(stage.started_at)}` : ''}
+                                    ${stage.completed_at ? ` · Done ${ST.formatDate(stage.completed_at)}` : ''}
+                                </span>
+                            </div>
+                        </div>
+                        ${taskHtml}
+                    </div>`;
+            }).join('');
+        } catch (err) {
+            content.classList.remove('st-loading');
+            content.innerHTML = '';
+            errorEl.textContent = `Failed to load stages: ${err.message}`;
+            errorEl.style.display = 'block';
+        }
+    }
+
+    function renderTask(t) {
+        const done = t.status === 'done' || t.status === 'n_a';
+        return `
+            <li>
+                <span class="title ${done ? 'task-done' : ''}">
+                    <a href="/sale-tracker/${ST.saleId}/tasks/${t.id}/">${escHtml(t.title)}</a>
+                </span>
+                <span class="owner">${escHtml(t.current_owner_display || t.current_owner || '')}</span>
+                <span class="task-status">${ST.statusPill(t.status, (t.status_display || t.status || '').replace('_', ' '))}</span>
+            </li>`;
+    }
+
+    loadStages();
+</script>
+{% endblock %}

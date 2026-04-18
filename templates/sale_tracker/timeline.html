@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Timeline — Sale Tracker — For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+{% include "sale_tracker/_shared.html" %}
+<style>
+    .timeline { position: relative; padding-left: 1.5rem; border-left: 2px solid #E2E2E2; }
+    .timeline-event { position: relative; padding: 0.5rem 0 1rem 1rem; }
+    .timeline-event::before { content: ''; position: absolute; left: -0.55rem; top: 0.75rem; width: 10px; height: 10px; border-radius: 50%; background: #19747E; }
+    .timeline-event.stage_completed::before { background: #19747E; }
+    .timeline-event.stage_started::before { background: #D8943B; }
+    .timeline-event.task_completed::before { background: #A9D6E5; }
+    .timeline-event.document_uploaded::before { background: #19747E; }
+    .timeline-event.contact::before { background: #8FA3A8; }
+    .timeline-event .when { color: #8FA3A8; font-size: 0.8rem; }
+    .timeline-event .what { color: #1A2C33; font-size: 0.95rem; margin-top: 0.1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="st-layout">
+    <aside id="st-subnav" class="st-subnav"></aside>
+    <div>
+        <div class="st-page-header">
+            <h2 class="st-page-title">Timeline</h2>
+        </div>
+        <div id="error" class="alert alert-error" style="display:none;"></div>
+        <div id="timeline" class="st-loading">Loading timeline…</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+    ST.saleId = parseInt(window.location.pathname.split('/').filter(Boolean)[1], 10);
+    ST.renderSubnav(ST.saleId, 'timeline');
+
+    async function loadTimeline() {
+        const container = document.getElementById('timeline');
+        const errorEl = document.getElementById('error');
+        try {
+            const events = await ST.fetch('timeline/');
+            container.classList.remove('st-loading');
+            if (!Array.isArray(events) || !events.length) {
+                container.innerHTML = `<p class="st-meta">Nothing has happened yet. Once you complete a task, upload a document, or log a contact, it will show up here.</p>`;
+                return;
+            }
+            container.innerHTML = `<div class="timeline">` + events.map(e => `
+                <div class="timeline-event ${escHtml(e.type || '')}">
+                    <div class="when">${ST.formatDate(e.date)}</div>
+                    <div class="what">${escHtml(e.title)}</div>
+                </div>
+            `).join('') + `</div>`;
+        } catch (err) {
+            container.classList.remove('st-loading');
+            errorEl.textContent = `Failed to load timeline: ${err.message}`;
+            errorEl.style.display = 'block';
+        }
+    }
+
+    loadTimeline();
+</script>
+{% endblock %}

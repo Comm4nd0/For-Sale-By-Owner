@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}New sale — Sale Tracker — For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+{% include "sale_tracker/_shared.html" %}
+<style>
+    .setup-form { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.5rem; max-width: 720px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+    .form-section-title { color: #115E66; margin: 1.5rem 0 0.75rem; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-section-title:first-of-type { margin-top: 0.25rem; }
+    .st-form-group textarea { min-height: 80px; resize: vertical; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="st-page-header">
+    <h2 class="st-page-title">Set up a new sale</h2>
+    <a href="/sale-tracker/" class="btn btn-secondary">Cancel</a>
+</div>
+
+<p class="st-meta" style="margin-bottom:1rem;max-width:720px;">Track the conveyancing process from accepted offer through to completion. You can update any of these fields later from the sale's Settings page.</p>
+
+<form id="setup-form" class="setup-form">
+    <div id="error" class="alert alert-error" style="display:none;"></div>
+
+    <h4 class="form-section-title">Property</h4>
+    <div class="st-form-group">
+        <label for="property_address">Property address <span style="color:#B03A2E">*</span></label>
+        <input type="text" id="property_address" required autocomplete="street-address" placeholder="e.g. 12 Example Road, London N1 1AA">
+    </div>
+    <div class="form-grid">
+        <div class="st-form-group">
+            <label for="tenure">Tenure <span style="color:#B03A2E">*</span></label>
+            <select id="tenure" required>
+                <option value="">Choose…</option>
+                <option value="freehold">Freehold</option>
+                <option value="leasehold">Leasehold</option>
+                <option value="share_of_freehold">Share of Freehold</option>
+            </select>
+        </div>
+        <div class="st-form-group">
+            <label for="asking_price">Asking price (£)</label>
+            <input type="number" id="asking_price" min="0" step="1000" placeholder="optional">
+        </div>
+        <div class="st-form-group">
+            <label for="agreed_price">Agreed price (£)</label>
+            <input type="number" id="agreed_price" min="0" step="1000" placeholder="once you've accepted an offer">
+        </div>
+        <div class="st-form-group">
+            <label for="target_completion_date">Target completion date</label>
+            <input type="date" id="target_completion_date">
+        </div>
+    </div>
+
+    <h4 class="form-section-title">Buyer</h4>
+    <div class="form-grid">
+        <div class="st-form-group">
+            <label for="buyer_name">Buyer name</label>
+            <input type="text" id="buyer_name">
+        </div>
+        <div class="st-form-group">
+            <label for="buyer_position">Buyer position</label>
+            <select id="buyer_position">
+                <option value="">Not yet known</option>
+                <option value="cash">Cash</option>
+                <option value="mortgage">Mortgage</option>
+                <option value="chain">Chain</option>
+            </select>
+        </div>
+    </div>
+
+    <h4 class="form-section-title">Your conveyancer</h4>
+    <div class="form-grid">
+        <div class="st-form-group">
+            <label for="seller_conveyancer_name">Firm name</label>
+            <input type="text" id="seller_conveyancer_name">
+        </div>
+        <div class="st-form-group">
+            <label for="seller_conveyancer_contact">Email or phone</label>
+            <input type="text" id="seller_conveyancer_contact">
+        </div>
+    </div>
+
+    <div style="margin-top:1.5rem;">
+        <button type="submit" id="submit-btn" class="btn btn-primary">Create sale</button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+
+    document.getElementById('setup-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('submit-btn');
+        const errorEl = document.getElementById('error');
+        errorEl.style.display = 'none';
+
+        const payload = {
+            property_address: document.getElementById('property_address').value.trim(),
+            tenure: document.getElementById('tenure').value,
+        };
+        const optionalFields = ['asking_price', 'agreed_price', 'target_completion_date',
+                                'buyer_name', 'buyer_position',
+                                'seller_conveyancer_name', 'seller_conveyancer_contact'];
+        for (const field of optionalFields) {
+            const v = document.getElementById(field).value;
+            if (v) payload[field] = v;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Creating…';
+
+        try {
+            const res = await Auth.authFetch('/api/sale-tracker/sales/', {
+                method: 'POST',
+                headers: Auth.headers(),
+                body: JSON.stringify(payload),
+            });
+            if (!res.ok) {
+                let msg = `Failed (${res.status})`;
+                try {
+                    const body = await res.json();
+                    const parts = [];
+                    for (const [k, v] of Object.entries(body)) {
+                        parts.push(`${k}: ${Array.isArray(v) ? v.join(', ') : v}`);
+                    }
+                    if (parts.length) msg = parts.join(' · ');
+                } catch {}
+                throw new Error(msg);
+            }
+            const sale = await res.json();
+            window.location.href = `/sale-tracker/${sale.id}/`;
+        } catch (err) {
+            errorEl.textContent = err.message;
+            errorEl.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Create sale';
+        }
+    });
+</script>
+{% endblock %}

@@ -17,6 +17,8 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
   static const Color _accent = Color(0xFF19747E);
 
   final TextEditingController _codeController = TextEditingController();
+  final TextEditingController _disablePasswordController =
+      TextEditingController();
 
   bool _is2FAEnabled = false;
   bool _setupComplete = false;
@@ -30,6 +32,7 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
   @override
   void dispose() {
     _codeController.dispose();
+    _disablePasswordController.dispose();
     super.dispose();
   }
 
@@ -103,9 +106,16 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
 
   Future<void> _handleDisable() async {
     final code = _codeController.text.trim();
+    final password = _disablePasswordController.text;
     if (code.length != 6) {
       setState(() {
         _error = 'Please enter a valid 6-digit code to disable 2FA.';
+      });
+      return;
+    }
+    if (password.isEmpty) {
+      setState(() {
+        _error = 'Please enter your password to disable 2FA.';
       });
       return;
     }
@@ -118,11 +128,13 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
 
     try {
       final apiService = context.read<ApiService>();
-      final result = await apiService.disable2FA(code);
+      final result =
+          await apiService.disable2FA(code: code, password: password);
       if (mounted) {
         setState(() {
           _is2FAEnabled = false;
           _codeController.clear();
+          _disablePasswordController.clear();
           _successMessage =
               result['message'] as String? ?? '2FA disabled successfully.';
           _loading = false;
@@ -569,6 +581,18 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
               fontSize: 14,
               color: Colors.red.shade700,
               height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _disablePasswordController,
+            obscureText: true,
+            decoration: InputDecoration(
+              labelText: 'Current password',
+              hintText: 'Required to confirm your identity',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           ),
           const SizedBox(height: 16),

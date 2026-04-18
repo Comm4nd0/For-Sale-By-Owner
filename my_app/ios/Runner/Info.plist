@@ -30,7 +30,10 @@
 	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsArbitraryLoads</key>
+		<!-- Allow HTTP only to loopback / link-local / private addresses so
+		     local dev servers (iOS simulator at localhost, Android emulator
+		     at 10.0.2.2) keep working. Production traffic goes via HTTPS. -->
+		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>

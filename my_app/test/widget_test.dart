@@ -72,17 +72,35 @@ class TestAuthService extends ChangeNotifier implements AuthService {
   bool get isLoading => _isLoading;
 
   @override
+  void Function()? onAuthenticatedHook;
+  @override
+  void Function()? onLogoutHook;
+
+  @override
   Future<void> init() async {}
 
   @override
-  Future<bool> login(String email, String password) async {
+  Future<LoginResult> login(String email, String password) async {
     _isLoading = true;
     notifyListeners();
     await Future.delayed(const Duration(milliseconds: 50));
     _isLoading = false;
     // Simulate failure for tests
     notifyListeners();
-    return false;
+    return LoginResult.invalidCredentials();
+  }
+
+  @override
+  Future<LoginResult> completeTwoFactorLogin({
+    required String challengeId,
+    required String code,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    await Future.delayed(const Duration(milliseconds: 50));
+    _isLoading = false;
+    notifyListeners();
+    return LoginResult.invalidCredentials();
   }
 
   @override

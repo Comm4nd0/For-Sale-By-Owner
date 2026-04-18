@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Prompt drafts — Sale Tracker — For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+{% include "sale_tracker/_shared.html" %}
+<style>
+    .prompt { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; }
+    .prompt.sent { opacity: 0.75; }
+    .prompt-head { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.5rem; }
+    .prompt-subject { font-weight: 600; color: #115E66; margin: 0; }
+    .prompt-meta { color: #4A5C62; font-size: 0.85rem; }
+    .prompt-body { background: #F5F8F9; border-radius: 6px; padding: 0.75rem 1rem; white-space: pre-wrap; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 0.9rem; color: #1A2C33; }
+    .prompt-actions { margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .prompt-actions .btn { font-size: 0.85rem; padding: 0.4rem 0.75rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="st-layout">
+    <aside id="st-subnav" class="st-subnav"></aside>
+    <div>
+        <div class="st-page-header">
+            <h2 class="st-page-title">Prompt drafts</h2>
+        </div>
+        <p class="st-meta" style="margin-bottom:1rem;">Generate ready-to-send chase messages for any counterparty. The system fills in your property address, the open items, and how long each has been waiting. You copy and send them yourself — nothing is sent automatically.</p>
+
+        <div id="error" class="alert alert-error" style="display:none;"></div>
+        <div id="success" class="alert alert-success" style="display:none;"></div>
+
+        <div class="st-card">
+            <h3>Generate a new draft</h3>
+            <div class="st-form-group">
+                <label for="counterparty">Who are you writing to?</label>
+                <select id="counterparty">
+                    <option value="seller_conveyancer">Your conveyancer</option>
+                    <option value="buyer_conveyancer">Buyer's conveyancer</option>
+                    <option value="estate_agent">Estate agent</option>
+                    <option value="buyer">Buyer</option>
+                    <option value="lender">Lender</option>
+                    <option value="freeholder_or_managing_agent">Freeholder / managing agent</option>
+                    <option value="surveyor">Surveyor</option>
+                    <option value="local_authority_or_search_provider">Local authority / search provider</option>
+                </select>
+            </div>
+            <div class="st-form-group">
+                <label for="level">Tone / level</label>
+                <select id="level">
+                    <option value="1">Level 1 — gentle chase</option>
+                    <option value="2">Level 2 — firmer</option>
+                    <option value="escalation">Escalation</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" id="generate-btn">Generate draft</button>
+        </div>
+
+        <div id="prompts" class="st-loading" style="margin-top:1rem;">Loading drafts…</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+    ST.saleId = parseInt(window.location.pathname.split('/').filter(Boolean)[1], 10);
+    ST.renderSubnav(ST.saleId, 'prompts');
+
+    async function loadPrompts() {
+        const container = document.getElementById('prompts');
+        const errorEl = document.getElementById('error');
+        try {
+            const data = await ST.fetch('prompts/');
+            const drafts = (data.results || data).slice().sort((a, b) =>
+                (b.generated_at || '').localeCompare(a.generated_at || '')
+            );
+            container.classList.remove('st-loading');
+            if (!drafts.length) {
+                container.innerHTML = `<p class="st-meta">No drafts yet. Generate one using the form above.</p>`;
+                return;
+            }
+            container.innerHTML = drafts.map(renderPrompt).join('');
+            container.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
+        } catch (err) {
+            container.classList.remove('st-loading');
+            errorEl.textContent = `Failed to load drafts: ${err.message}`;
+            errorEl.style.display = 'block';
+        }
+    }
+
+    function renderPrompt(p) {
+        return `
+            <div class="prompt ${p.sent_marker ? 'sent' : ''}">
+                <div class="prompt-head">
+                    <div>
+                        <h4 class="prompt-subject">${escHtml(p.subject || '(no subject)')}</h4>
+                        <div class="prompt-meta">
+                            To ${escHtml(p.recipient_owner_display || p.recipient_owner)}
+                            · ${escHtml(p.level_display || p.level)}
+                            · Generated ${ST.formatDate(p.generated_at)}
+                            ${p.sent_marker ? ` · Marked sent ${ST.formatDate(p.sent_at)}` : ''}
+                        </div>
+                    </div>
+                </div>
+                <pre class="prompt-body">${escHtml(p.body_text || '')}</pre>
+                <div class="prompt-actions">
+                    <button class="btn btn-primary" data-action="copy" data-id="${p.id}">Copy to clipboard</button>
+                    <button class="btn btn-secondary" data-action="toggle-sent" data-id="${p.id}">${p.sent_marker ? 'Mark unsent' : 'Mark as sent'}</button>
+                </div>
+            </div>`;
+    }
+
+    async function handleAction(e) {
+        const action = e.currentTarget.dataset.action;
+        const id = e.currentTarget.dataset.id;
+        if (action === 'copy') {
+            const body = e.currentTarget.closest('.prompt').querySelector('.prompt-body').textContent;
+            try {
+                await navigator.clipboard.writeText(body);
+                showSuccess('Copied to clipboard.');
+            } catch {
+                alert(body);
+            }
+            return;
+        }
+        if (action === 'toggle-sent') {
+            const btn = e.currentTarget;
+            const shouldMark = btn.textContent.includes('Mark as sent');
+            try {
+                await ST.fetch(`prompts/${id}/`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ sent_marker: shouldMark }),
+                });
+                loadPrompts();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+    }
+
+    document.getElementById('generate-btn').addEventListener('click', async function() {
+        const btn = this;
+        const errorEl = document.getElementById('error');
+        errorEl.style.display = 'none';
+        btn.disabled = true;
+        btn.textContent = 'Generating…';
+        try {
+            await ST.fetch('prompts/generate/', {
+                method: 'POST',
+                body: JSON.stringify({
+                    counterparty_type: document.getElementById('counterparty').value,
+                    level: document.getElementById('level').value,
+                }),
+            });
+            showSuccess('Draft generated.');
+            loadPrompts();
+        } catch (err) {
+            errorEl.textContent = err.message;
+            errorEl.style.display = 'block';
+        }
+        btn.disabled = false;
+        btn.textContent = 'Generate draft';
+    });
+
+    function showSuccess(msg) {
+        const el = document.getElementById('success');
+        el.textContent = msg;
+        el.style.display = 'block';
+        setTimeout(() => { el.style.display = 'none'; }, 2500);
+    }
+
+    loadPrompts();
+</script>
+{% endblock %}

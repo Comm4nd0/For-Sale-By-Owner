@@ -1,0 +1,130 @@
+{% comment %}
+Shared partial used by every Sale Tracker page. Provides:
+- common CSS
+- a <script> block with helper URL builders and the ST_* helpers
+- a renderable sub-nav once the current sale is known
+
+Usage:
+    {% extends "base.html" %}
+    {% block extra_css %}
+    {% include "sale_tracker/_shared.html" %}
+    ... page-specific CSS ...
+    {% endblock %}
+
+The {% include %} inside extra_css inserts both the <style> and <script>
+tags; Django's template loader runs them each once per page.
+{% endcomment %}
+<style>
+    .st-layout { display: grid; grid-template-columns: 220px 1fr; gap: 1.5rem; }
+    @media (max-width: 768px) { .st-layout { grid-template-columns: 1fr; } }
+    .st-subnav { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 0.5rem; height: fit-content; position: sticky; top: 1rem; }
+    .st-subnav a { display: block; padding: 0.5rem 0.75rem; color: #4A5C62; text-decoration: none; border-radius: 6px; font-size: 0.92rem; }
+    .st-subnav a:hover { background: #F5F8F9; color: #115E66; }
+    .st-subnav a.active { background: #D1E8E2; color: #115E66; font-weight: 600; }
+    .st-subnav h4 { padding: 0.5rem 0.75rem; margin: 0.25rem 0 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #8FA3A8; }
+    .st-page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem; }
+    .st-page-title { color: #115E66; margin: 0; font-size: 1.5rem; }
+    .st-card { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+    .st-card h3 { color: #115E66; margin: 0 0 0.75rem; font-size: 1.05rem; }
+    .st-empty { text-align: center; padding: 3rem 1.5rem; color: #4A5C62; }
+    .st-empty p { margin-bottom: 1rem; font-size: 1.05rem; }
+    .st-pill { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; }
+    .st-pill-ok { background: #D1E8E2; color: #115E66; }
+    .st-pill-warn { background: #FFF2D0; color: #A36A00; }
+    .st-pill-pending { background: #E2E2E2; color: #4A5C62; }
+    .st-pill-danger { background: #f8d7d4; color: #B03A2E; }
+    .st-pill-info { background: #A9D6E5; color: #19747E; }
+    .st-meta { color: #4A5C62; font-size: 0.9rem; }
+    .st-loading { padding: 2rem; text-align: center; color: #8FA3A8; }
+    .st-form-group { margin-bottom: 1rem; }
+    .st-form-group label { display: block; margin-bottom: 0.25rem; font-weight: 500; color: #4A5C62; font-size: 0.9rem; }
+    .st-form-group input, .st-form-group select, .st-form-group textarea {
+        width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #E2E2E2;
+        border-radius: 6px; font-size: 0.95rem; font-family: inherit;
+    }
+    .st-form-group input:focus, .st-form-group select:focus, .st-form-group textarea:focus {
+        outline: none; border-color: #19747E; box-shadow: 0 0 0 2px rgba(25,116,126,0.15);
+    }
+    .st-stage-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .st-stage-chip { padding: 0.35rem 0.6rem; background: #F5F8F9; border: 1px solid #E2E2E2; border-radius: 999px; font-size: 0.8rem; color: #4A5C62; }
+    .st-stage-chip.done { background: #D1E8E2; border-color: #a8d8b0; color: #115E66; }
+    .st-stage-chip.in-progress { background: #FFF2D0; border-color: #E8C87A; color: #A36A00; font-weight: 600; }
+    .st-inline-btns { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .st-inline-btns .btn { font-size: 0.88rem; padding: 0.45rem 0.9rem; }
+</style>
+<script>
+    // Shared Sale Tracker helpers. Each page loads this include exactly
+    // once, so the ST namespace is defined before any page-level
+    // script runs.
+    const ST = {
+        // Currently-viewed sale id. Pages set this in their own script
+        // before calling loaders, except /sale-tracker/ (the list).
+        saleId: null,
+        apiBase(saleId) {
+            return `/api/sale-tracker/sales/${saleId}`;
+        },
+        // Fetch JSON from the sale-tracker API with auth headers. Throws
+        // on non-2xx so callers can `try/catch` once.
+        async fetch(path, options = {}) {
+            const url = path.startsWith('/') ? path : `${ST.apiBase(ST.saleId)}/${path}`;
+            const opts = { ...options, headers: { ...Auth.headers(), ...(options.headers || {}) } };
+            opts.cache = 'no-store';
+            const res = await Auth.authFetch(url, opts);
+            if (!res.ok) {
+                let msg = `Request failed (${res.status})`;
+                try {
+                    const body = await res.json();
+                    if (body.detail) msg = body.detail;
+                } catch {}
+                throw new Error(msg);
+            }
+            if (res.status === 204) return null;
+            return res.json();
+        },
+        statusPill(status, label) {
+            const map = {
+                'setup': 'pending', 'instructed': 'info',
+                'exchanged': 'info', 'completed': 'ok',
+                'cancelled': 'danger', 'fallen_through': 'danger',
+                'done': 'ok', 'in_progress': 'info',
+                'blocked': 'warn', 'waiting': 'warn',
+                'missing': 'pending', 'have': 'ok',
+                'not_applicable': 'pending', 'expired': 'danger',
+                'open': 'warn', 'answered': 'ok', 'closed': 'pending',
+            };
+            const cls = map[status] || 'pending';
+            return `<span class="st-pill st-pill-${cls}">${escHtml(label || status)}</span>`;
+        },
+        renderSubnav(saleId, active) {
+            const links = [
+                ['dashboard', 'Dashboard', `/sale-tracker/${saleId}/`],
+                ['stages', 'Stages', `/sale-tracker/${saleId}/stages/`],
+                ['documents', 'Documents', `/sale-tracker/${saleId}/documents/`],
+                ['contact-log', 'Contact log', `/sale-tracker/${saleId}/contact-log/`],
+                ['enquiries', 'Enquiries', `/sale-tracker/${saleId}/enquiries/`],
+                ['timeline', 'Timeline', `/sale-tracker/${saleId}/timeline/`],
+                ['prompts', 'Prompts', `/sale-tracker/${saleId}/prompts/`],
+                ['settings', 'Settings', `/sale-tracker/${saleId}/settings/`],
+            ];
+            const container = document.getElementById('st-subnav');
+            if (!container) return;
+            container.innerHTML = `
+                <h4>This sale</h4>
+                ${links.map(([key, label, href]) =>
+                    `<a href="${href}"${key === active ? ' class="active"' : ''}>${label}</a>`
+                ).join('')}
+                <h4>All sales</h4>
+                <a href="/sale-tracker/">Back to list</a>
+            `;
+        },
+        formatDate(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        },
+        formatMoney(val) {
+            if (val == null || val === '') return '—';
+            return '£' + Number(val).toLocaleString('en-GB');
+        },
+    };
+</script>

@@ -1,0 +1,22 @@
+# Source file for requirements-prod.txt. Edit this, then run:
+#   python -m piptools compile --output-file=requirements-prod.txt requirements-prod.in
+# from the repo root. Commit both files. The production Dockerfile
+# installs from requirements-prod.txt.
+
+Django==5.2.10
+djangorestframework
+djoser
+django-cors-headers
+python-dotenv
+Pillow
+gunicorn
+psycopg2-binary
+whitenoise
+requests
+stripe
+celery[redis]
+django-celery-beat
+redis
+channels[daphne]
+channels-redis
+firebase-admin

@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Sale dashboard — Sale Tracker — For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+{% include "sale_tracker/_shared.html" %}
+<style>
+    .headline-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
+    .headline-card { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 0.9rem 1rem; }
+    .headline-card .value { font-size: 1.4rem; font-weight: 700; color: #115E66; }
+    .headline-card .label { color: #4A5C62; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.4px; }
+    .task-group { margin-top: 1.25rem; }
+    .task-group h3 { color: #115E66; font-size: 1rem; margin-bottom: 0.5rem; }
+    .task-row { background: #FFFFFF; border: 1px solid #E2E2E2; border-left: 3px solid #E2E2E2; border-radius: 6px; padding: 0.8rem 1rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; align-items: center; }
+    .task-row.your-turn { border-left-color: #D8943B; }
+    .task-row.other-turn { border-left-color: #A9D6E5; }
+    .task-row .main { flex: 1; min-width: 220px; }
+    .task-row .title { font-weight: 600; color: #1A2C33; }
+    .task-row .sub { color: #4A5C62; font-size: 0.85rem; margin-top: 0.15rem; }
+    .task-row .age { color: #A36A00; font-size: 0.85rem; font-weight: 600; }
+    .readiness-banner { background: #FFF2D0; border: 1px solid #E8C87A; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+    .readiness-banner .head { font-weight: 600; color: #A36A00; margin-bottom: 0.4rem; }
+    .expiring-warning { background: #f8d7d4; border: 1px solid #e8a9a4; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; color: #B03A2E; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="st-layout">
+    <aside id="st-subnav" class="st-subnav"></aside>
+    <div>
+        <div class="st-page-header">
+            <h2 class="st-page-title" id="sale-title">Loading…</h2>
+            <div id="sale-status"></div>
+        </div>
+        <div id="error" class="alert alert-error" style="display:none;"></div>
+        <div id="dashboard-content" class="st-loading">Loading dashboard…</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+
+    // Sale id is the final path segment: /sale-tracker/<id>/
+    ST.saleId = parseInt(window.location.pathname.split('/').filter(Boolean)[1], 10);
+    ST.renderSubnav(ST.saleId, 'dashboard');
+
+    async function loadDashboard() {
+        const content = document.getElementById('dashboard-content');
+        const errorEl = document.getElementById('error');
+        const titleEl = document.getElementById('sale-title');
+        const statusEl = document.getElementById('sale-status');
+
+        try {
+            const [sale, dash] = await Promise.all([
+                ST.fetch(''),
+                ST.fetch('dashboard/'),
+            ]);
+
+            titleEl.textContent = sale.property_address || 'Sale';
+            statusEl.innerHTML = ST.statusPill(sale.status, sale.status_display);
+
+            const h = dash.headline_numbers || {};
+            const tasksCompleted = h.completed_tasks || 0;
+            const tasksTotal = h.total_tasks || 0;
+            const stageLabel = h.current_stage_name
+                ? `Stage ${h.current_stage_number}: ${escHtml(h.current_stage_name)}`
+                : 'Setup';
+
+            const yourTurn = dash.your_turn || [];
+            const awaiting = dash.awaiting_others || {};
+            const expiring = dash.expiring_documents || [];
+            const readiness = dash.readiness;
+
+            let html = `
+                <div class="headline-grid">
+                    <div class="headline-card">
+                        <div class="value">${tasksCompleted}/${tasksTotal}</div>
+                        <div class="label">Tasks complete</div>
+                    </div>
+                    <div class="headline-card">
+                        <div class="value" style="font-size:1rem;font-weight:600;">${stageLabel}</div>
+                        <div class="label">Current stage</div>
+                    </div>
+                    <div class="headline-card">
+                        <div class="value">${h.days_since_instruction != null ? h.days_since_instruction : '—'}</div>
+                        <div class="label">Days since instructed</div>
+                    </div>
+                    <div class="headline-card">
+                        <div class="value">${h.days_to_target_completion != null ? h.days_to_target_completion : '—'}</div>
+                        <div class="label">Days to target completion</div>
+                    </div>
+                </div>`;
+
+            if (readiness && !readiness.ready) {
+                const missing = (readiness.missing_always || []).concat(readiness.missing_if_applicable || []);
+                html += `
+                    <div class="readiness-banner">
+                        <div class="head">Not ready to instruct a conveyancer yet</div>
+                        <p class="st-meta" style="margin-bottom:0.5rem;">${readiness.documents_ready || 0} of ${readiness.total_documents || 0} required documents gathered.</p>
+                        ${missing.length ? `<p class="st-meta">Missing: ${missing.slice(0, 5).map(d => escHtml(d.title)).join(', ')}${missing.length > 5 ? ` and ${missing.length - 5} more` : ''}.</p>` : ''}
+                        <a href="/sale-tracker/${ST.saleId}/documents/" class="btn btn-primary" style="margin-top:0.5rem;">Go to document vault</a>
+                    </div>`;
+            }
+
+            if (expiring.length) {
+                html += `
+                    <div class="expiring-warning">
+                        <strong>${expiring.length} document${expiring.length === 1 ? '' : 's'} expiring within 30 days:</strong>
+                        ${expiring.map(d => escHtml(d.title)).join(', ')}.
+                        <a href="/sale-tracker/${ST.saleId}/documents/" style="color:#B03A2E;">Review</a>
+                    </div>`;
+            }
+
+            html += `<div class="task-group">`;
+            html += `<h3>Your turn (${yourTurn.length})</h3>`;
+            if (yourTurn.length) {
+                html += yourTurn.map(t => renderTask(t, 'your-turn')).join('');
+            } else {
+                html += `<p class="st-meta">Nothing waiting on you right now.</p>`;
+            }
+            html += `</div>`;
+
+            const othersKeys = Object.keys(awaiting);
+            if (othersKeys.length) {
+                html += `<div class="task-group"><h3>Awaiting others</h3>`;
+                for (const owner of othersKeys) {
+                    const items = awaiting[owner];
+                    if (!items || !items.length) continue;
+                    const ownerLabel = items[0].current_owner_display || owner;
+                    html += `<p class="st-meta" style="margin-top:0.75rem;"><strong>${escHtml(ownerLabel)} (${items.length})</strong></p>`;
+                    html += items.map(t => renderTask(t, 'other-turn')).join('');
+                }
+                html += `</div>`;
+            }
+
+            content.classList.remove('st-loading');
+            content.innerHTML = html;
+        } catch (err) {
+            content.classList.remove('st-loading');
+            content.innerHTML = '';
+            errorEl.textContent = `Failed to load dashboard: ${err.message}`;
+            errorEl.style.display = 'block';
+        }
+    }
+
+    function renderTask(t, cls) {
+        const ageHtml = t.days_awaiting
+            ? `<span class="age">${t.days_awaiting} day${t.days_awaiting === 1 ? '' : 's'}</span>`
+            : '';
+        const stage = t.stage_number != null
+            ? `Stage ${t.stage_number}${t.stage_name ? `: ${escHtml(t.stage_name)}` : ''}`
+            : '';
+        const link = t.type === 'task'
+            ? `/sale-tracker/${ST.saleId}/tasks/${t.id}/`
+            : `/sale-tracker/${ST.saleId}/enquiries/`;
+        return `
+            <div class="task-row ${cls}">
+                <div class="main">
+                    <div class="title"><a href="${link}" style="color:inherit;">${escHtml(t.title)}</a></div>
+                    <div class="sub">${stage}${stage && t.status ? ' · ' : ''}${escHtml(t.status || '')}</div>
+                </div>
+                ${ageHtml}
+            </div>`;
+    }
+
+    loadDashboard();
+</script>
+{% endblock %}

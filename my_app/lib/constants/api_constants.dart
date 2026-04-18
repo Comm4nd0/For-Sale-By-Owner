@@ -6,7 +6,8 @@ class ApiConstants {
   // Android emulator uses 10.0.2.2 to reach host; iOS simulator uses localhost
   static const String _androidLocalUrl = 'http://10.0.2.2:8000';
   static const String _iosLocalUrl = 'http://localhost:8000';
-  static const String _prodUrl = 'http://178.104.29.66:8002';
+  // Reaches the app via Caddy (TLS terminated there) rather than the origin IP.
+  static const String _prodUrl = 'https://for-sale-by-owner.co.uk';
 
   static String get _localUrl =>
       Platform.isIOS ? _iosLocalUrl : _androidLocalUrl;

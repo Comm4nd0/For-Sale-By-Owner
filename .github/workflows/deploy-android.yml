@@ -77,7 +77,12 @@ jobs:
 
       - name: Build AAB
         working-directory: my_app
-        run: flutter build appbundle --release
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_MOBILE }}
+        run: |
+          flutter build appbundle --release \
+            --dart-define=SENTRY_DSN="$SENTRY_DSN" \
+            --dart-define=SENTRY_ENVIRONMENT="${{ github.ref_name == 'main' && 'production' || 'alpha' }}"
 
       - name: Set deploy track
         id: track

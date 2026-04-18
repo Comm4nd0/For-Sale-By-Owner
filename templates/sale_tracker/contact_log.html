@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Contact log — Sale Tracker — For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+{% include "sale_tracker/_shared.html" %}
+<style>
+    .log-entry { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 0.5rem; }
+    .log-head { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; color: #4A5C62; font-size: 0.85rem; }
+    .log-counterparty { color: #115E66; font-weight: 600; }
+    .log-summary { margin-top: 0.5rem; color: #1A2C33; white-space: pre-wrap; }
+    .new-entry-form .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    @media (max-width: 500px) { .new-entry-form .form-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="st-layout">
+    <aside id="st-subnav" class="st-subnav"></aside>
+    <div>
+        <div class="st-page-header">
+            <h2 class="st-page-title">Contact log</h2>
+        </div>
+        <div id="error" class="alert alert-error" style="display:none;"></div>
+        <div id="success" class="alert alert-success" style="display:none;"></div>
+
+        <div class="st-card new-entry-form">
+            <h3>Log a new contact</h3>
+            <div class="form-grid">
+                <div class="st-form-group">
+                    <label for="channel">Channel</label>
+                    <select id="channel">
+                        <option value="email">Email</option>
+                        <option value="phone">Phone</option>
+                        <option value="letter">Letter</option>
+                        <option value="meeting">Meeting</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="st-form-group">
+                    <label for="counterparty">Who did you contact?</label>
+                    <input type="text" id="counterparty" placeholder="e.g. John at Smith & Co.">
+                </div>
+            </div>
+            <div class="st-form-group">
+                <label for="summary">Summary</label>
+                <textarea id="summary" rows="3" placeholder="What was discussed / agreed?"></textarea>
+            </div>
+            <div class="form-grid">
+                <div class="st-form-group">
+                    <label for="date">Date</label>
+                    <input type="date" id="date">
+                </div>
+                <div class="st-form-group">
+                    <label for="follow_up_date">Follow up by (optional)</label>
+                    <input type="date" id="follow_up_date">
+                </div>
+            </div>
+            <button class="btn btn-primary" id="save-btn">Save entry</button>
+        </div>
+
+        <div id="entries" class="st-loading">Loading log…</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+    ST.saleId = parseInt(window.location.pathname.split('/').filter(Boolean)[1], 10);
+    ST.renderSubnav(ST.saleId, 'contact-log');
+
+    // Default to today in the date field
+    document.getElementById('date').valueAsDate = new Date();
+
+    async function loadEntries() {
+        const container = document.getElementById('entries');
+        const errorEl = document.getElementById('error');
+        try {
+            const data = await ST.fetch('contact-log/');
+            const entries = (data.results || data).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            container.classList.remove('st-loading');
+            if (!entries.length) {
+                container.innerHTML = `<p class="st-meta">No contacts logged yet.</p>`;
+                return;
+            }
+            container.innerHTML = entries.map(e => `
+                <div class="log-entry">
+                    <div class="log-head">
+                        <span class="log-counterparty">${escHtml(e.counterparty || '—')}</span>
+                        <span>${escHtml(e.channel_display || e.channel || '')}${e.date ? ' · ' + ST.formatDate(e.date) : ''}</span>
+                    </div>
+                    <div class="log-summary">${escHtml(e.summary || '')}</div>
+                    ${e.follow_up_date ? `<div class="st-meta" style="margin-top:0.4rem; color:#A36A00;">Follow up by ${ST.formatDate(e.follow_up_date)}</div>` : ''}
+                </div>
+            `).join('');
+        } catch (err) {
+            container.classList.remove('st-loading');
+            errorEl.textContent = `Failed to load log: ${err.message}`;
+            errorEl.style.display = 'block';
+        }
+    }
+
+    document.getElementById('save-btn').addEventListener('click', async function() {
+        const btn = this;
+        const errorEl = document.getElementById('error');
+        const successEl = document.getElementById('success');
+        errorEl.style.display = successEl.style.display = 'none';
+
+        const payload = {
+            channel: document.getElementById('channel').value,
+            counterparty: document.getElementById('counterparty').value.trim(),
+            summary: document.getElementById('summary').value.trim(),
+        };
+        const date = document.getElementById('date').value;
+        if (date) payload.date = date;
+        const followUp = document.getElementById('follow_up_date').value;
+        if (followUp) payload.follow_up_date = followUp;
+
+        if (!payload.counterparty || !payload.summary) {
+            errorEl.textContent = 'Who and summary are required.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Saving…';
+        try {
+            await ST.fetch('contact-log/', {
+                method: 'POST',
+                body: JSON.stringify(payload),
+            });
+            successEl.textContent = 'Entry saved.';
+            successEl.style.display = 'block';
+            setTimeout(() => { successEl.style.display = 'none'; }, 2500);
+            document.getElementById('counterparty').value = '';
+            document.getElementById('summary').value = '';
+            document.getElementById('follow_up_date').value = '';
+            loadEntries();
+        } catch (err) {
+            errorEl.textContent = err.message;
+            errorEl.style.display = 'block';
+        }
+        btn.disabled = false;
+        btn.textContent = 'Save entry';
+    });
+
+    loadEntries();
+</script>
+{% endblock %}

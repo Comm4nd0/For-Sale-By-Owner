@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Enquiries — Sale Tracker — For Sale By Owner{% endblock %}
+
+{% block extra_css %}
+{% include "sale_tracker/_shared.html" %}
+<style>
+    .enquiry-item { background: #FFFFFF; border: 1px solid #E2E2E2; border-left: 3px solid #A9D6E5; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 0.5rem; }
+    .enquiry-item.open { border-left-color: #D8943B; }
+    .enquiry-item.answered { border-left-color: #19747E; }
+    .enquiry-item.closed { border-left-color: #E2E2E2; }
+    .enquiry-head { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; align-items: center; }
+    .enquiry-question { font-weight: 600; color: #1A2C33; margin-top: 0.3rem; }
+    .enquiry-response { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #F5F8F9; color: #4A5C62; }
+    .enquiry-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
+    .enquiry-actions .btn { font-size: 0.85rem; padding: 0.4rem 0.75rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="st-layout">
+    <aside id="st-subnav" class="st-subnav"></aside>
+    <div>
+        <div class="st-page-header">
+            <h2 class="st-page-title">Enquiries</h2>
+        </div>
+        <div id="error" class="alert alert-error" style="display:none;"></div>
+        <div id="success" class="alert alert-success" style="display:none;"></div>
+
+        <div class="st-card">
+            <h3>Log a new enquiry</h3>
+            <p class="st-meta" style="margin-bottom:0.75rem;">Record questions raised by the buyer's conveyancer so you can track owner and response.</p>
+            <div class="st-form-group">
+                <label for="question">Question</label>
+                <textarea id="question" rows="3" placeholder="e.g. Confirm whether the boiler service record is available…"></textarea>
+            </div>
+            <div class="st-form-group">
+                <label for="new-owner">Whose turn is it?</label>
+                <select id="new-owner">
+                    <option value="seller">Seller (you)</option>
+                    <option value="seller_conveyancer">Your conveyancer</option>
+                    <option value="buyer_conveyancer">Buyer's conveyancer</option>
+                    <option value="buyer">Buyer</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" id="save-btn">Log enquiry</button>
+        </div>
+
+        <div id="entries" class="st-loading" style="margin-top:1rem;">Loading enquiries…</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.requireAuth()) throw new Error('Not authenticated');
+    ST.saleId = parseInt(window.location.pathname.split('/').filter(Boolean)[1], 10);
+    ST.renderSubnav(ST.saleId, 'enquiries');
+
+    async function loadEnquiries() {
+        const container = document.getElementById('entries');
+        const errorEl = document.getElementById('error');
+        try {
+            const data = await ST.fetch('enquiries/');
+            const entries = (data.results || data).slice().sort((a, b) =>
+                (b.raised_date || '').localeCompare(a.raised_date || '')
+            );
+            container.classList.remove('st-loading');
+            if (!entries.length) {
+                container.innerHTML = `<p class="st-meta">No enquiries logged yet.</p>`;
+                return;
+            }
+            container.innerHTML = entries.map(renderEnquiry).join('');
+            container.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', handleAction));
+        } catch (err) {
+            container.classList.remove('st-loading');
+            errorEl.textContent = `Failed to load: ${err.message}`;
+            errorEl.style.display = 'block';
+        }
+    }
+
+    function renderEnquiry(e) {
+        const statusCls = e.status || 'open';
+        const ownerLabel = e.current_owner_display || e.current_owner || '—';
+        const statusLabel = (e.status_display || e.status || '').replace('_', ' ');
+        return `
+            <div class="enquiry-item ${statusCls}">
+                <div class="enquiry-head">
+                    <span class="st-meta">${ST.formatDate(e.raised_date)} · ${escHtml(ownerLabel)}</span>
+                    ${ST.statusPill(e.status, statusLabel)}
+                </div>
+                <div class="enquiry-question">${escHtml(e.question)}</div>
+                ${e.response ? `
+                    <div class="enquiry-response">
+                        <strong>Response:</strong> ${escHtml(e.response)}
+                        ${e.response_date ? `<span class="st-meta"> · ${ST.formatDate(e.response_date)}</span>` : ''}
+                    </div>` : ''}
+                <div class="enquiry-actions">
+                    ${e.status === 'open' ? `<button class="btn btn-primary" data-action="answer" data-id="${e.id}">Record answer</button>` : ''}
+                    ${e.status !== 'closed' ? `<button class="btn btn-secondary" data-action="reassign" data-id="${e.id}">Reassign</button>` : ''}
+                </div>
+            </div>`;
+    }
+
+    async function handleAction(e) {
+        const action = e.currentTarget.dataset.action;
+        const id = e.currentTarget.dataset.id;
+        if (action === 'answer') {
+            const response = prompt('Response / answer:');
+            if (!response) return;
+            try {
+                await ST.fetch(`enquiries/${id}/`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        response,
+                        response_date: new Date().toISOString().slice(0, 10),
+                        status: 'answered',
+                    }),
+                });
+                loadEnquiries();
+            } catch (err) {
+                alert(err.message);
+            }
+            return;
+        }
+        if (action === 'reassign') {
+            const newOwner = prompt(
+                'Reassign to (seller / seller_conveyancer / buyer_conveyancer / buyer):',
+                'buyer_conveyancer',
+            );
+            if (!newOwner) return;
+            try {
+                await ST.fetch(`enquiries/${id}/reassign/`, {
+                    method: 'POST',
+                    body: JSON.stringify({ new_owner: newOwner }),
+                });
+                loadEnquiries();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+    }
+
+    document.getElementById('save-btn').addEventListener('click', async function() {
+        const btn = this;
+        const errorEl = document.getElementById('error');
+        const successEl = document.getElementById('success');
+        errorEl.style.display = successEl.style.display = 'none';
+
+        const question = document.getElementById('question').value.trim();
+        const newOwner = document.getElementById('new-owner').value;
+        if (!question) {
+            errorEl.textContent = 'Enter the question.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Saving…';
+        try {
+            await ST.fetch('enquiries/', {
+                method: 'POST',
+                body: JSON.stringify({
+                    question,
+                    current_owner: newOwner,
+                    raised_date: new Date().toISOString().slice(0, 10),
+                }),
+            });
+            successEl.textContent = 'Enquiry logged.';
+            successEl.style.display = 'block';
+            setTimeout(() => { successEl.style.display = 'none'; }, 2500);
+            document.getElementById('question').value = '';
+            loadEnquiries();
+        } catch (err) {
+            errorEl.textContent = err.message;
+            errorEl.style.display = 'block';
+        }
+        btn.disabled = false;
+        btn.textContent = 'Log enquiry';
+    });
+
+    loadEnquiries();
+</script>
+{% endblock %}

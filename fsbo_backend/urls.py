@@ -8,6 +8,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.static import serve as static_serve
 
 from api.sitemaps import PropertySitemap, StaticViewSitemap
+from api.views import TwoFactorAwareTokenCreateView
 
 sitemaps = {
     'static': StaticViewSitemap,
@@ -28,9 +29,23 @@ admin.site.site_title = "FSBO Admin"
 admin.site.index_title = "Dashboard"
 
 
+_INLINE_MEDIA_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif'}
+
+
 def serve_media(request, path):
-    """Serve user-uploaded media files."""
-    return static_serve(request, path, document_root=settings.MEDIA_ROOT)
+    """Serve user-uploaded media files.
+
+    Non-image files are served with ``Content-Disposition: attachment`` so
+    that even if a user-uploaded file sneaks past upload validation (for
+    instance an .html renamed to .pdf), the browser downloads it rather
+    than executing it in the site's origin.
+    """
+    import os as _os
+    response = static_serve(request, path, document_root=settings.MEDIA_ROOT)
+    ext = _os.path.splitext(path)[1].lower()
+    if ext not in _INLINE_MEDIA_EXTENSIONS:
+        response['Content-Disposition'] = 'attachment'
+    return response
 
 
 urlpatterns = [
@@ -38,6 +53,10 @@ urlpatterns = [
     path('api/', include('api.urls')),
     path('api/sale-tracker/', include('sale_tracker.urls')),
     path('auth/', include('djoser.urls')),
+    # Must come BEFORE djoser.urls.authtoken so this override handles
+    # /auth/token/login/ — it gates on 2FA. Djoser's own logout handler
+    # is still picked up from the include below.
+    path('auth/token/login/', TwoFactorAwareTokenCreateView.as_view(), name='login'),
     path('auth/', include('djoser.urls.authtoken')),
 
     # Web pages
@@ -81,6 +100,19 @@ urlpatterns = [
     path('conveyancing/', CSRFTemplateView.as_view(template_name='conveyancing.html'), name='conveyancing'),
     path('price-comparison/', CSRFTemplateView.as_view(template_name='price_comparison.html'), name='price-comparison'),
     path('how-it-works/', CSRFTemplateView.as_view(template_name='how_it_works.html'), name='how-it-works'),
+
+    # Sale Tracker (web parity with the mobile Sale Tracker feature)
+    path('sale-tracker/', CSRFTemplateView.as_view(template_name='sale_tracker/list.html'), name='sale-tracker-list'),
+    path('sale-tracker/new/', CSRFTemplateView.as_view(template_name='sale_tracker/setup.html'), name='sale-tracker-setup'),
+    path('sale-tracker/<int:sale_id>/', CSRFTemplateView.as_view(template_name='sale_tracker/dashboard.html'), name='sale-tracker-dashboard'),
+    path('sale-tracker/<int:sale_id>/stages/', CSRFTemplateView.as_view(template_name='sale_tracker/stages.html'), name='sale-tracker-stages'),
+    path('sale-tracker/<int:sale_id>/tasks/<int:task_id>/', CSRFTemplateView.as_view(template_name='sale_tracker/task.html'), name='sale-tracker-task'),
+    path('sale-tracker/<int:sale_id>/documents/', CSRFTemplateView.as_view(template_name='sale_tracker/documents.html'), name='sale-tracker-documents'),
+    path('sale-tracker/<int:sale_id>/contact-log/', CSRFTemplateView.as_view(template_name='sale_tracker/contact_log.html'), name='sale-tracker-contact-log'),
+    path('sale-tracker/<int:sale_id>/enquiries/', CSRFTemplateView.as_view(template_name='sale_tracker/enquiries.html'), name='sale-tracker-enquiries'),
+    path('sale-tracker/<int:sale_id>/timeline/', CSRFTemplateView.as_view(template_name='sale_tracker/timeline.html'), name='sale-tracker-timeline'),
+    path('sale-tracker/<int:sale_id>/prompts/', CSRFTemplateView.as_view(template_name='sale_tracker/prompts.html'), name='sale-tracker-prompts'),
+    path('sale-tracker/<int:sale_id>/settings/', CSRFTemplateView.as_view(template_name='sale_tracker/settings.html'), name='sale-tracker-settings'),
 
     # Legal pages
     path('terms/', CSRFTemplateView.as_view(template_name='terms.html'), name='terms'),

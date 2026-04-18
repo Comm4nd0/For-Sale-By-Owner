@@ -1,28 +1,145 @@
 #!/bin/bash
 # Deploy script for For Sale By Owner
-# Usage: ./deploy.sh
+#
+# Normal use:
+#   ./deploy.sh                 # pull latest, back up DB, migrate, roll services
+#
+# Emergency rollback:
+#   ./deploy.sh --rollback      # restore the most recent DB snapshot
+#                               # (follow up with `git reset --hard <sha>` and
+#                               # re-run ./deploy.sh to roll the code back too)
+#
+# Env overrides:
+#   BACKUP_DIR   directory for DB snapshots (default /root/fsbo-backups)
+#   HEALTH_URL   URL to poll for post-deploy readiness
+#                (default http://localhost:8002/api/health/)
 
-set -e
+set -euo pipefail
 
-echo "🔄 Pulling latest code..."
-git pull
+COMPOSE="docker compose -f docker-compose.prod.yml"
+BACKUP_DIR="${BACKUP_DIR:-/root/fsbo-backups}"
+HEALTH_URL="${HEALTH_URL:-http://localhost:8002/api/health/}"
+DB_USER_DEFAULT="${DB_USER:-postgres}"
+DB_NAME_DEFAULT="${DB_NAME:-fsbo_properties}"
 
-echo "📦 Building Docker image (installs pip dependencies)..."
-docker compose -f docker-compose.prod.yml build --no-cache
+# ── Helpers ──────────────────────────────────────────────────────
+die() { echo "❌ $*" >&2; exit 1; }
 
-echo "🚀 Restarting services..."
-docker compose -f docker-compose.prod.yml up -d
+wait_for_db() {
+  echo "⏳ Waiting for database to be healthy..."
+  for _ in $(seq 1 30); do
+    if $COMPOSE exec -T db pg_isready -U "$DB_USER_DEFAULT" >/dev/null 2>&1; then
+      echo "✓ Database is ready."
+      return 0
+    fi
+    sleep 1
+  done
+  die "Database did not become ready within 30s."
+}
 
-echo "⏳ Waiting for services to be ready..."
-sleep 5
+wait_for_web() {
+  echo "⏳ Waiting for web to respond to $HEALTH_URL..."
+  for _ in $(seq 1 30); do
+    if curl -fs "$HEALTH_URL" >/dev/null 2>&1; then
+      echo "✓ Web is responding."
+      return 0
+    fi
+    sleep 2
+  done
+  echo "⚠️  Web did not respond within 60s — investigate with '$COMPOSE logs web'."
+  return 1
+}
 
-echo "🗄️  Running database migrations..."
-docker compose -f docker-compose.prod.yml exec -T web python manage.py migrate --noinput
+backup_database() {
+  mkdir -p "$BACKUP_DIR"
+  local ts
+  ts=$(date +%Y%m%d-%H%M%S)
+  local backup_file="$BACKUP_DIR/fsbo-${ts}.sql.gz"
+  echo "💾 Backing up database to $backup_file..."
+  $COMPOSE exec -T db pg_dump -U "$DB_USER_DEFAULT" "$DB_NAME_DEFAULT" \
+    | gzip > "$backup_file"
+  # Keep the last 14 days of backups
+  find "$BACKUP_DIR" -name 'fsbo-*.sql.gz' -mtime +14 -delete 2>/dev/null || true
+  echo "$backup_file" > "$BACKUP_DIR/latest-backup.path"
+}
 
-echo "📋 Verifying installed packages..."
-docker compose -f docker-compose.prod.yml exec -T web pip list --format=columns
+# ── Rollback path ─────────────────────────────────────────────────
+if [[ "${1:-}" == "--rollback" ]]; then
+  latest_backup=$(cat "$BACKUP_DIR/latest-backup.path" 2>/dev/null || true)
+  [[ -f "$latest_backup" ]] || die "No backup found in $BACKUP_DIR."
+
+  echo "⚠️  About to RESTORE the database from:"
+  echo "   $latest_backup"
+  echo "This will OVERWRITE the current database."
+  read -r -p "Type 'yes' to continue: " confirm
+  [[ "$confirm" == "yes" ]] || die "Aborted."
+
+  echo "⏸  Stopping web and workers so writes pause..."
+  $COMPOSE stop web celery celery-beat
+
+  echo "⏪ Restoring from snapshot..."
+  gunzip -c "$latest_backup" \
+    | $COMPOSE exec -T db psql -U "$DB_USER_DEFAULT" "$DB_NAME_DEFAULT" \
+      >/dev/null
+
+  echo "▶️  Starting services back up..."
+  $COMPOSE up -d web celery celery-beat
+  wait_for_web || true
+
+  echo ""
+  echo "✅ Database restore complete."
+  echo "   If the code is also rolled back, you're done."
+  echo "   Otherwise: git reset --hard <sha> && ./deploy.sh"
+  exit 0
+fi
+
+# ── Forward deploy path ───────────────────────────────────────────
+
+# Confirm the branch we're pulling onto — git pull with no args uses the
+# currently checked-out branch, which historically has caused surprises.
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+echo "🌿 Currently on branch: $current_branch"
+if [[ "$current_branch" != "main" && "$current_branch" != "development" ]]; then
+  read -r -p "Not on main/development — continue? (yes/NO) " confirm
+  [[ "$confirm" == "yes" ]] || die "Aborted."
+fi
+
+sha_before=$(git rev-parse --short HEAD)
+echo "🔄 Pulling latest on $current_branch..."
+git pull --ff-only
+sha_after=$(git rev-parse --short HEAD)
+if [[ "$sha_before" == "$sha_after" ]]; then
+  echo "ℹ️  No new commits to deploy ($sha_after). Continuing anyway."
+else
+  echo "   $sha_before → $sha_after"
+fi
+
+# Make sure db/redis are up before we try to back up and migrate.
+$COMPOSE up -d db redis
+wait_for_db
+
+# Back up BEFORE migrating so rollback is possible.
+backup_database
+
+# Build new image. Rely on Docker's layer cache — --no-cache is slow and
+# rarely needed; if deps change, requirements-prod.txt's content hash
+# invalidates the layer and pip reinstalls.
+echo "📦 Building new image..."
+$COMPOSE build web
+
+# Migrate with the NEW image in a one-shot container, BEFORE rolling web.
+# This avoids serving new code against the old schema (or vice versa).
+echo "🗄️  Applying migrations with new image..."
+$COMPOSE run --rm --no-deps --entrypoint "" web \
+  python manage.py migrate --noinput
+
+# Now roll web / celery / celery-beat to pick up the new image.
+echo "🚀 Rolling services..."
+$COMPOSE up -d --no-deps web celery celery-beat
+
+wait_for_web || true
 
 echo ""
-echo "✅ Deploy complete!"
-echo ""
-docker compose -f docker-compose.prod.yml ps
+echo "✅ Deploy complete: $(git rev-parse --short HEAD) on $current_branch."
+echo "   Rollback: ./deploy.sh --rollback"
+$COMPOSE ps
