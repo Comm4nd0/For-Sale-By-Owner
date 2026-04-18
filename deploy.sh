@@ -19,8 +19,11 @@ set -euo pipefail
 COMPOSE="docker compose -f docker-compose.prod.yml"
 BACKUP_DIR="${BACKUP_DIR:-/root/fsbo-backups}"
 HEALTH_URL="${HEALTH_URL:-http://localhost:8002/api/health/}"
-DB_USER_DEFAULT="${DB_USER:-postgres}"
-DB_NAME_DEFAULT="${DB_NAME:-fsbo_properties}"
+
+# DB credentials live inside the running db container's environment (docker-
+# compose passes them in from .env). The pg_* commands below always use
+# `sh -c` so $POSTGRES_USER / $POSTGRES_DB are expanded inside the container,
+# which means we don't need to source .env on the host or duplicate defaults.
 
 # ── Helpers ──────────────────────────────────────────────────────
 die() { echo "❌ $*" >&2; exit 1; }
@@ -28,7 +31,9 @@ die() { echo "❌ $*" >&2; exit 1; }
 wait_for_db() {
   echo "⏳ Waiting for database to be healthy..."
   for _ in $(seq 1 30); do
-    if $COMPOSE exec -T db pg_isready -U "$DB_USER_DEFAULT" >/dev/null 2>&1; then
+    # pg_isready uses $POSTGRES_USER from inside the db container so it works
+    # regardless of what role name .env actually configured.
+    if $COMPOSE exec -T db sh -c 'pg_isready -U "$POSTGRES_USER"' >/dev/null 2>&1; then
       echo "✓ Database is ready."
       return 0
     fi
@@ -56,7 +61,9 @@ backup_database() {
   ts=$(date +%Y%m%d-%H%M%S)
   local backup_file="$BACKUP_DIR/fsbo-${ts}.sql.gz"
   echo "💾 Backing up database to $backup_file..."
-  $COMPOSE exec -T db pg_dump -U "$DB_USER_DEFAULT" "$DB_NAME_DEFAULT" \
+  # Use the container's own POSTGRES_USER / POSTGRES_DB so the role and db
+  # name match what the postgres container was actually initialised with.
+  $COMPOSE exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' \
     | gzip > "$backup_file"
   # Keep the last 14 days of backups
   find "$BACKUP_DIR" -name 'fsbo-*.sql.gz' -mtime +14 -delete 2>/dev/null || true
@@ -79,7 +86,7 @@ if [[ "${1:-}" == "--rollback" ]]; then
 
   echo "⏪ Restoring from snapshot..."
   gunzip -c "$latest_backup" \
-    | $COMPOSE exec -T db psql -U "$DB_USER_DEFAULT" "$DB_NAME_DEFAULT" \
+    | $COMPOSE exec -T db sh -c 'psql -U "$POSTGRES_USER" "$POSTGRES_DB"' \
       >/dev/null
 
   echo "▶️  Starting services back up..."
