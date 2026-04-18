@@ -15,14 +15,19 @@ import 'package:for_sale_by_owner/main.dart';
 import 'package:for_sale_by_owner/screens/login_screen.dart';
 import 'package:for_sale_by_owner/screens/register_screen.dart';
 import 'package:for_sale_by_owner/screens/main_shell.dart';
+import 'package:for_sale_by_owner/screens/dashboard_screen.dart';
 import 'package:for_sale_by_owner/screens/tools_screen.dart';
 import 'package:for_sale_by_owner/screens/account_screen.dart';
 import 'package:for_sale_by_owner/screens/stamp_duty_screen.dart';
 import 'package:for_sale_by_owner/screens/mortgage_calculator_screen.dart';
+import 'package:for_sale_by_owner/models/chat_room.dart';
 import 'package:for_sale_by_owner/models/notification_counts.dart';
 import 'package:for_sale_by_owner/models/dashboard_stats.dart';
+import 'package:for_sale_by_owner/models/offer.dart';
+import 'package:for_sale_by_owner/models/paginated_response.dart';
 import 'package:for_sale_by_owner/models/property.dart';
 import 'package:for_sale_by_owner/models/user_profile.dart';
+import 'package:for_sale_by_owner/models/viewing_request.dart';
 import 'package:for_sale_by_owner/models/mortgage_calculation.dart';
 
 // ─── Test helpers ──────────────────────────────────────────────────────
@@ -126,16 +131,95 @@ class TestAuthService extends ChangeNotifier implements AuthService {
   }
 }
 
+/// Stub ApiService that returns canned data (or throws) without hitting the
+/// network. Only the endpoints DashboardScreen / MainShell call are overridden;
+/// the remaining methods inherit from ApiService and are never invoked in tests.
+class FakeApiService extends ApiService {
+  FakeApiService({
+    this.shouldFail = false,
+    DashboardStats? stats,
+    NotificationCounts? counts,
+    List<dynamic>? sales,
+    List<ViewingRequest>? viewings,
+    List<Offer>? offers,
+    List<ChatRoom>? chatRooms,
+  })  : stats = stats ??
+            DashboardStats(
+              totalListings: 5,
+              activeListings: 3,
+              totalViews: 42,
+              totalMessages: 7,
+              unreadMessages: 1,
+              totalSaves: 10,
+              pendingViewings: 2,
+              totalOffers: 3,
+              pendingOffers: 1,
+              viewsByDay: const [],
+              propertyStats: const [],
+            ),
+        counts = counts ??
+            NotificationCounts(
+              pendingViewings: 0,
+              unreadMessages: 0,
+              pendingOffers: 0,
+            ),
+        sales = sales ?? const [],
+        viewings = viewings ?? const [],
+        offers = offers ?? const [],
+        chatRooms = chatRooms ?? const [],
+        super(() => 'test-token');
+
+  bool shouldFail;
+  DashboardStats stats;
+  NotificationCounts counts;
+  List<dynamic> sales;
+  List<ViewingRequest> viewings;
+  List<Offer> offers;
+  List<ChatRoom> chatRooms;
+
+  /// When true, [getDashboardStats] throws to exercise the error-state path.
+  /// The other endpoints continue to return canned data so the rest of the
+  /// screen's FutureBuilders resolve cleanly and don't leak unhandled errors
+  /// into the test zone.
+  @override
+  Future<DashboardStats> getDashboardStats() async {
+    if (shouldFail) throw Exception('simulated failure');
+    return stats;
+  }
+
+  @override
+  Future<NotificationCounts> getNotificationCounts() async => counts;
+
+  @override
+  Future<List<dynamic>> getSales() async => sales;
+
+  @override
+  Future<PaginatedResponse<ViewingRequest>> getReceivedViewings(
+          {int page = 1}) async =>
+      PaginatedResponse<ViewingRequest>(
+        count: viewings.length,
+        results: viewings,
+      );
+
+  @override
+  Future<List<Offer>> getOffers({bool? received}) async => offers;
+
+  @override
+  Future<List<ChatRoom>> getChatRooms() async => chatRooms;
+}
+
 /// Wraps a widget in MaterialApp + providers for testing.
 Widget buildTestWidget({
   required Widget child,
   TestAuthService? authService,
+  ApiService? apiService,
 }) {
   final auth = authService ?? TestAuthService();
+  final api = apiService ?? ApiService(() => auth.token);
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<AuthService>.value(value: auth),
-      Provider<ApiService>(create: (_) => ApiService(() => auth.token)),
+      Provider<ApiService>.value(value: api),
     ],
     child: MaterialApp(
       theme: AppTheme.lightTheme,
@@ -381,11 +465,35 @@ void main() {
       await tester.pump(const Duration(seconds: 30));
     });
 
-    // Note: The authenticated MainShell test is intentionally omitted because
-    // DashboardScreen fires real API calls via AutoRetryMixin in initState,
-    // which throw unhandled async zone errors in the test environment.
-    // The BottomNavigationBar structure is verified via the guest tests above
-    // and the FSBOApp integration tests below.
+    testWidgets('shows authenticated navigation tabs and Dashboard item',
+        (tester) async {
+      final fake = FakeApiService();
+      // firstName: '' keeps the Account label plain ("Account" rather than
+      // "Account (<name>)") so the finder matches exactly once.
+      await tester.pumpWidget(buildTestWidget(
+        child: const MainShell(),
+        authService: TestAuthService(authenticated: true, firstName: ''),
+        apiService: fake,
+      ));
+      await tester.pump();
+
+      // Authenticated tabs: Home, Dashboard, Tools, Services, Account
+      expect(find.text('Home'), findsOneWidget);
+      expect(find.text('Dashboard'), findsOneWidget);
+      expect(find.text('Tools'), findsOneWidget);
+      expect(find.text('Services'), findsOneWidget);
+      expect(find.text('Account'), findsOneWidget);
+
+      final navBar = tester.widget<BottomNavigationBar>(
+        find.byType(BottomNavigationBar),
+      );
+      expect(navBar.items.length, 5);
+      // The shell starts on Home (index 0); Dashboard is at index 1.
+      expect(navBar.currentIndex, 0);
+
+      // Drain pending AutoRetry / 60s polling timers
+      await tester.pump(const Duration(seconds: 30));
+    });
 
     testWidgets('has bottom navigation bar', (tester) async {
       await tester.pumpWidget(buildTestWidget(
@@ -412,6 +520,87 @@ void main() {
       expect(navBar.items.length, 4);
 
       await tester.pump(const Duration(seconds: 30));
+    });
+  });
+
+  // ─── Dashboard Screen Tests ──────────────────────────────────────
+
+  group('DashboardScreen', () {
+    testWidgets('shows loading indicator then stats when API returns',
+        (tester) async {
+      final fake = FakeApiService(
+        stats: DashboardStats(
+          totalListings: 4,
+          activeListings: 2,
+          totalViews: 99,
+          totalMessages: 6,
+          unreadMessages: 0,
+          totalSaves: 8,
+          pendingViewings: 1,
+          totalOffers: 0,
+          pendingOffers: 0,
+          viewsByDay: const [],
+          propertyStats: const [],
+        ),
+      );
+
+      await tester.pumpWidget(buildTestWidget(
+        child: const DashboardScreen(),
+        authService: TestAuthService(authenticated: true),
+        apiService: fake,
+      ));
+
+      // First frame: stats still loading.
+      expect(find.byType(CircularProgressIndicator), findsWidgets);
+
+      // Flush the microtasks created by Future.value-backed stubs.
+      await tester.pump();
+      await tester.pump();
+
+      // Stats row is now rendered. 'Views' only appears in the stats section,
+      // so it's a reliable marker that the success state has taken over.
+      expect(find.text('Views'), findsOneWidget);
+      expect(find.text('Listings'), findsOneWidget);
+      expect(find.text('Saved'), findsOneWidget);
+      // The totalViews value from the fake should be displayed.
+      expect(find.text('99'), findsOneWidget);
+
+      // Drain any residual retry / polling timers before tearing down.
+      await tester.pump(const Duration(seconds: 30));
+    });
+
+    testWidgets('shows retry button when stats API fails', (tester) async {
+      final fake = FakeApiService(shouldFail: true);
+
+      await tester.pumpWidget(buildTestWidget(
+        child: const DashboardScreen(),
+        authService: TestAuthService(authenticated: true),
+        apiService: fake,
+      ));
+
+      // Loading state is shown while retries are in flight.
+      expect(find.byType(CircularProgressIndicator), findsWidgets);
+
+      // AutoRetryMixin retries 3 times with 2s/4s/8s delays (14s total).
+      // Pump past the last delay so the catch block can render the error UI.
+      await tester.pump(const Duration(seconds: 15));
+      await tester.pump();
+
+      expect(find.text('Retry loading stats'), findsOneWidget);
+    });
+
+    testWidgets('shows login required banner when unauthenticated',
+        (tester) async {
+      await tester.pumpWidget(buildTestWidget(
+        child: const DashboardScreen(),
+        authService: TestAuthService(authenticated: false),
+        apiService: FakeApiService(),
+      ));
+      await tester.pump();
+
+      expect(find.text('Login Required'), findsOneWidget);
+      expect(find.text('Please log in to view your dashboard.'),
+          findsOneWidget);
     });
   });
 
