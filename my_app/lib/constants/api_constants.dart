@@ -1,7 +1,10 @@
 import 'dart:io' show Platform;
 
 class ApiConstants {
-  static const bool _useProduction = true;
+  // Controlled by `--dart-define=USE_PRODUCTION=false` for local dev builds.
+  // Defaults to production so accidentally-released debug builds still hit prod.
+  static const bool _useProduction =
+      bool.fromEnvironment('USE_PRODUCTION', defaultValue: true);
 
   // Android emulator uses 10.0.2.2 to reach host; iOS simulator uses localhost
   static const String _androidLocalUrl = 'http://10.0.2.2:8000';
@@ -155,6 +158,7 @@ class ApiConstants {
 
   // Push notifications
   static String get pushRegister => '$apiUrl/push/register/';
+  static String get pushUnregister => '$apiUrl/push/unregister/';
 
   // Health check
   static String get healthCheck => '$apiUrl/health/';

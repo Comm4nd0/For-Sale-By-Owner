@@ -83,6 +83,25 @@ def register_push_device(request):
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
+def unregister_push_device(request):
+    """Mark an FCM token inactive so the device stops receiving pushes.
+
+    Called from the mobile app on logout to stop the previous user's
+    notifications from arriving on a shared device.
+    """
+    token = request.data.get('token')
+    if not token:
+        return Response({'detail': 'Token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    # Only allow a user to unregister their own device token to avoid cross-user
+    # deactivation, but be lenient if a token has rotated and is no longer ours.
+    updated = PushNotificationDevice.objects.filter(
+        token=token, user=request.user
+    ).update(is_active=False)
+    return Response({'unregistered': bool(updated)})
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
 def flag_property(request, property_pk):
     """Flag a property listing for moderation."""
     prop = get_object_or_404(Property, pk=property_pk)

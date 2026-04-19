@@ -93,11 +93,29 @@ class PushService {
     });
   }
 
-  /// Clear the last-registered token tracking so a subsequent
-  /// registerDeviceForUser call (e.g. after a different user logs in)
-  /// will re-post.
-  void onLogout() {
+  /// Tell the backend to stop sending pushes to this device and clear
+  /// the last-registered token tracking so a subsequent
+  /// [registerDeviceForUser] call (e.g. after a different user logs in)
+  /// will re-post. Call this BEFORE the auth token is cleared so the
+  /// unregister request is still authenticated.
+  Future<void> onLogout(String? authToken) async {
+    final fcmToken = _lastRegisteredToken;
     _lastRegisteredToken = null;
+    if (fcmToken == null || authToken == null) return;
+    try {
+      await http
+          .post(
+            Uri.parse(ApiConstants.pushUnregister),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Token $authToken',
+            },
+            body: jsonEncode({'token': fcmToken}),
+          )
+          .timeout(const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint('Push token unregister failed: $e');
+    }
   }
 
   Future<void> _postTokenToBackend(

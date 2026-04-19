@@ -5,3 +5,8 @@ linter:
     prefer_const_constructors: true
     prefer_const_declarations: true
     avoid_print: false
+    # Catch genuinely unsafe null handling without flagging legitimate guarded `!`.
+    null_check_on_nullable_type_parameter: true
+    cancel_subscriptions: true
+    close_sinks: true
+    avoid_empty_else: true

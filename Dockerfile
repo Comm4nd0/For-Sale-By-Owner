@@ -45,4 +45,13 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8000/api/health/ || exit 1
 
-CMD ["gunicorn", "fsbo_backend.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "2"]
+# Overridable via GUNICORN_WORKERS / GUNICORN_THREADS / GUNICORN_TIMEOUT env vars
+# (see docker-compose.prod.yml). Defaults are tuned for a shared 2-core host.
+ENV GUNICORN_WORKERS=2 GUNICORN_THREADS=2 GUNICORN_TIMEOUT=30
+CMD gunicorn fsbo_backend.wsgi:application \
+    --bind 0.0.0.0:8000 \
+    --workers ${GUNICORN_WORKERS} \
+    --threads ${GUNICORN_THREADS} \
+    --timeout ${GUNICORN_TIMEOUT} \
+    --graceful-timeout ${GUNICORN_TIMEOUT} \
+    --access-logfile -

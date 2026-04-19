@@ -111,6 +111,7 @@ urlpatterns = [
     path('notifications/counts/', views.notification_counts, name='notification-counts'),
     path('profile/', views.user_profile, name='user-profile'),
     path('push/register/', views.register_push_device, name='push-register'),
+    path('push/unregister/', views.unregister_push_device, name='push-unregister'),
     # Chat messages (nested)
     path(
         'chat-rooms/<int:room_pk>/messages/',

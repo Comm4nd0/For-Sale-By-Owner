@@ -1,7 +1,9 @@
 """Formal offers on properties."""
 from decimal import Decimal
 
+from django.db import transaction
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 
 from rest_framework import viewsets, permissions
 from rest_framework.decorators import action
@@ -50,23 +52,30 @@ class OfferViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['patch'])
     def respond(self, request, pk=None):
         """Seller responds to an offer (accept, reject, counter)."""
-        offer = self.get_object()
-        if offer.property.owner != request.user:
-            raise PermissionDenied()
-
         new_status = request.data.get('status')
         if new_status not in ['accepted', 'rejected', 'countered']:
             raise ValidationError("Status must be 'accepted', 'rejected', or 'countered'.")
 
-        offer.status = new_status
-        if 'seller_notes' in request.data:
-            offer.seller_notes = request.data['seller_notes']
-        if new_status == 'countered':
-            counter = request.data.get('counter_amount')
-            if not counter:
-                raise ValidationError("counter_amount is required for counter offers.")
-            offer.counter_amount = Decimal(str(counter))
-        offer.save()
+        counter = request.data.get('counter_amount')
+        if new_status == 'countered' and not counter:
+            raise ValidationError("counter_amount is required for counter offers.")
+
+        with transaction.atomic():
+            offer = get_object_or_404(
+                Offer.objects.select_for_update().select_related('property'),
+                pk=pk,
+            )
+            if offer.property.owner != request.user:
+                raise PermissionDenied()
+            if offer.status in ('accepted', 'rejected', 'withdrawn'):
+                raise ValidationError("This offer has already been resolved.")
+
+            offer.status = new_status
+            if 'seller_notes' in request.data:
+                offer.seller_notes = request.data['seller_notes']
+            if new_status == 'countered':
+                offer.counter_amount = Decimal(str(counter))
+            offer.save()
 
         try:
             from ..tasks import send_offer_notification
@@ -79,11 +88,12 @@ class OfferViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['patch'])
     def withdraw(self, request, pk=None):
         """Buyer withdraws their offer."""
-        offer = self.get_object()
-        if offer.buyer != request.user:
-            raise PermissionDenied()
-        if offer.status not in ['submitted', 'under_review', 'countered']:
-            raise ValidationError("Cannot withdraw this offer.")
-        offer.status = 'withdrawn'
-        offer.save(update_fields=['status', 'updated_at'])
+        with transaction.atomic():
+            offer = get_object_or_404(Offer.objects.select_for_update(), pk=pk)
+            if offer.buyer != request.user:
+                raise PermissionDenied()
+            if offer.status not in ['submitted', 'under_review', 'countered']:
+                raise ValidationError("Cannot withdraw this offer.")
+            offer.status = 'withdrawn'
+            offer.save(update_fields=['status', 'updated_at'])
         return Response(OfferSerializer(offer).data)

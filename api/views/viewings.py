@@ -1,5 +1,6 @@
 """Viewing requests, viewing slots, open-house events and related replies/RSVPs."""
 from django.conf import settings
+from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -107,20 +108,24 @@ class ViewingRequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['patch'])
     def update_status(self, request, pk=None):
         """Property owner can confirm/decline, or requester can cancel."""
-        viewing = self.get_object()
         new_status = request.data.get('status')
-        # Allow requester to cancel their own request
-        if viewing.requester == request.user:
-            if new_status != 'cancelled':
-                raise PermissionDenied("You can only cancel your own viewing request.")
-        elif viewing.property.owner != request.user:
-            raise PermissionDenied()
-        elif new_status not in ['confirmed', 'declined', 'completed']:
-            raise ValidationError("Invalid status.")
-        viewing.status = new_status
-        if 'seller_notes' in request.data:
-            viewing.seller_notes = request.data['seller_notes']
-        viewing.save(update_fields=['status', 'seller_notes', 'updated_at'])
+        with transaction.atomic():
+            viewing = get_object_or_404(
+                ViewingRequest.objects.select_for_update().select_related('property'),
+                pk=pk,
+            )
+            # Allow requester to cancel their own request
+            if viewing.requester == request.user:
+                if new_status != 'cancelled':
+                    raise PermissionDenied("You can only cancel your own viewing request.")
+            elif viewing.property.owner != request.user:
+                raise PermissionDenied()
+            elif new_status not in ['confirmed', 'declined', 'completed']:
+                raise ValidationError("Invalid status.")
+            viewing.status = new_status
+            if 'seller_notes' in request.data:
+                viewing.seller_notes = request.data['seller_notes']
+            viewing.save(update_fields=['status', 'seller_notes', 'updated_at'])
         try:
             from ..tasks import send_viewing_status_notification
             send_viewing_status_notification.delay(viewing.id)
