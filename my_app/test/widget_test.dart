@@ -618,6 +618,13 @@ void main() {
       expect(find.text('House Price Lookup'), findsOneWidget);
       expect(find.text('Price Comparison'), findsOneWidget);
       expect(find.text('Stamp Duty Calculator'), findsOneWidget);
+      // Last card sits below the default 800x600 test viewport and the
+      // ListView's cacheExtent, so it isn't built until we scroll to it.
+      await tester.scrollUntilVisible(
+        find.text('Neighbourhood Reviews'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('Neighbourhood Reviews'), findsOneWidget);
     });
 
