@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:provider/provider.dart';
@@ -99,12 +100,12 @@ class _ServiceProvidersSectionState extends State<ServiceProvidersSection> {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(6),
                             child: p.logoUrl != null
-                                ? Image.network(
-                                    ApiConstants.fullUrl(p.logoUrl!),
+                                ? CachedNetworkImage(
+                                    imageUrl: ApiConstants.fullUrl(p.logoUrl!),
                                     width: 36,
                                     height: 36,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) =>
+                                    errorWidget: (_, __, ___) =>
                                         _miniLogo(),
                                   )
                                 : _miniLogo(),

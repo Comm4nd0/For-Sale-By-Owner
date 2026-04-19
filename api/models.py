@@ -663,6 +663,11 @@ class ViewingRequest(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            # Owner dashboard + requester dashboard both filter by status.
+            models.Index(fields=['property', 'status']),
+            models.Index(fields=['requester', 'status']),
+        ]
 
     def __str__(self):
         return f"Viewing for {self.property.title} by {self.name} on {self.preferred_date}"
@@ -915,6 +920,11 @@ class Offer(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            # Seller lists offers received on a property; buyer lists their own.
+            models.Index(fields=['property', 'status']),
+            models.Index(fields=['buyer', 'status']),
+        ]
 
     def __str__(self):
         return f"Offer £{self.amount:,.0f} on {self.property.title} by {self.buyer.email}"
@@ -1264,7 +1274,7 @@ class ServiceProviderSubscription(models.Model):
         SubscriptionTier, on_delete=models.PROTECT, related_name='subscriptions'
     )
     billing_cycle = models.CharField(max_length=10, choices=BILLING_CHOICES, default='monthly')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', db_index=True)
 
     # Stripe
     stripe_subscription_id = models.CharField(

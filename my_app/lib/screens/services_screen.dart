@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../constants/api_constants.dart';
@@ -474,12 +475,12 @@ class _ProviderCard extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: provider.logoUrl != null
-                    ? Image.network(
-                        ApiConstants.fullUrl(provider.logoUrl!),
+                    ? CachedNetworkImage(
+                        imageUrl: ApiConstants.fullUrl(provider.logoUrl!),
                         width: 56,
                         height: 56,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _logoPlaceholder(),
+                        errorWidget: (_, __, ___) => _logoPlaceholder(),
                       )
                     : _logoPlaceholder(),
               ),

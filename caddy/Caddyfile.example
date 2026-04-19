@@ -1,0 +1,45 @@
+# Example Caddyfile for for-sale-by-owner.co.uk
+#
+# The production box (Hetzner, shared) uses ~/caddy/Caddyfile. This file is a
+# committed reference so the config isn't only on the server — if the box is
+# rebuilt, copy this file, adjust reverse_proxy upstreams, and reload.
+#
+# Edits on the server should flow back into this file so it stays current.
+# Reload with:  sudo systemctl reload caddy  (or  caddy reload --config ...)
+
+# Canonical host. The app runs on port 8002 (port 8000 is taken by another app
+# on this shared host — see CLAUDE.md).
+for-sale-by-owner.co.uk, www.for-sale-by-owner.co.uk {
+    encode zstd gzip
+
+    # Security headers. CSP is intentionally NOT set here yet — add it once
+    # inline <style>/<script> blocks have been extracted (see plan item #11).
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "geolocation=(self), camera=(), microphone=(), payment=(self)"
+        # Remove the server fingerprint.
+        -Server
+    }
+
+    # www → apex redirect.
+    @www host www.for-sale-by-owner.co.uk
+    redir @www https://for-sale-by-owner.co.uk{uri} permanent
+
+    reverse_proxy 172.17.0.1:8002 {
+        # Trust the upstream health check so Caddy knows when to stop routing.
+        health_uri /api/health/
+        health_interval 30s
+        health_timeout 5s
+    }
+
+    log {
+        output file /var/log/caddy/fsbo-access.log {
+            roll_size 50mb
+            roll_keep 14
+        }
+        format json
+    }
+}

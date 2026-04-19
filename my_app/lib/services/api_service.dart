@@ -66,22 +66,31 @@ class ApiService {
   late final http.Client _http = _TimeoutClient(http.Client(), _timeout);
 
   String _extractError(http.Response response) {
-    try {
-      final body = jsonDecode(response.body);
-      if (body is Map) {
-        if (body.containsKey('detail')) return body['detail'].toString();
-        // Collect field-level errors (e.g. {"business_name": ["This field is required."]})
-        final messages = <String>[];
-        body.forEach((key, value) {
-          if (value is List) {
-            messages.add('$key: ${value.join(', ')}');
-          } else {
-            messages.add('$key: $value');
-          }
-        });
-        if (messages.isNotEmpty) return messages.join('; ');
-      }
-    } catch (_) {}
+    // Upstream proxies (Caddy, Cloudflare) return HTML on 5xx; only try to
+    // decode JSON if the server actually tagged the body as JSON.
+    final contentType = response.headers['content-type'] ?? '';
+    if (contentType.contains('application/json') && response.body.isNotEmpty) {
+      try {
+        final body = jsonDecode(response.body);
+        if (body is Map) {
+          if (body.containsKey('detail')) return body['detail'].toString();
+          // Collect field-level errors (e.g. {"business_name": ["This field is required."]})
+          final messages = <String>[];
+          body.forEach((key, value) {
+            if (value is List) {
+              messages.add('$key: ${value.join(', ')}');
+            } else {
+              messages.add('$key: $value');
+            }
+          });
+          if (messages.isNotEmpty) return messages.join('; ');
+        }
+      } catch (_) {}
+    }
+    final reason = response.reasonPhrase;
+    if (reason != null && reason.isNotEmpty) {
+      return 'Request failed (${response.statusCode} $reason)';
+    }
     return 'Request failed (${response.statusCode})';
   }
 

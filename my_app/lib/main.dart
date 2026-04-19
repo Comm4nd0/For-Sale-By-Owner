@@ -33,7 +33,8 @@ Future<void> _bootstrap() async {
   authService.onAuthenticatedHook = () {
     PushService.instance.registerDeviceForUser(() => authService.token);
   };
-  authService.onLogoutHook = PushService.instance.onLogout;
+  // Logout cleanup (FCM unregister) is handled inline in AuthService.logout
+  // so it can run before the auth token is cleared.
   await authService.init();
 
   runApp(FSBOApp(authService: authService));

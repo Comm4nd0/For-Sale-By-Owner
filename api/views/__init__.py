@@ -9,6 +9,10 @@ import requests  # kept so tests can patch api.views.requests.get
 
 from .base import *  # noqa: F401,F403
 from .properties import *  # noqa: F401,F403
+from .offers import *  # noqa: F401,F403
+from .viewings import *  # noqa: F401,F403
+from .chat import *  # noqa: F401,F403
+from .saved import *  # noqa: F401,F403
 from .services import *  # noqa: F401,F403
 from .tools import *  # noqa: F401,F403
 from .account import *  # noqa: F401,F403

@@ -75,7 +75,15 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'fsbo_backend.middleware.ContentSecurityPolicyMiddleware',
 ]
+
+# CSP rollout: start in Report-Only mode. Once the browser console is clean
+# of violations (or a CSP reporting endpoint is wired up), set
+# CONTENT_SECURITY_POLICY_ENFORCE=True in the production env to enforce.
+CONTENT_SECURITY_POLICY_ENFORCE = os.getenv(
+    'CONTENT_SECURITY_POLICY_ENFORCE', 'False'
+).lower() in ('true', '1', 'yes')
 
 ROOT_URLCONF = 'fsbo_backend.urls'
 
@@ -210,6 +218,15 @@ CORS_ALLOWED_ORIGINS = [
     for origin in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
     if origin.strip()
 ]
+# Fail-fast in production: if CORS isn't explicitly configured, any future
+# cookie-based flow will break silently. The mobile app uses token auth so
+# it isn't affected, but a browser integration would be.
+if not DEBUG and not CORS_ALLOW_ALL_ORIGINS and not CORS_ALLOWED_ORIGINS:
+    raise ImproperlyConfigured(
+        'Set CORS_ALLOWED_ORIGINS (comma-separated list) or CORS_ALLOW_ALL_ORIGINS=True '
+        'when DEBUG is off. An empty CORS_ALLOWED_ORIGINS silently blocks all cross-origin '
+        'browser traffic.'
+    )
 
 # Email
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')

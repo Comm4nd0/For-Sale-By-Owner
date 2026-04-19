@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
+import 'push_service.dart';
 
 /// Outcome of a login attempt. The server may either return a token
 /// directly (no 2FA) or respond with a pending 2FA challenge that the
@@ -245,13 +246,23 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    if (_token != null) {
+    final authToken = _token;
+    // Unregister the push device BEFORE we lose the auth token, otherwise
+    // the backend call can't be authenticated and the previous user keeps
+    // getting notifications on this device.
+    try {
+      await PushService.instance.onLogout(authToken);
+    } catch (e) {
+      debugPrint('PushService onLogout error: $e');
+    }
+
+    if (authToken != null) {
       try {
         await http.post(
           Uri.parse(ApiConstants.logout),
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Token $_token',
+            'Authorization': 'Token $authToken',
           },
         );
       } catch (e) {
