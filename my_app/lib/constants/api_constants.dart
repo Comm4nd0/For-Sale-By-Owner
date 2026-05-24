@@ -249,22 +249,10 @@ class ApiConstants {
   static String propertyFlyer(int propertyId) =>
       '$apiUrl/properties/$propertyId/flyer/';
 
-  // #39 Solicitor/Conveyancer Matching
-  static String get quoteRequests => '$apiUrl/quote-requests/';
-  static String quoteRequestDetail(int id) =>
-      '$apiUrl/quote-requests/$id/';
-  static String get conveyancerQuotes => '$apiUrl/conveyancer-quotes/';
-  static String acceptQuote(int quoteId) =>
-      '$apiUrl/quotes/$quoteId/accept/';
-
   // #40 Neighbourhood Reviews
   static String get neighbourhoodReviews => '$apiUrl/neighbourhood-reviews/';
   static String neighbourhoodSummary(String postcodeArea) =>
       '$apiUrl/neighbourhood/$postcodeArea/summary/';
-
-  // #41 Board Orders
-  static String get boardOrders => '$apiUrl/board-orders/';
-  static String get boardPricing => '$apiUrl/board-pricing/';
 
   // #42 EPC Suggestions
   static String epcSuggestions(int propertyId) =>

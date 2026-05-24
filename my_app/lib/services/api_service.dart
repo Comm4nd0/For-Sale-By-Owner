@@ -1770,62 +1770,6 @@ class ApiService {
     throw Exception('Failed to generate flyer');
   }
 
-  // ── #39 Solicitor/Conveyancer Matching ────────────────────────────
-
-  Future<List<dynamic>> getQuoteRequests() async {
-    final response = await _http.get(
-      Uri.parse(ApiConstants.quoteRequests),
-      headers: _authHeaders,
-    );
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data is List ? data : (data['results'] ?? []);
-    }
-    throw Exception('Failed to load quote requests');
-  }
-
-  Future<Map<String, dynamic>> createQuoteRequest(
-      int propertyId, String transactionType,
-      {String additionalInfo = ''}) async {
-    final response = await _http.post(
-      Uri.parse(ApiConstants.quoteRequests),
-      headers: _authJsonHeaders,
-      body: jsonEncode({
-        'property': propertyId,
-        'transaction_type': transactionType,
-        'additional_info': additionalInfo,
-      }),
-    );
-    if (response.statusCode == 201) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to create quote request');
-  }
-
-  Future<Map<String, dynamic>> submitConveyancerQuote(
-      Map<String, dynamic> data) async {
-    final response = await _http.post(
-      Uri.parse(ApiConstants.conveyancerQuotes),
-      headers: _authJsonHeaders,
-      body: jsonEncode(data),
-    );
-    if (response.statusCode == 201) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to submit quote');
-  }
-
-  Future<Map<String, dynamic>> acceptQuote(int quoteId) async {
-    final response = await _http.post(
-      Uri.parse(ApiConstants.acceptQuote(quoteId)),
-      headers: _authHeaders,
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to accept quote');
-  }
-
   // ── #40 Neighbourhood Reviews ─────────────────────────────────────
 
   Future<List<dynamic>> getNeighbourhoodReviews(
@@ -1868,48 +1812,6 @@ class ApiService {
       return jsonDecode(response.body);
     }
     throw Exception('Failed to load neighbourhood summary');
-  }
-
-  // ── #41 Board Orders ──────────────────────────────────────────────
-
-  Future<List<dynamic>> getBoardOrders() async {
-    final response = await _http.get(
-      Uri.parse(ApiConstants.boardOrders),
-      headers: _authHeaders,
-    );
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data is List ? data : (data['results'] ?? []);
-    }
-    throw Exception('Failed to load board orders');
-  }
-
-  Future<Map<String, dynamic>> createBoardOrder(
-      int propertyId, String boardType, String deliveryAddress) async {
-    final response = await _http.post(
-      Uri.parse(ApiConstants.boardOrders),
-      headers: _authJsonHeaders,
-      body: jsonEncode({
-        'property': propertyId,
-        'board_type': boardType,
-        'delivery_address': deliveryAddress,
-      }),
-    );
-    if (response.statusCode == 201) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to create board order');
-  }
-
-  Future<Map<String, dynamic>> getBoardPricing() async {
-    final response = await _http.get(
-      Uri.parse(ApiConstants.boardPricing),
-      headers: _headers,
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('Failed to load board pricing');
   }
 
   // ── #42 EPC Suggestions ───────────────────────────────────────────

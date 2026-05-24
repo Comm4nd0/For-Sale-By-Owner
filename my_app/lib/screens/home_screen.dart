@@ -584,7 +584,7 @@ class _HomeScreenState extends State<HomeScreen> with AutoRetryMixin {
                 3,
                 PhosphorIconsDuotone.handshake,
                 'Sell direct',
-                'Accept an offer, agree terms and complete the sale — we guide you through conveyancing.',
+                'Accept an offer, agree terms and complete the sale — no middleman, no commission.',
               ),
             ]),
           ),

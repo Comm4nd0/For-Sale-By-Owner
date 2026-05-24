@@ -946,68 +946,6 @@ class NeighbourhoodReviewAPITest(TestCase):
 
 
 # ══════════════════════════════════════════════════════════════════
-# #41 BOARD ORDERING
-# ══════════════════════════════════════════════════════════════════
-
-@override_settings(REST_FRAMEWORK=TEST_REST_FRAMEWORK, STORAGES=TEST_STORAGES)
-class BoardOrderAPITest(TestCase):
-    def setUp(self):
-        self.owner = make_user(email='owner@test.com')
-        self.prop = make_property(self.owner)
-        self.client = auth_client(self.owner)
-
-    def test_create_board_order(self):
-        res = self.client.post('/api/board-orders/', {
-            'property': self.prop.id,
-            'board_type': 'standard',
-            'delivery_address': '1 Test St, London, SW1A 1AA',
-        }, format='json')
-        self.assertEqual(res.status_code, 201)
-        self.assertEqual(res.data['price'], '29.99')
-
-    def test_premium_board_price(self):
-        res = self.client.post('/api/board-orders/', {
-            'property': self.prop.id,
-            'board_type': 'premium',
-            'delivery_address': '1 Test St',
-        }, format='json')
-        self.assertEqual(res.status_code, 201)
-        self.assertEqual(res.data['price'], '49.99')
-
-    def test_solar_lit_board_price(self):
-        res = self.client.post('/api/board-orders/', {
-            'property': self.prop.id,
-            'board_type': 'solar_lit',
-            'delivery_address': '1 Test St',
-        }, format='json')
-        self.assertEqual(res.status_code, 201)
-        self.assertEqual(res.data['price'], '79.99')
-
-    def test_non_owner_cannot_order(self):
-        buyer = make_user(email='buyer@test.com')
-        res = auth_client(buyer).post('/api/board-orders/', {
-            'property': self.prop.id,
-            'board_type': 'standard',
-            'delivery_address': '1 X',
-        }, format='json')
-        self.assertEqual(res.status_code, 403)
-
-    def test_board_pricing_endpoint(self):
-        res = APIClient().get('/api/board-pricing/')
-        self.assertEqual(res.status_code, 200)
-        self.assertEqual(len(res.data['boards']), 3)
-
-    def test_list_my_board_orders(self):
-        BoardOrder.objects.create(
-            property=self.prop, user=self.owner,
-            board_type='standard', delivery_address='1 Test St',
-            price=Decimal('29.99'),
-        )
-        res = self.client.get('/api/board-orders/')
-        self.assertEqual(res.status_code, 200)
-
-
-# ══════════════════════════════════════════════════════════════════
 # #42 EPC IMPROVEMENT SUGGESTIONS
 # ══════════════════════════════════════════════════════════════════
 
@@ -1459,78 +1397,6 @@ class SimilarPropertiesAPITest(TestCase):
 # CONVEYANCER QUOTE MATCHING (#39)
 # ══════════════════════════════════════════════════════════════════
 
-@override_settings(
-    REST_FRAMEWORK=TEST_REST_FRAMEWORK, STORAGES=TEST_STORAGES,
-    EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
-    CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True,
-)
-class ConveyancerQuoteAPITest(TestCase):
-    def setUp(self):
-        self.buyer = make_user(email='buyer@test.com')
-        self.provider_user = make_user(email='provider@test.com')
-        self.owner = make_user(email='owner@test.com')
-        self.prop = make_property(self.owner)
-        self.provider = ServiceProvider.objects.create(
-            owner=self.provider_user, business_name='Legal Services',
-            contact_email='legal@test.com', status='active',
-        )
-        self.buyer_client = auth_client(self.buyer)
-        self.provider_client = auth_client(self.provider_user)
-
-    def test_create_quote_request(self):
-        res = self.buyer_client.post('/api/quote-requests/', {
-            'property': self.prop.id,
-            'transaction_type': 'buying',
-        }, format='json')
-        self.assertEqual(res.status_code, 201)
-
-    def test_submit_quote(self):
-        quote_req = ConveyancerQuoteRequest.objects.create(
-            property=self.prop, requester=self.buyer,
-            transaction_type='buying',
-        )
-        res = self.provider_client.post('/api/conveyancer-quotes/', {
-            'request': quote_req.id,
-            'provider': self.provider.id,
-            'legal_fee': '1200',
-            'disbursements': '300',
-            'total': '1500',
-            'estimated_weeks': 8,
-        }, format='json')
-        self.assertEqual(res.status_code, 201)
-
-    def test_accept_quote(self):
-        quote_req = ConveyancerQuoteRequest.objects.create(
-            property=self.prop, requester=self.buyer,
-            transaction_type='buying',
-        )
-        quote = ConveyancerQuote.objects.create(
-            request=quote_req, provider=self.provider,
-            legal_fee=Decimal('1200'), disbursements=Decimal('300'),
-            total=Decimal('1500'),
-        )
-        res = self.buyer_client.post(f'/api/quotes/{quote.id}/accept/')
-        self.assertEqual(res.status_code, 200)
-        quote.refresh_from_db()
-        self.assertTrue(quote.is_accepted)
-        quote_req.refresh_from_db()
-        self.assertEqual(quote_req.status, 'accepted')
-
-    def test_non_requester_cannot_accept(self):
-        quote_req = ConveyancerQuoteRequest.objects.create(
-            property=self.prop, requester=self.buyer,
-            transaction_type='buying',
-        )
-        quote = ConveyancerQuote.objects.create(
-            request=quote_req, provider=self.provider,
-            legal_fee=Decimal('1200'), disbursements=Decimal('300'),
-            total=Decimal('1500'),
-        )
-        other = make_user(email='other@test.com')
-        res = auth_client(other).post(f'/api/quotes/{quote.id}/accept/')
-        self.assertEqual(res.status_code, 403)
-
-
 # ══════════════════════════════════════════════════════════════════
 # WEB PAGE SMOKE TESTS (NEW PAGES)
 # ══════════════════════════════════════════════════════════════════
@@ -1541,9 +1407,6 @@ class NewWebPageTests(TestCase):
 
     def test_stamp_duty_calculator(self):
         self.assertEqual(self.client.get('/stamp-duty-calculator/').status_code, 200)
-
-    def test_conveyancing(self):
-        self.assertEqual(self.client.get('/conveyancing/').status_code, 200)
 
     def test_price_comparison(self):
         self.assertEqual(self.client.get('/price-comparison/').status_code, 200)

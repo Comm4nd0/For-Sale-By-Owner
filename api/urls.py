@@ -14,10 +14,7 @@ router.register(r'chat-rooms', views.ChatRoomViewSet, basename='chat-room')
 router.register(r'offers', views.OfferViewSet, basename='offer')
 # New feature routers
 router.register(r'buyer-verifications', views.BuyerVerificationViewSet, basename='buyer-verification')
-router.register(r'quote-requests', views.ConveyancerQuoteRequestViewSet, basename='quote-request')
-router.register(r'conveyancer-quotes', views.ConveyancerQuoteViewSet, basename='conveyancer-quote')
 router.register(r'neighbourhood-reviews', views.NeighbourhoodReviewViewSet, basename='neighbourhood-review')
-router.register(r'board-orders', views.BoardOrderViewSet, basename='board-order')
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -220,14 +217,8 @@ urlpatterns = [
     # #38 QR code property flyers
     path('properties/<int:property_pk>/flyer/', views.generate_property_flyer, name='property-flyer'),
 
-    # #39 Conveyancer matching
-    path('quotes/<int:quote_pk>/accept/', views.accept_conveyancer_quote, name='accept-quote'),
-
     # #40 Neighbourhood summary
     path('neighbourhood/<str:postcode_area>/summary/', views.neighbourhood_summary, name='neighbourhood-summary'),
-
-    # #41 Board pricing
-    path('board-pricing/', views.board_pricing, name='board-pricing'),
 
     # #42 EPC improvement suggestions
     path(
