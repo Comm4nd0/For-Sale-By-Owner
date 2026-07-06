@@ -6,7 +6,8 @@ from decimal import Decimal
 import requests
 
 from django.conf import settings
-from django.db.models import Q
+from django.core.cache import cache
+from django.db.models import Exists, OuterRef, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -24,6 +25,7 @@ from ..models import (
     PropertyDocument,
     PriceHistory,
     PropertyView,
+    SavedProperty,
     ServiceCategory,
     ServiceProvider,
 )
@@ -36,7 +38,7 @@ from ..serializers import (
     PropertyDocumentSerializer,
     ServiceProviderListSerializer,
 )
-from .base import IsOwnerOrReadOnly
+from .base import IsOwnerOrReadOnly, count_subquery
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +70,19 @@ class PropertyViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = Property.objects.all().select_related('owner').prefetch_related(
             'images', 'features',
+        ).annotate(
+            view_count_annotated=count_subquery(
+                PropertyView.objects.filter(property=OuterRef('pk')), 'property',
+            ),
         )
+        if self.request.user.is_authenticated:
+            queryset = queryset.annotate(
+                is_saved_annotated=Exists(
+                    SavedProperty.objects.filter(
+                        user=self.request.user, property=OuterRef('pk'),
+                    )
+                ),
+            )
         status_filter = self.request.query_params.get('status')
         property_type = self.request.query_params.get('property_type')
         city = self.request.query_params.get('city')
@@ -150,8 +164,26 @@ class PropertyViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
+        self._record_view(request, instance)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
+    def _record_view(self, request, instance):
+        """Record a listing view for analytics.
+
+        Owner views are skipped, and repeat views from the same user/IP
+        within an hour are de-duplicated so refreshes and crawlers don't
+        inflate view counts (which sellers see on their dashboard).
+        """
+        if request.user.is_authenticated and instance.owner_id == request.user.pk:
+            return
         try:
             ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+            ident = f'u{request.user.pk}' if request.user.is_authenticated else f'ip{ip}'
+            # cache.add only succeeds when the key is absent — repeat
+            # views within the window are silently dropped.
+            if not cache.add(f'property_view_dedup_{instance.pk}_{ident}', 1, 3600):
+                return
             PropertyView.objects.create(
                 property=instance,
                 viewer_ip=ip or None,
@@ -159,8 +191,6 @@ class PropertyViewSet(viewsets.ModelViewSet):
             )
         except Exception:
             pass
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
 
     @action(detail=True, methods=['get'])
     def similar(self, request, pk=None):
@@ -520,28 +550,34 @@ def property_history(request, property_pk):
     # Days on market
     days_on_market = (timezone.now() - prop.created_at).days
 
-    # Land Registry previous sales for this postcode
-    land_registry = []
-    try:
-        resp = requests.get(
-            'https://landregistry.data.gov.uk/data/ppi/transaction-record.json',
-            params={
-                'propertyAddress.postcode': prop.postcode,
-                'propertyAddress.paon': prop.address_line_1.split()[0] if prop.address_line_1 else '',
-                '_pageSize': '10',
-                '_sort': '-transactionDate',
-            },
-            timeout=15,
-        )
-        resp.raise_for_status()
-        items = resp.json().get('result', {}).get('items', [])
-        for item in items:
-            land_registry.append({
-                'price': item.get('pricePaid', 0),
-                'date': item.get('transactionDate', ''),
-            })
-    except requests.RequestException:
-        pass
+    # Land Registry previous sales for this address. PPD updates monthly,
+    # so cache per-property for 24h instead of hitting the slow upstream
+    # API on every page view.
+    cache_key = f'property_history_lr_{prop.pk}'
+    land_registry = cache.get(cache_key)
+    if land_registry is None:
+        land_registry = []
+        try:
+            resp = requests.get(
+                'https://landregistry.data.gov.uk/data/ppi/transaction-record.json',
+                params={
+                    'propertyAddress.postcode': prop.postcode,
+                    'propertyAddress.paon': prop.address_line_1.split()[0] if prop.address_line_1 else '',
+                    '_pageSize': '10',
+                    '_sort': '-transactionDate',
+                },
+                timeout=15,
+            )
+            resp.raise_for_status()
+            items = resp.json().get('result', {}).get('items', [])
+            for item in items:
+                land_registry.append({
+                    'price': item.get('pricePaid', 0),
+                    'date': item.get('transactionDate', ''),
+                })
+            cache.set(cache_key, land_registry, 86400)
+        except requests.RequestException:
+            pass
 
     return Response({
         'property_id': prop.pk,

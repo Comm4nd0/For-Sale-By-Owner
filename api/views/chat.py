@@ -11,6 +11,7 @@ from rest_framework.response import Response
 
 from ..models import Property, ChatRoom, ChatMessage
 from ..serializers import ChatRoomSerializer, ChatMessageSerializer
+from ..tasks import send_message_notification
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +56,9 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         # If an initial message was provided, create it
         message_text = request.data.get('message', '').strip()
         if message_text:
-            ChatMessage.objects.create(room=room, sender=request.user, message=message_text)
+            message = ChatMessage.objects.create(room=room, sender=request.user, message=message_text)
             room.save(update_fields=['updated_at'])
+            send_message_notification.delay(message.pk)
         serializer = self.get_serializer(room)
         return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
@@ -88,8 +90,9 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user != room.buyer and user != room.seller:
             raise PermissionDenied()
-        serializer.save(room=room, sender=user)
+        message = serializer.save(room=room, sender=user)
         room.save(update_fields=['updated_at'])
+        send_message_notification.delay(message.pk)
 
     @action(detail=False, methods=['post'])
     def mark_read(self, request, room_pk=None):

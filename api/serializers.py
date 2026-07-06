@@ -213,21 +213,29 @@ class PropertySerializer(serializers.ModelSerializer):
         return data
 
     def get_primary_image(self, obj):
-        primary = obj.images.filter(is_primary=True).first()
+        # Iterate the (usually prefetched) images rather than issuing a
+        # per-object filter query in list views.
+        primary = next((img for img in obj.images.all() if img.is_primary), None)
         if primary:
             return primary.image.url
         return None
 
     def get_is_saved(self, obj):
         request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return SavedProperty.objects.filter(user=request.user, property=obj).exists()
-        return False
+        if not (request and request.user.is_authenticated):
+            return False
+        annotated = getattr(obj, 'is_saved_annotated', None)
+        if annotated is not None:
+            return annotated
+        return SavedProperty.objects.filter(user=request.user, property=obj).exists()
 
     def get_image_count(self, obj):
-        return obj.images.count()
+        return len(obj.images.all())
 
     def get_view_count(self, obj):
+        annotated = getattr(obj, 'view_count_annotated', None)
+        if annotated is not None:
+            return annotated
         return obj.views.count()
 
     def get_message_count(self, obj):

@@ -2,6 +2,7 @@ from datetime import date, time
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -186,6 +187,9 @@ class PropertyAPITest(TestCase):
         self.owner_client = auth_client(self.owner)
         self.buyer_client = auth_client(self.buyer)
         self.anon_client = APIClient()
+        # View recording de-duplicates via the cache, which is not reset
+        # between tests like the database is.
+        cache.clear()
 
     # ── Property CRUD ────────────────────────────────────────────────────
 
@@ -248,6 +252,18 @@ class PropertyAPITest(TestCase):
         count_before = PropertyView.objects.count()
         self.anon_client.get(f'/api/properties/{self.prop.id}/')
         self.assertEqual(PropertyView.objects.count(), count_before + 1)
+
+    def test_repeat_retrieve_deduplicates_view(self):
+        """Refreshing the page shouldn't inflate the seller's view count."""
+        self.anon_client.get(f'/api/properties/{self.prop.id}/')
+        count_after_first = PropertyView.objects.count()
+        self.anon_client.get(f'/api/properties/{self.prop.id}/')
+        self.assertEqual(PropertyView.objects.count(), count_after_first)
+
+    def test_owner_retrieve_does_not_create_view(self):
+        count_before = PropertyView.objects.count()
+        self.owner_client.get(f'/api/properties/{self.prop.id}/')
+        self.assertEqual(PropertyView.objects.count(), count_before)
 
     def test_update_property_owner_only(self):
         res = self.buyer_client.patch(

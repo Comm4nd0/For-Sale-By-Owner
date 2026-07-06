@@ -72,6 +72,24 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
         return obj.owner == request.user
 
 
+def count_subquery(queryset, group_by):
+    """Annotation expression counting related rows without join fan-out.
+
+    ``queryset`` must already filter on ``OuterRef``; ``group_by`` is the
+    field linking back to the outer row. Unlike ``Count('relation')``
+    annotations, combining several of these never multiplies rows.
+    """
+    from django.db.models import Count, IntegerField, Subquery
+    from django.db.models.functions import Coalesce
+    return Coalesce(
+        Subquery(
+            queryset.order_by().values(group_by).annotate(_c=Count('pk')).values('_c'),
+            output_field=IntegerField(),
+        ),
+        0,
+    )
+
+
 def haversine_distance(lat1, lon1, lat2, lon2):
     """Calculate distance in miles between two lat/lon points."""
     R = 3959  # Earth radius in miles
@@ -84,19 +102,20 @@ def haversine_distance(lat1, lon1, lat2, lon2):
 
 
 def _calculate_stamp_duty(price, buyer_type='standard'):
-    """Calculate stamp duty based on buyer type (England/NI rates)."""
-    # First-time buyer relief
+    """Calculate stamp duty based on buyer type (England/NI rates from April 2025)."""
+    # First-time buyer relief: nil to £300k, 5% to £500k, none above £500k
     if buyer_type == 'first_time':
-        if price <= 625000:
-            if price <= 425000:
+        if price <= 500000:
+            if price <= 300000:
                 return 0
-            return (price - 425000) * 0.05
-        # Falls through to standard rates if price > £625k
+            return (price - 300000) * 0.05
+        # Falls through to standard rates if price > £500k
 
     # Standard bands
     duty = 0
     bands = [
-        (250000, 0),
+        (125000, 0),
+        (250000, 0.02),
         (925000, 0.05),
         (1500000, 0.10),
         (float('inf'), 0.12),
@@ -125,6 +144,24 @@ class IsServiceProviderOwnerOrReadOnly(permissions.BasePermission):
         if request.user.is_staff:
             return True
         return obj.owner == request.user
+
+
+class ExternalLookupThrottle(UserRateThrottle):
+    """Throttle for endpoints that proxy external APIs (Land Registry etc.).
+
+    Those endpoints are AllowAny and each request can trigger a slow
+    outbound HTTP call, so they need a tighter, dedicated rate than the
+    generic user/anon limits. Keyed by user when authenticated, IP
+    otherwise.
+    """
+    scope = 'external_lookup'
+
+    def get_cache_key(self, request, view):
+        if request.user and request.user.is_authenticated:
+            ident = str(request.user.pk)
+        else:
+            ident = self.get_ident(request)
+        return self.cache_format % {'scope': self.scope, 'ident': ident}
 
 
 class TwoFactorVerifyThrottle(UserRateThrottle):

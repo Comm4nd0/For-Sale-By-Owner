@@ -831,6 +831,12 @@ class ChatMessage(models.Model):
 
     class Meta:
         ordering = ['created_at']
+        indexes = [
+            # Unread badge counts filter on (room, is_read); chat history
+            # pages order by created_at within a room.
+            models.Index(fields=['room', 'is_read']),
+            models.Index(fields=['room', 'created_at']),
+        ]
 
     def __str__(self):
         return f"{self.sender.email}: {self.message[:50]}"

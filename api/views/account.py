@@ -9,7 +9,8 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.db.models import Q, Count, Sum, Avg, F
+from django.db.models import Q, Count, Sum, Avg, F, Exists, OuterRef
+from django.db.models.functions import TruncDate
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -65,7 +66,7 @@ User = get_user_model()
 from .base import (
     IsOwnerOrReadOnly, IsServiceProviderOwnerOrReadOnly,
     haversine_distance, TwoFactorVerifyThrottle,
-    _calculate_stamp_duty,
+    _calculate_stamp_duty, count_subquery,
 )
 
 @api_view(['GET'])
@@ -93,7 +94,7 @@ def dashboard_stats(request):
     thirty_days_ago = timezone.now() - timedelta(days=30)
     views_by_day = (
         PropertyView.objects.filter(property__owner=user, viewed_at__gte=thirty_days_ago)
-        .extra(select={'day': "date(viewed_at)"})
+        .annotate(day=TruncDate('viewed_at'))
         .values('day')
         .annotate(count=Count('id'))
         .order_by('day')
@@ -102,13 +103,36 @@ def dashboard_stats(request):
     # Message conversion rate (messages / views)
     message_rate = round((total_messages / total_views * 100), 1) if total_views > 0 else 0
 
-    # Per-property stats
+    # Per-property stats — annotated in one query instead of ~6 queries
+    # per property.
+    annotated_properties = properties.annotate(
+        views_count=count_subquery(
+            PropertyView.objects.filter(property=OuterRef('pk')), 'property',
+        ),
+        messages_count=count_subquery(
+            ChatMessage.objects.filter(room__property=OuterRef('pk')).exclude(sender=user),
+            'room__property',
+        ),
+        saves_count=count_subquery(
+            SavedProperty.objects.filter(property=OuterRef('pk')), 'property',
+        ),
+        offers_count=count_subquery(
+            Offer.objects.filter(property=OuterRef('pk')), 'property',
+        ),
+        images_count=count_subquery(
+            PropertyImage.objects.filter(property=OuterRef('pk')), 'property',
+        ),
+        has_floorplan=Exists(
+            PropertyFloorplan.objects.filter(property=OuterRef('pk')),
+        ),
+    )
+
     property_stats = []
-    for prop in properties:
-        prop_views = prop.views.count()
-        prop_messages = ChatMessage.objects.filter(room__property=prop).exclude(sender=user).count()
-        has_floorplan = prop.floorplans.exists()
-        image_count = prop.images.count()
+    for prop in annotated_properties:
+        prop_views = prop.views_count
+        prop_messages = prop.messages_count
+        has_floorplan = prop.has_floorplan
+        image_count = prop.images_count
         tips = []
         if image_count < 5:
             tips.append(f'Add more photos ({image_count}/10). Listings with 5+ photos get 40% more interest.')
@@ -125,8 +149,8 @@ def dashboard_stats(request):
             'status': prop.status,
             'views': prop_views,
             'messages': prop_messages,
-            'saves': prop.saved_by.count(),
-            'offers': prop.offers.count(),
+            'saves': prop.saves_count,
+            'offers': prop.offers_count,
             'conversion_rate': round((prop_messages / prop_views * 100), 1) if prop_views > 0 else 0,
             'tips': tips,
         })

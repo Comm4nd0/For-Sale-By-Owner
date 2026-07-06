@@ -116,12 +116,14 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def save_message(self, user_id, room_id, text):
         from .models import ChatMessage, ChatRoom
+        from .tasks import send_message_notification
         room = ChatRoom.objects.get(pk=room_id)
         msg = ChatMessage.objects.create(
             room=room, sender_id=user_id, message=text,
         )
         # Update room timestamp
         room.save(update_fields=['updated_at'])
+        send_message_notification.delay(msg.pk)
         return {
             'id': msg.id,
             'sender_id': msg.sender_id,

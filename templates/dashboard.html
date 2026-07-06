@@ -10,6 +10,11 @@
     .stat-card .value { font-size: 2rem; font-weight: 700; color: #115E66; }
     .stat-card .label { font-size: 0.85rem; color: #4A5C62; margin-top: 0.25rem; }
     .stat-card.highlight { border-color: #19747E; background: #D1E8E2; }
+    .views-chart-card { background: #FFFFFF; border: 1px solid #E2E2E2; border-radius: 8px; padding: 1.25rem; margin-bottom: 2rem; }
+    .views-chart-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem; font-weight: 600; color: #1A2C33; }
+    .views-chart-total { font-size: 0.85rem; color: #4A5C62; font-weight: 400; }
+    .views-chart-card svg { width: 100%; height: 120px; display: block; }
+    .views-chart-axis { display: flex; justify-content: space-between; font-size: 0.75rem; color: #4A5C62; margin-top: 0.35rem; }
 
     .dash-section { margin-bottom: 2rem; }
     .dash-section h3 { color: #115E66; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #E2E2E2; }
@@ -172,6 +177,8 @@
                     ${myPendingViewings > 0 ? `<div class="stat-card highlight"><div class="value">${myPendingViewings}</div><div class="label">My Pending Requests</div></div>` : ''}
                 </div>
 
+                <div id="views-chart"></div>
+
                 <div class="tab-nav">
                     <button class="tab-btn active" onclick="switchTab('messages', this)">Messages ${unreadMessages > 0 ? `<span class="tab-badge unread">${unreadMessages}</span>` : ''}</button>
                     <button class="tab-btn" onclick="switchTab('viewings', this)">Viewings ${stats.pending_viewings > 0 ? `<span class="tab-badge pending">${stats.pending_viewings}</span>` : ''}</button>
@@ -195,6 +202,7 @@
                 </div>
             `;
 
+            renderViewsChart(stats.views_by_day || []);
             loadDashboardMessages();
             loadViewings();
             loadMyViewingRequests();
@@ -202,6 +210,38 @@
         } catch (err) {
             document.getElementById('dashboard-content').innerHTML = '<div class="alert alert-error">Failed to load dashboard.</div>';
         }
+    }
+
+    function renderViewsChart(viewsByDay) {
+        const container = document.getElementById('views-chart');
+        if (!container) return;
+        // Build a continuous 30-day series ending today so gaps show as 0
+        const counts = {};
+        viewsByDay.forEach(d => { counts[d.day] = d.count; });
+        const days = [];
+        for (let i = 29; i >= 0; i--) {
+            const dt = new Date();
+            dt.setDate(dt.getDate() - i);
+            const key = dt.toISOString().slice(0, 10);
+            days.push({
+                label: dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+                count: counts[key] || 0,
+            });
+        }
+        const total = days.reduce((sum, d) => sum + d.count, 0);
+        if (!total) { container.innerHTML = ''; return; }
+        const max = Math.max(...days.map(d => d.count));
+        const W = 600, H = 120, barW = W / days.length;
+        const bars = days.map((d, i) => {
+            const h = Math.max(d.count > 0 ? 3 : 0, Math.round((d.count / max) * (H - 10)));
+            return `<rect x="${(i * barW + 1).toFixed(1)}" y="${H - h}" width="${(barW - 2).toFixed(1)}" height="${h}" rx="1.5" fill="#19747E"><title>${d.label}: ${d.count} view${d.count === 1 ? '' : 's'}</title></rect>`;
+        }).join('');
+        container.innerHTML = `
+            <div class="views-chart-card">
+                <div class="views-chart-header"><span>Views &mdash; last 30 days</span><span class="views-chart-total">${total} total</span></div>
+                <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Bar chart of property views over the last 30 days">${bars}</svg>
+                <div class="views-chart-axis"><span>${days[0].label}</span><span>${days[days.length - 1].label}</span></div>
+            </div>`;
     }
 
     function switchTab(tab, btn) {

@@ -129,6 +129,54 @@ class ChatRoomAPITest(TestCase):
         res = client.get(f'/api/chat-rooms/{room.id}/messages/')
         self.assertEqual(res.status_code, 403)
 
+    def test_message_notification_respects_preference(self):
+        """Turning off notification_enquiries suppresses the email."""
+        from django.core import mail
+
+        room = ChatRoom.objects.create(property=self.prop, buyer=self.buyer, seller=self.owner)
+        self.owner.notification_enquiries = False
+        self.owner.save(update_fields=['notification_enquiries'])
+
+        mail.outbox = []
+        res = self.buyer_client.post(f'/api/chat-rooms/{room.id}/messages/', {
+            'message': 'Hello!',
+        }, format='json')
+        self.assertEqual(res.status_code, 201)
+        recipients = [addr for m in mail.outbox for addr in m.to]
+        self.assertNotIn(self.owner.email, recipients)
+
+        # And with the preference on, the email goes out (tasks run eagerly).
+        # Mark existing messages read first — the email is debounced while
+        # the recipient already has unread messages in the room.
+        self.owner_client.post(f'/api/chat-rooms/{room.id}/messages/mark_read/')
+        self.owner.notification_enquiries = True
+        self.owner.save(update_fields=['notification_enquiries'])
+        mail.outbox = []
+        self.buyer_client.post(f'/api/chat-rooms/{room.id}/messages/', {
+            'message': 'Hello again!',
+        }, format='json')
+        recipients = [addr for m in mail.outbox for addr in m.to]
+        self.assertIn(self.owner.email, recipients)
+
+    def test_message_email_debounced_while_unread(self):
+        """A second message while the first is unread doesn't email again."""
+        from django.core import mail
+
+        room = ChatRoom.objects.create(property=self.prop, buyer=self.buyer, seller=self.owner)
+        mail.outbox = []
+        self.buyer_client.post(f'/api/chat-rooms/{room.id}/messages/', {
+            'message': 'First',
+        }, format='json')
+        self.assertEqual(
+            len([m for m in mail.outbox if self.owner.email in m.to]), 1,
+        )
+        self.buyer_client.post(f'/api/chat-rooms/{room.id}/messages/', {
+            'message': 'Second',
+        }, format='json')
+        self.assertEqual(
+            len([m for m in mail.outbox if self.owner.email in m.to]), 1,
+        )
+
 
 # ══════════════════════════════════════════════════════════════════
 # OFFER MANAGEMENT TESTS
@@ -432,6 +480,15 @@ class MortgageCalculatorAPITest(TestCase):
             'buyer_type': 'first_time',
         })
         self.assertEqual(res.status_code, 200)
+        # FTB relief (April 2025): nil to £300k, 5% on £300k-£400k = £5,000
+        self.assertEqual(res.data['stamp_duty'], 5000.0)
+
+    def test_first_time_buyer_stamp_duty_under_nil_band(self):
+        res = APIClient().get('/api/mortgage-calculator/', {
+            'price': '295000',
+            'buyer_type': 'first_time',
+        })
+        self.assertEqual(res.status_code, 200)
         self.assertEqual(res.data['stamp_duty'], 0)
 
     def test_invalid_params(self):
@@ -705,7 +762,9 @@ class StampDutyCalculatorAPITest(TestCase):
             'country': 'england',
         })
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(res.data['stamp_duty'], 12500.0)
+        # April 2025 rates: 2% on £125k-£250k (£2,500) + 5% on £250k-£500k
+        # (£12,500) = £15,000
+        self.assertEqual(res.data['stamp_duty'], 15000.0)
         self.assertIn('band_breakdown', res.data)
         self.assertIn('total_purchase_costs', res.data)
 
@@ -716,16 +775,34 @@ class StampDutyCalculatorAPITest(TestCase):
             'country': 'england',
         })
         self.assertEqual(res.status_code, 200)
+        # FTB relief (April 2025): nil to £300k, 5% on the remaining £100k
+        self.assertEqual(res.data['stamp_duty'], 5000.0)
+
+    def test_first_time_buyer_relief_under_nil_band(self):
+        res = APIClient().get('/api/stamp-duty-calculator/', {
+            'price': '300000',
+            'first_time_buyer': 'true',
+            'country': 'england',
+        })
+        self.assertEqual(res.status_code, 200)
         self.assertEqual(res.data['stamp_duty'], 0.0)
 
     def test_additional_property_surcharge(self):
+        standard = APIClient().get('/api/stamp-duty-calculator/', {
+            'price': '300000',
+            'country': 'england',
+        })
         res = APIClient().get('/api/stamp-duty-calculator/', {
             'price': '300000',
             'additional_property': 'true',
             'country': 'england',
         })
         self.assertEqual(res.status_code, 200)
-        self.assertGreater(res.data['stamp_duty'], 0)
+        # Surcharge is a flat 5% of the whole price on top of standard duty
+        self.assertEqual(
+            res.data['stamp_duty'] - standard.data['stamp_duty'],
+            300000 * 0.05,
+        )
 
     def test_scotland_lbtt(self):
         res = APIClient().get('/api/stamp-duty-calculator/', {
@@ -1739,3 +1816,54 @@ class ImageReorderAPITest(TestCase):
             {'order': []}, format='json',
         )
         self.assertEqual(res.status_code, 403)
+
+
+# ══════════════════════════════════════════════════════════════════
+# WEBSOCKET TOKEN AUTH MIDDLEWARE
+# ══════════════════════════════════════════════════════════════════
+
+@override_settings(STORAGES=TEST_STORAGES)
+class WebSocketTokenAuthTest(TestCase):
+    """The chat WebSocket must accept DRF tokens (mobile app auth)."""
+
+    def setUp(self):
+        self.user = make_user(email='ws@test.com')
+
+    def _run_middleware(self, scope):
+        from asgiref.sync import async_to_sync
+        from api.ws_auth import TokenAuthMiddleware
+
+        captured = {}
+
+        async def inner(inner_scope, receive, send):
+            captured.update(inner_scope)
+
+        async_to_sync(TokenAuthMiddleware(inner))(scope, None, None)
+        return captured
+
+    def test_valid_token_query_param_resolves_user(self):
+        from rest_framework.authtoken.models import Token
+        token = Token.objects.create(user=self.user)
+        scope = {'query_string': f'token={token.key}'.encode(), 'headers': []}
+        captured = self._run_middleware(scope)
+        self.assertEqual(captured['user'], self.user)
+
+    def test_valid_token_header_resolves_user(self):
+        from rest_framework.authtoken.models import Token
+        token = Token.objects.create(user=self.user)
+        scope = {
+            'query_string': b'',
+            'headers': [(b'authorization', f'Token {token.key}'.encode())],
+        }
+        captured = self._run_middleware(scope)
+        self.assertEqual(captured['user'], self.user)
+
+    def test_invalid_token_resolves_anonymous(self):
+        scope = {'query_string': b'token=not-a-real-token', 'headers': []}
+        captured = self._run_middleware(scope)
+        self.assertTrue(captured['user'].is_anonymous)
+
+    def test_no_token_leaves_scope_untouched(self):
+        scope = {'query_string': b'', 'headers': []}
+        captured = self._run_middleware(scope)
+        self.assertNotIn('user', captured)

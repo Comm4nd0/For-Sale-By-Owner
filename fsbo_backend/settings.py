@@ -183,6 +183,10 @@ REST_FRAMEWORK = {
         # Scope-specific limit on the 2FA verify endpoint — keyed by
         # challenge_id so rotating IPs does not help a brute-force attack.
         'two_factor_verify': '10/min',
+        # Endpoints that proxy slow external APIs (Land Registry,
+        # postcodes.io) — tighter than the general limits to prevent
+        # abuse amplification.
+        'external_lookup': '30/min',
     },
     'EXCEPTION_HANDLER': 'api.exception_handler.custom_exception_handler',
 }
@@ -255,6 +259,29 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# Periodic tasks. The DatabaseScheduler syncs these into django-celery-beat
+# on startup, so alerts fire without manually creating PeriodicTask rows.
+from celery.schedules import crontab  # noqa: E402
+
+CELERY_BEAT_SCHEDULE = {
+    'process-saved-search-alerts': {
+        'task': 'api.tasks.process_saved_search_alerts',
+        'schedule': crontab(minute='*/15'),
+    },
+    'send-price-drop-alerts': {
+        'task': 'api.tasks.send_price_drop_alerts',
+        'schedule': crontab(minute=0, hour=9),
+    },
+    'send-seller-activity-reminders': {
+        'task': 'api.tasks.send_seller_activity_reminders',
+        'schedule': crontab(minute=0, hour=10),
+    },
+    'send-weekly-seller-digest': {
+        'task': 'api.tasks.send_weekly_seller_digest',
+        'schedule': crontab(minute=0, hour=9, day_of_week=1),
+    },
+}
 
 # In CI/test mode, run Celery tasks synchronously (no broker needed)
 if USE_SQLITE:

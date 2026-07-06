@@ -40,18 +40,29 @@ def send_message_notification(message_id):
     else:
         recipient = room.seller
 
+    if not recipient.notification_enquiries:
+        return
+
     sender_name = msg.sender.get_full_name() or msg.sender.email
-    subject = f'New message about {room.property.title}'
-    message = (
-        f'Hi {recipient.first_name or recipient.email},\n\n'
-        f'You have received a new message about "{room.property.title}".\n\n'
-        f'From: {sender_name}\n\n'
-        f'Message:\n{msg.message}\n\n'
-        f'Reply on your dashboard:\n'
-        f'{settings.SITE_URL}/messages/{room.id}/\n\n'
-        f'— For Sale By Owner'
-    )
-    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [recipient.email])
+
+    # Debounce email in rapid conversations: only email when this is the
+    # recipient's first unread message in the room. Push always fires.
+    already_unread = ChatMessage.objects.filter(
+        room=room, is_read=False,
+    ).exclude(sender=recipient).exclude(pk=msg.pk).exists()
+
+    if not already_unread:
+        subject = f'New message about {room.property.title}'
+        message = (
+            f'Hi {recipient.first_name or recipient.email},\n\n'
+            f'You have received a new message about "{room.property.title}".\n\n'
+            f'From: {sender_name}\n\n'
+            f'Message:\n{msg.message}\n\n'
+            f'Reply on your dashboard:\n'
+            f'{settings.SITE_URL}/messages/{room.id}/\n\n'
+            f'— For Sale By Owner'
+        )
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [recipient.email])
 
     send_push_notification.delay(
         recipient.id,
@@ -70,6 +81,8 @@ def send_viewing_notification(viewing_id):
         return
 
     owner = viewing.property.owner
+    if not owner.notification_viewings:
+        return
     subject = f'New viewing request for {viewing.property.title}'
     message = (
         f'Hi {owner.first_name or owner.email},\n\n'
@@ -187,8 +200,11 @@ def send_viewing_status_notification(viewing_id):
     """Send email when viewing status changes."""
     from .models import ViewingRequest
     try:
-        viewing = ViewingRequest.objects.select_related('property').get(pk=viewing_id)
+        viewing = ViewingRequest.objects.select_related('property', 'requester').get(pk=viewing_id)
     except ViewingRequest.DoesNotExist:
+        return
+
+    if viewing.requester and not viewing.requester.notification_viewings:
         return
 
     subject = f'Viewing update for {viewing.property.title}'
@@ -257,7 +273,10 @@ def process_saved_search_alerts():
     from .models import SavedSearch, Property
 
     now = timezone.now()
-    searches = SavedSearch.objects.filter(email_alerts=True).select_related('user')
+    searches = SavedSearch.objects.filter(
+        email_alerts=True,
+        user__notification_saved_searches=True,
+    ).select_related('user')
 
     for search in searches:
         # Determine time window based on frequency

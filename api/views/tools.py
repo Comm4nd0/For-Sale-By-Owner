@@ -65,8 +65,35 @@ User = get_user_model()
 from .base import (
     IsOwnerOrReadOnly, IsServiceProviderOwnerOrReadOnly,
     haversine_distance, TwoFactorVerifyThrottle,
-    _calculate_stamp_duty,
+    _calculate_stamp_duty, ExternalLookupThrottle,
 )
+
+
+def _fetch_land_registry_transactions(postcode, page_size=50):
+    """Fetch Land Registry Price Paid data for a postcode, cached for 6h.
+
+    PPD is updated monthly, so short-term caching loses nothing while
+    keeping repeat lookups (and page refreshes) off the slow upstream API.
+    Raises requests.RequestException on failure so callers keep their
+    existing error handling.
+    """
+    cache_key = f'land_registry_ppd_{postcode.replace(" ", "_")}_{page_size}'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+    resp = requests.get(
+        'https://landregistry.data.gov.uk/data/ppi/transaction-record.json',
+        params={
+            'propertyAddress.postcode': postcode,
+            '_pageSize': str(page_size),
+            '_sort': '-transactionDate',
+        },
+        timeout=15,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    cache.set(cache_key, data, 6 * 3600)
+    return data
 
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
@@ -176,23 +203,14 @@ def neighbourhood_info(request, property_pk):
 
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
+@throttle_classes([ExternalLookupThrottle])
 def house_price_lookup(request):
     """Proxy Land Registry Price Paid Data API."""
     postcode = request.query_params.get('postcode', '').strip().upper()
     if not postcode:
         return Response({'error': 'Postcode is required'}, status=400)
     try:
-        resp = requests.get(
-            'https://landregistry.data.gov.uk/data/ppi/transaction-record.json',
-            params={
-                'propertyAddress.postcode': postcode,
-                '_pageSize': '50',
-                '_sort': '-transactionDate',
-            },
-            timeout=30,
-        )
-        resp.raise_for_status()
-        return Response(resp.json())
+        return Response(_fetch_land_registry_transactions(postcode))
     except requests.RequestException as e:
         logger.warning('Land Registry API error: %s', e)
         return Response(
@@ -203,6 +221,7 @@ def house_price_lookup(request):
 
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
+@throttle_classes([ExternalLookupThrottle])
 def price_comparison(request):
     """Compare property prices in an area using Land Registry data and local listings."""
     postcode = request.query_params.get('postcode', '').strip().upper()
@@ -215,17 +234,7 @@ def price_comparison(request):
     # 1. Land Registry sold prices
     land_registry_data = []
     try:
-        resp = requests.get(
-            'https://landregistry.data.gov.uk/data/ppi/transaction-record.json',
-            params={
-                'propertyAddress.postcode': postcode,
-                '_pageSize': '50',
-                '_sort': '-transactionDate',
-            },
-            timeout=30,
-        )
-        resp.raise_for_status()
-        data = resp.json()
+        data = _fetch_land_registry_transactions(postcode)
         items = data.get('result', {}).get('items', [])
         for item in items:
             land_registry_data.append({
@@ -457,32 +466,35 @@ def stamp_duty_calculator(request):
     country = request.query_params.get('country', 'england').lower()
 
     if country in ('england', 'northern_ireland'):
-        # Standard SDLT rates (2024/25)
-        if is_first_time and price <= 625000:
+        # SDLT rates from 1 April 2025
+        if is_first_time and price <= 500000:
             bands = [
-                (425000, 0.0),
-                (625000, 0.05),
+                (300000, 0.0),
+                (500000, 0.05),
             ]
         else:
             bands = [
-                (250000, 0.0),
+                (125000, 0.0),
+                (250000, 0.02),
                 (925000, 0.05),
                 (1500000, 0.10),
                 (float('inf'), 0.12),
             ]
-        additional_surcharge = 0.03 if is_additional else 0.0
+        additional_surcharge = 0.05 if is_additional else 0.0
     elif country == 'scotland':
-        # Scottish LBTT
+        # Scottish LBTT (first-time buyer relief raises the nil band to £175k)
         bands = [
-            (145000, 0.0),
+            (175000 if is_first_time else 145000, 0.0),
             (250000, 0.02),
             (325000, 0.05),
             (750000, 0.10),
             (float('inf'), 0.12),
         ]
-        additional_surcharge = 0.06 if is_additional else 0.0
+        # Additional Dwelling Supplement (8% from 5 December 2024)
+        additional_surcharge = 0.08 if is_additional else 0.0
     elif country == 'wales':
-        # Welsh LTT
+        # Welsh LTT (main rates; higher rates approximated as +5% from
+        # December 2024)
         bands = [
             (225000, 0.0),
             (400000, 0.06),
@@ -490,7 +502,7 @@ def stamp_duty_calculator(request):
             (1500000, 0.10),
             (float('inf'), 0.12),
         ]
-        additional_surcharge = 0.04 if is_additional else 0.0
+        additional_surcharge = 0.05 if is_additional else 0.0
     else:
         return Response({'error': 'Invalid country. Use: england, scotland, wales, northern_ireland'}, status=400)
 

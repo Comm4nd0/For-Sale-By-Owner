@@ -14,6 +14,16 @@
     .section-divider { border: none; border-top: 1px solid #E2E2E2; margin: 2rem 0; }
     .section-title { font-size: 1.1rem; margin-bottom: 1rem; color: #1A2C33; }
     .password-section { margin-top: 1rem; }
+    .pref-row { display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0; border-bottom: 1px solid #F0F0F0; }
+    .pref-row:last-child { border-bottom: none; }
+    .pref-label { font-size: 0.95rem; }
+    .pref-label small { display: block; color: #4A5C62; font-size: 0.8rem; }
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch .slider { position: absolute; cursor: pointer; inset: 0; background: #C4CDD0; border-radius: 24px; transition: 0.2s; }
+    .switch .slider::before { content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+    .switch input:checked + .slider { background: #19747E; }
+    .switch input:checked + .slider::before { transform: translateX(20px); }
 </style>
 {% endblock %}
 {% block content %}
@@ -43,6 +53,29 @@
         </div>
         <button type="submit" class="btn btn-primary btn-block" id="save-btn">Save Changes</button>
     </form>
+
+    <hr class="section-divider">
+
+    <div>
+        <h2 class="section-title">Notification Preferences</h2>
+        <p style="color:#4A5C62; font-size:0.85rem; margin-bottom:0.75rem;">Choose which email and push notifications you receive.</p>
+        <div class="pref-row">
+            <span class="pref-label">Messages &amp; enquiries<small>When a buyer messages you about a listing</small></span>
+            <label class="switch"><input type="checkbox" id="notification_enquiries" onchange="savePreference(this)"><span class="slider"></span></label>
+        </div>
+        <div class="pref-row">
+            <span class="pref-label">Viewing requests<small>Booking requests and viewing confirmations</small></span>
+            <label class="switch"><input type="checkbox" id="notification_viewings" onchange="savePreference(this)"><span class="slider"></span></label>
+        </div>
+        <div class="pref-row">
+            <span class="pref-label">Price drops<small>When a property you saved drops in price</small></span>
+            <label class="switch"><input type="checkbox" id="notification_price_drops" onchange="savePreference(this)"><span class="slider"></span></label>
+        </div>
+        <div class="pref-row">
+            <span class="pref-label">Saved search alerts<small>New listings matching your saved searches</small></span>
+            <label class="switch"><input type="checkbox" id="notification_saved_searches" onchange="savePreference(this)"><span class="slider"></span></label>
+        </div>
+    </div>
 
     <hr class="section-divider">
 
@@ -79,6 +112,11 @@
 <script>
 if (!Auth.requireAuth()) throw '';
 
+const NOTIFICATION_PREFS = [
+    'notification_enquiries', 'notification_viewings',
+    'notification_price_drops', 'notification_saved_searches',
+];
+
 // Load profile
 async function loadProfile() {
     const res = await fetch('/api/profile/', { headers: Auth.headers() });
@@ -88,6 +126,27 @@ async function loadProfile() {
     document.getElementById('first_name').value = data.first_name || '';
     document.getElementById('last_name').value = data.last_name || '';
     document.getElementById('phone').value = data.phone || '';
+    for (const pref of NOTIFICATION_PREFS) {
+        document.getElementById(pref).checked = data[pref] !== false;
+    }
+}
+
+// Save a notification preference as soon as it's toggled
+async function savePreference(input) {
+    const errorEl = document.getElementById('error-msg');
+    errorEl.style.display = 'none';
+    try {
+        const res = await fetch('/api/profile/', {
+            method: 'PATCH',
+            headers: Auth.headers(),
+            body: JSON.stringify({ [input.id]: input.checked }),
+        });
+        if (!res.ok) throw new Error();
+    } catch {
+        input.checked = !input.checked;  // revert on failure
+        errorEl.textContent = 'Could not save your notification preference. Please try again.';
+        errorEl.style.display = 'block';
+    }
 }
 
 // Save profile
