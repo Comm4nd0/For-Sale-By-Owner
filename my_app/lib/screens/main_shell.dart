@@ -20,7 +20,7 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   int _currentIndex = 0;
   NotificationCounts? _notificationCounts;
   Timer? _notificationTimer;
@@ -45,16 +45,31 @@ class _MainShellState extends State<MainShell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _startNotificationPolling();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _notificationTimer?.cancel();
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Don't poll while the app is backgrounded — it wastes battery and
+    // network. Resume (with an immediate refresh) when foregrounded.
+    if (state == AppLifecycleState.resumed) {
+      _startNotificationPolling();
+    } else {
+      _notificationTimer?.cancel();
+      _notificationTimer = null;
+    }
+  }
+
   void _startNotificationPolling() {
+    _notificationTimer?.cancel();
     _fetchNotificationCounts();
     _notificationTimer = Timer.periodic(
       const Duration(seconds: 60),
@@ -146,7 +161,7 @@ class _MainShellState extends State<MainShell> {
                   icon: PhosphorIcon(PhosphorIconsDuotone.user),
                   activeIcon: PhosphorIcon(PhosphorIconsDuotone.user),
                   label: authService.firstName != null && authService.firstName!.isNotEmpty
-                      ? 'Account (\${authService.firstName})'
+                      ? 'Account (${authService.firstName})'
                       : 'Account',
                 ),
               ]

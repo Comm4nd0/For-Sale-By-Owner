@@ -81,7 +81,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           );
         }
       } else {
-        setState(() => _error = 'Registration failed. Please try again.');
+        setState(() => _error =
+            authService.registrationError ?? 'Registration failed. Please try again.');
       }
     }
   }

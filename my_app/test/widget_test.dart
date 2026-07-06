@@ -109,6 +109,9 @@ class TestAuthService extends ChangeNotifier implements AuthService {
   }
 
   @override
+  String? get registrationError => null;
+
+  @override
   Future<bool> register(String email, String firstName, String lastName,
       String password, String rePassword) async {
     _isLoading = true;

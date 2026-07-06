@@ -4,6 +4,7 @@ import '../constants/app_theme.dart';
 import '../widgets/branded_app_bar.dart';
 import '../widgets/skeleton_loading.dart';
 import '../models/dashboard_stats.dart';
+import '../widgets/views_bar_chart.dart';
 import '../models/notification_counts.dart';
 import '../models/viewing_request.dart';
 import '../models/offer.dart';
@@ -332,27 +333,36 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     final stats = _stats!;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-      child: Row(
-        children: [
-          _buildStatChip(PhosphorIconsDuotone.house, 'Listings', stats.activeListings, null),
-          _buildStatChip(PhosphorIconsDuotone.eye, 'Views', stats.totalViews, null),
-          _buildStatChip(
-            PhosphorIconsDuotone.chat,
-            'Messages',
-            stats.totalMessages,
-            stats.unreadMessages > 0 ? AppTheme.goldEmber : null,
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+          child: Row(
+            children: [
+              _buildStatChip(PhosphorIconsDuotone.house, 'Listings', stats.activeListings, null),
+              _buildStatChip(PhosphorIconsDuotone.eye, 'Views', stats.totalViews, null),
+              _buildStatChip(
+                PhosphorIconsDuotone.chat,
+                'Messages',
+                stats.totalMessages,
+                stats.unreadMessages > 0 ? AppTheme.goldEmber : null,
+              ),
+              _buildStatChip(PhosphorIconsDuotone.heart, 'Saved', stats.totalSaves, null),
+              _buildStatChip(
+                PhosphorIconsDuotone.calendar,
+                'Viewings',
+                stats.pendingViewings,
+                null,
+              ),
+            ],
           ),
-          _buildStatChip(PhosphorIconsDuotone.heart, 'Saved', stats.totalSaves, null),
-          _buildStatChip(
-            PhosphorIconsDuotone.calendar,
-            'Viewings',
-            stats.pendingViewings,
-            null,
+        ),
+        if (stats.viewsByDay.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+            child: ViewsBarChart(viewsByDay: stats.viewsByDay),
           ),
-        ],
-      ),
+      ],
     );
   }
 

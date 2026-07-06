@@ -215,9 +215,16 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// Human-readable reason the last [register] call failed (server
+  /// validation messages such as "user with this email already exists").
+  /// Null after a successful registration.
+  String? _registrationError;
+  String? get registrationError => _registrationError;
+
   Future<bool> register(String email, String firstName, String lastName,
       String password, String rePassword) async {
     _isLoading = true;
+    _registrationError = null;
     notifyListeners();
 
     try {
@@ -233,16 +240,41 @@ class AuthService extends ChangeNotifier {
         }),
       );
 
+      if (response.statusCode != 201) {
+        _registrationError = _parseRegistrationError(response.body);
+      }
+
       _isLoading = false;
       notifyListeners();
       return response.statusCode == 201;
     } catch (e) {
       debugPrint('Register error: $e');
+      _registrationError = 'Could not reach the server. Please check your connection and try again.';
     }
 
     _isLoading = false;
     notifyListeners();
     return false;
+  }
+
+  /// Flatten Djoser's {"field": ["message", ...]} validation payload into
+  /// a single readable string.
+  String? _parseRegistrationError(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        final messages = <String>[];
+        decoded.forEach((_, value) {
+          if (value is List) {
+            messages.addAll(value.map((v) => v.toString()));
+          } else if (value is String) {
+            messages.add(value);
+          }
+        });
+        if (messages.isNotEmpty) return messages.join('\n');
+      }
+    } catch (_) {}
+    return null;
   }
 
   Future<void> logout() async {

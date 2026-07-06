@@ -34,6 +34,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   List<SavedSearch> _savedSearches = [];
   bool _searchesLoading = true;
 
+  // Notification preferences
+  bool _notificationEnquiries = true;
+  bool _notificationViewings = true;
+  bool _notificationPriceDrops = true;
+  bool _notificationSavedSearches = true;
+
   @override
   void initState() {
     super.initState();
@@ -61,6 +67,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _firstNameController.text = profile.firstName;
           _lastNameController.text = profile.lastName;
           _phoneController.text = profile.phone;
+          _notificationEnquiries = profile.notificationEnquiries;
+          _notificationViewings = profile.notificationViewings;
+          _notificationPriceDrops = profile.notificationPriceDrops;
+          _notificationSavedSearches = profile.notificationSavedSearches;
           _profileLoading = false;
         });
       }
@@ -91,7 +101,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update profile: $e')),
+          const SnackBar(content: Text('Failed to update profile. Please try again.')),
         );
       }
     } finally {
@@ -137,11 +147,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          const SnackBar(content: Text('Failed to change password. Please try again.')),
         );
       }
     } finally {
       if (mounted) setState(() => _passwordChanging = false);
+    }
+  }
+
+  Future<void> _saveNotificationPreference(
+    String field,
+    bool value,
+    void Function(bool) applyLocally,
+  ) async {
+    final previous = !value;
+    setState(() => applyLocally(value));
+    try {
+      final apiService = context.read<ApiService>();
+      await apiService.updateProfile({field: value});
+    } catch (e) {
+      if (mounted) {
+        setState(() => applyLocally(previous));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not save your notification preference. Please try again.'),
+          ),
+        );
+      }
     }
   }
 
@@ -170,7 +202,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update alerts: $e')),
+          const SnackBar(content: Text('Failed to update alerts. Please try again.')),
         );
       }
     }
@@ -186,7 +218,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete search: $e')),
+          const SnackBar(content: Text('Failed to delete search. Please try again.')),
         );
       }
     }
@@ -213,7 +245,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildPasswordSection(),
             const SizedBox(height: 24),
 
-            // Section 3: Saved Searches
+            // Section 3: Notification Preferences
+            _buildSectionHeader('Notification Preferences'),
+            const SizedBox(height: 8),
+            _buildNotificationPreferencesSection(),
+            const SizedBox(height: 24),
+
+            // Section 4: Saved Searches
             _buildSectionHeader('Saved Searches'),
             const SizedBox(height: 8),
             _buildSavedSearchesSection(),
@@ -327,6 +365,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildNotificationPreferencesSection() {
+    if (_profileLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Card(
+      child: Column(
+        children: [
+          _buildPreferenceTile(
+            title: 'Messages & enquiries',
+            subtitle: 'When a buyer messages you about a listing',
+            value: _notificationEnquiries,
+            onChanged: (v) => _saveNotificationPreference(
+              'notification_enquiries', v, (nv) => _notificationEnquiries = nv,
+            ),
+          ),
+          _buildPreferenceTile(
+            title: 'Viewing requests',
+            subtitle: 'Booking requests and viewing confirmations',
+            value: _notificationViewings,
+            onChanged: (v) => _saveNotificationPreference(
+              'notification_viewings', v, (nv) => _notificationViewings = nv,
+            ),
+          ),
+          _buildPreferenceTile(
+            title: 'Price drops',
+            subtitle: 'When a property you saved drops in price',
+            value: _notificationPriceDrops,
+            onChanged: (v) => _saveNotificationPreference(
+              'notification_price_drops', v, (nv) => _notificationPriceDrops = nv,
+            ),
+          ),
+          _buildPreferenceTile(
+            title: 'Saved search alerts',
+            subtitle: 'New listings matching your saved searches',
+            value: _notificationSavedSearches,
+            onChanged: (v) => _saveNotificationPreference(
+              'notification_saved_searches', v,
+              (nv) => _notificationSavedSearches = nv,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreferenceTile({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return SwitchListTile(
+      title: Text(title, style: const TextStyle(fontSize: 15)),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+      value: value,
+      onChanged: onChanged,
+      activeColor: AppTheme.forestMid,
+      dense: true,
     );
   }
 

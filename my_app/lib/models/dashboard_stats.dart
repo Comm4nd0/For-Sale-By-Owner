@@ -59,7 +59,8 @@ class ViewsByDay {
 
   factory ViewsByDay.fromJson(Map<String, dynamic> json) {
     return ViewsByDay(
-      date: json['date'] ?? '',
+      // The API sends 'day'; accept legacy 'date' too.
+      date: json['day'] ?? json['date'] ?? '',
       count: json['count'] ?? 0,
     );
   }

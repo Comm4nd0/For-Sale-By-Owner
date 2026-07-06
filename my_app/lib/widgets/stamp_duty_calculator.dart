@@ -29,13 +29,14 @@ class _StampDutyCalculatorState extends State<StampDutyCalculator> {
     final standardDuty = _calculateStandard(price);
 
     if (_buyerType == BuyerType.additional) {
-      final surcharge = price * 0.03;
+      final surcharge = price * 0.05;
       return standardDuty + surcharge;
     }
 
     return standardDuty;
   }
 
+  // England/NI SDLT rates from 1 April 2025.
   double _calculateStandard(double price) {
     double duty = 0;
 
@@ -49,19 +50,23 @@ class _StampDutyCalculatorState extends State<StampDutyCalculator> {
     }
     if (price > 250000) {
       duty += (price - 250000) * 0.05;
+      price = 250000;
+    }
+    if (price > 125000) {
+      duty += (price - 125000) * 0.02;
     }
 
     return duty;
   }
 
   double _calculateFirstTime(double price) {
-    if (price > 625000) {
+    if (price > 500000) {
       return _calculateStandard(price);
     }
 
     double duty = 0;
-    if (price > 425000) {
-      duty += (price - 425000) * 0.05;
+    if (price > 300000) {
+      duty += (price - 300000) * 0.05;
     }
     return duty;
   }
